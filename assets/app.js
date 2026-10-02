@@ -26,7 +26,7 @@
   const MOVE_BADGE = { purchase: 'ok', issue: 'accent', damage: 'danger', expired: 'warn', count_adjust: '' };
   const STATUS_LABEL = { draft: 'مسودة', approved: 'معتمدة', cancelled: 'ملغاة' };
   const STATUS_BADGE = { draft: 'warn', approved: 'ok', cancelled: '' };
-  const UNITS = ['حبة', 'علبة', 'عبوة', 'زجاجة', 'أنبوب', 'كيس', 'لفة', 'باكيت', 'كرتون', 'جالون', 'طقم'];
+  const UNITS = ['حبة', 'علبة', 'عبوة', 'زجاجة', 'أنبوب', 'كيس', 'لفة', 'باكيت', 'كرتون', 'جالون', 'طقم', 'زوج', 'لتر', 'كيلو'];
 
   /* ======================= utils ======================= */
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -524,8 +524,12 @@
             <option value="">بدون فئة</option>
             ${S.categories.map((c) => `<option value="${c.id}" ${c.id === it.category_id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
           </select></div>
-          <div class="field"><label>الوحدة</label><input class="input" name="unit" list="units" required value="${esc(it.unit)}">
-            <datalist id="units">${UNITS.map((u) => `<option value="${u}">`).join('')}</datalist></div>
+          <div class="field"><label>الوحدة</label>
+            <select class="input" name="unit_sel" id="unit-sel">
+              ${UNITS.map((u) => `<option value="${u}" ${u === it.unit ? 'selected' : ''}>${u}</option>`).join('')}
+              <option value="__other" ${UNITS.includes(it.unit) ? '' : 'selected'}>أخرى…</option>
+            </select>
+            <input class="input" name="unit_other" id="unit-other" placeholder="اكتب الوحدة" style="margin-top:8px" value="${UNITS.includes(it.unit) ? '' : esc(it.unit)}" ${UNITS.includes(it.unit) ? 'hidden' : ''}></div>
         </div>
         <div class="field"><label>الحد الأدنى</label><input class="input num" name="min_qty" type="number" min="0" step="any" inputmode="decimal" value="${esc(it.min_qty)}">
           <div class="hint">يظهر تنبيه وينضاف الصنف لقائمة المشتريات إذا وصل رصيده لهذا الحد.</div></div>
@@ -535,13 +539,20 @@
         <div class="field"><label>ملاحظات</label><textarea class="input" name="notes">${esc(it.notes || '')}</textarea></div>
         <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">حفظ</button></div>
       </form>`, (el, close) => {
+      $('#unit-sel', el).addEventListener('change', (e) => {
+        const other = $('#unit-other', el);
+        other.hidden = e.target.value !== '__other';
+        if (!other.hidden) other.focus();
+      });
       $('#item-form', el).addEventListener('submit', async (e) => {
         e.preventDefault();
         const f = new FormData(e.target);
+        const unit = f.get('unit_sel') === '__other' ? String(f.get('unit_other') || '').trim() : f.get('unit_sel');
+        if (!unit) return toast('اكتب الوحدة', true);
         const row = {
           name: f.get('name').trim(),
           category_id: f.get('category_id') ? Number(f.get('category_id')) : null,
-          unit: f.get('unit').trim() || 'حبة',
+          unit,
           min_qty: Number(f.get('min_qty') || 0),
           track_expiry: !!f.get('track_expiry'),
           notes: f.get('notes').trim() || null,

@@ -278,7 +278,7 @@
       L.push({ sep: true });
       L.push({ href: '#/users', label: 'المستخدمين', icon: I.users, key: 'users' });
       L.push({ href: '#/catalog', label: 'الفئات والموردين', icon: I.tag, key: 'catalog' });
-      L.push({ href: '#/more', label: 'الإشعارات والحساب', icon: I.key, key: 'more' });
+      L.push({ href: '#/more', label: 'الإعدادات', icon: I.key, key: 'more' });
     }
     return L;
   }
@@ -308,7 +308,7 @@
           <a href="#/items" data-nav="items"><span class="ic">${I.box}</span>الأصناف</a>
           <a href="#/issue" data-nav="issue" class="primary"><span class="ic">${I.out}</span>صرف</a>
           <a href="#/invoices" data-nav="invoices"><span class="ic">${I.invoice}</span>الفواتير</a>
-          <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>المزيد</a>
+          <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>الإعدادات</a>
         </nav>
       </div>`;
     $('[data-act=out]').onclick = () => sb.auth.signOut();
@@ -340,7 +340,7 @@
     reports: { title: 'التقارير', nav: 'reports', fn: pageReports, manager: true },
     users: { title: 'المستخدمين', nav: 'users', fn: pageUsers, admin: true },
     catalog: { title: 'الفئات والموردين', nav: 'catalog', fn: pageCatalog, admin: true },
-    more: { title: 'المزيد', nav: 'more', fn: pageMore },
+    more: { title: 'الإعدادات', nav: 'more', fn: pageMore },
   };
 
   let routeSeq = 0;

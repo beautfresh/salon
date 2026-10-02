@@ -6,4 +6,6 @@ window.APP_CONFIG = {
   appName: 'مخزون الصالون',
   loginDomain: 'salon.local',
   expiryWarningDays: 60,
+  // مفتاح عام لإشعارات الجوال (Web Push)، والمفتاح الخاص محفوظ في قاعدة البيانات
+  vapidPublicKey: 'BMZ4yzqerFd2J3t1R-9-H9AIw71fF4BqMA9R7avqxDqn5ctP7k-cxa5pjF6UB6XFPMU8d6L1TOthoXj5Q2I-TKI',
 };

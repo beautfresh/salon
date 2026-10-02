@@ -256,6 +256,7 @@
       await loadRefs();
       renderShell();
       route();
+      syncPushOnLogin();
     } catch (e) {
       $('#app').innerHTML = `<div class="auth"><div class="auth-card"><h1>تعذر التحميل</h1><p class="sub">${esc(errMsg(e))}</p><button class="btn primary block" onclick="location.reload()">إعادة المحاولة</button></div></div>`;
     }
@@ -277,6 +278,7 @@
       L.push({ sep: true });
       L.push({ href: '#/users', label: 'المستخدمين', icon: I.users, key: 'users' });
       L.push({ href: '#/catalog', label: 'الفئات والموردين', icon: I.tag, key: 'catalog' });
+      L.push({ href: '#/more', label: 'الإشعارات والحساب', icon: I.key, key: 'more' });
     }
     return L;
   }
@@ -422,6 +424,7 @@
     const hello = (S.profile.full_name || '').split(' ')[0];
     view.innerHTML = `
       <p class="muted" style="margin:0 0 14px">أهلاً ${esc(hello)}، هذا ملخص المخزون اليوم.</p>
+      <div id="push-home"></div>
       ${pendingUsers ? `<a class="notice info" style="display:block" href="#/users">يوجد ${pendingUsers} ${pendingUsers === 1 ? 'طلب تسجيل' : 'طلبات تسجيل'} بانتظار اعتمادك ←</a>` : ''}
       <div class="stats">
         <a class="stat danger" href="#/shopping"><div class="label">أصناف ناقصة</div><div class="value num">${low.length}</div></a>
@@ -448,6 +451,7 @@
 
       <div class="section-title"><h2>${isManager() ? 'آخر الحركات' : 'آخر حركاتك'}</h2><a href="#/movements" class="small">السجل الكامل</a></div>
       <div class="list">${moves.length ? moves.map(moveRow).join('') : '<div class="empty">لا توجد حركات بعد</div>'}</div>`;
+    renderPushCard($('#push-home'), { compact: true });
     const expLink = $('a[href="#expiring"]', view);
     expLink.addEventListener('click', (e) => { e.preventDefault(); $('#expiring').scrollIntoView({ behavior: 'smooth' }); });
   }
@@ -1279,14 +1283,108 @@
     });
   }
 
+  /* ======================= push notifications ======================= */
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+  function b64ToBytes(b64) {
+    const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  }
+
+  async function pushStatus() {
+    if (!pushSupported()) return isIOS && !isStandalone() ? 'ios-install' : 'unsupported';
+    if (Notification.permission === 'denied') return 'denied';
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg && await reg.pushManager.getSubscription();
+      return sub ? 'on' : 'off';
+    } catch (_) { return 'off'; }
+  }
+
+  async function saveSubscription(sub) {
+    const j = sub.toJSON();
+    await q(sb.rpc('save_push_subscription', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_user_agent: navigator.userAgent }));
+  }
+
+  async function enablePush() {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') throw new Error('لم يتم السماح بالإشعارات. فعّلها من إعدادات المتصفح ثم حاول مرة أخرى.');
+    const reg = await navigator.serviceWorker.register('sw.js');
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(CFG.vapidPublicKey) });
+    await saveSubscription(sub);
+  }
+
+  async function disablePush() {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await q(sb.rpc('delete_push_subscription', { p_endpoint: sub.endpoint }));
+    await sub.unsubscribe();
+  }
+
+  async function testPush() {
+    const { data, error } = await sb.functions.invoke('notify', { body: { test: true } });
+    if (error) throw error;
+    if (!data?.sent) throw new Error('لم يصل الإشعار. أوقف الإشعارات وفعّلها من جديد على هذا الجهاز.');
+  }
+
+  // keeps this device linked to the signed-in admin
+  async function syncPushOnLogin() {
+    if (!isAdmin() || !pushSupported() || Notification.permission !== 'granted') return;
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg && await reg.pushManager.getSubscription();
+      if (sub) await saveSubscription(sub);
+    } catch (_) { /* ignore */ }
+  }
+
+  async function renderPushCard(box, { compact = false } = {}) {
+    if (!isAdmin()) { box.innerHTML = ''; return; }
+    const st = await pushStatus();
+    if (compact && (st === 'on' || st === 'unsupported')) { box.innerHTML = ''; return; }
+    const msg = {
+      on: 'الإشعارات مفعّلة على هذا الجهاز. يصلك تنبيه عند وجود فاتورة بانتظار الاعتماد، أو طلب تسجيل، أو صنف وصل للحد الأدنى، أو تالف، وملخص يومي الساعة 8 صباحاً.',
+      off: 'فعّل الإشعارات على هذا الجهاز ليصلك تنبيه فوري بكل ما يحتاج انتباهك.',
+      denied: 'الإشعارات مرفوضة في إعدادات المتصفح لهذا الموقع. اسمح بها من إعدادات المتصفح ثم ارجع هنا.',
+      'ios-install': 'لتفعيل الإشعارات على الآيفون: افتح الموقع من Safari، واضغط زر المشاركة، ثم «إضافة إلى الشاشة الرئيسية»، وافتحه من الأيقونة وفعّل الإشعارات من هنا.',
+      unsupported: 'هذا المتصفح لا يدعم الإشعارات.',
+    }[st];
+    box.innerHTML = `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+          <b>إشعارات الجوال</b>
+          <span class="badge ${st === 'on' ? 'ok' : st === 'off' ? 'warn' : ''}">${st === 'on' ? 'مفعّلة' : 'غير مفعّلة'}</span>
+        </div>
+        <p class="muted small" style="margin:0 0 10px">${msg}</p>
+        <div class="actions">
+          ${st === 'off' ? '<button class="btn primary sm" data-push="on">تفعيل الإشعارات</button>' : ''}
+          ${st === 'on' ? '<button class="btn sm" data-push="test">إرسال إشعار تجريبي</button><button class="btn sm ghost" data-push="off">إيقاف على هذا الجهاز</button>' : ''}
+        </div>
+      </div>`;
+    $$('[data-push]', box).forEach((b) => b.addEventListener('click', () => busy(b, async () => {
+      try {
+        if (b.dataset.push === 'on') { await enablePush(); toast('تم تفعيل الإشعارات'); }
+        if (b.dataset.push === 'off') { await disablePush(); toast('تم إيقاف الإشعارات على هذا الجهاز'); }
+        if (b.dataset.push === 'test') { await testPush(); toast('تم الإرسال، يفترض يوصلك الإشعار خلال ثوانٍ'); return; }
+        renderPushCard(box, { compact });
+      } catch (err) { toast(errMsg(err), true); }
+    })));
+  }
+
   /* ---------- more (mobile) ---------- */
   async function pageMore(view) {
-    const links = navLinks().filter((l) => !l.sep && !['home', 'items', 'issue', 'invoices'].includes(l.key));
+    const links = navLinks().filter((l) => !l.sep && !['home', 'items', 'issue', 'invoices', 'more'].includes(l.key));
     view.innerHTML = `
       <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
         <span class="avatar" style="width:44px;height:44px;font-size:18px">${esc(initial(S.profile.full_name || S.profile.login))}</span>
         <div><div style="font-weight:700">${esc(S.profile.full_name || S.profile.login)}</div><div class="muted small">${ROLE_LABEL[S.profile.role]}</div></div>
       </div>
+      <div id="push-box"></div>
       <div class="list">
         ${links.map((l) => `<a class="row" href="${l.href}"><span class="ic" style="color:var(--accent)">${l.icon}</span><div class="grow title">${l.label}</div></a>`).join('')}
         <button class="row" id="m-pw"><span class="ic" style="color:var(--accent)">${I.key}</span><div class="grow title">تغيير كلمة المرور</div></button>
@@ -1294,9 +1392,11 @@
       </div>`;
     $('#m-pw').onclick = changePassword;
     $('#m-out').onclick = () => sb.auth.signOut();
+    renderPushCard($('#push-box'));
   }
 
   /* ======================= start ======================= */
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
   const authType = hashParams.get('type');
 

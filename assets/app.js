@@ -21,7 +21,7 @@
   const isAdmin = () => S.profile?.role === 'admin';
   const isManager = () => ['admin', 'partner'].includes(S.profile?.role);
 
-  const ROLE_LABEL = { admin: 'مديرة النظام', partner: 'شريكة', staff: 'موظفة' };
+  const ROLE_LABEL = { admin: 'مدير النظام', partner: 'شريك', staff: 'موظف' };
   const MOVE_LABEL = { purchase: 'شراء', issue: 'صرف', damage: 'تالف', expired: 'منتهي الصلاحية', count_adjust: 'تسوية جرد' };
   const MOVE_BADGE = { purchase: 'ok', issue: 'accent', damage: 'danger', expired: 'warn', count_adjust: '' };
   const STATUS_LABEL = { draft: 'مسودة', approved: 'معتمدة', cancelled: 'ملغاة' };
@@ -139,7 +139,7 @@
       q(sb.from('categories').select('id,name,sort_order').order('sort_order').order('name')),
       q(sb.from('suppliers').select('id,name,phone,notes,is_active').order('name')),
       q(sb.from('items').select('id,name,category_id,unit,min_qty,track_expiry,qty_on_hand,is_active,notes').order('name')),
-      q(sb.from('profiles').select('id,full_name,login,role,is_active,created_at').order('full_name')),
+      q(sb.from('profiles').select('id,full_name,login,role,is_active,approved_at,created_at').order('full_name')),
     ]);
     S.categories = cats; S.suppliers = sups; S.items = items;
     S.profiles = new Map(profs.map((p) => [p.id, p]));
@@ -159,46 +159,66 @@
   /* ======================= auth ======================= */
   const toEmail = (login) => (login.includes('@') ? login.trim() : `${login.trim().toLowerCase()}@${CFG.loginDomain}`);
 
-  function renderLogin(msg) {
+  function renderLogin(msg, mode = 'login') {
     S.shellReady = false;
+    const signup = mode === 'signup';
     $('#app').innerHTML = `
       <div class="auth">
-        <form class="auth-card" id="login-form" autocomplete="on">
+        <form class="auth-card" id="auth-form" autocomplete="on">
           <div class="auth-logo">${I.bag}</div>
-          <h1>${esc(CFG.appName)}</h1>
-          <p class="sub">سجّلي الدخول لإدارة مخزون الصالون</p>
-          ${msg ? `<div class="notice danger">${esc(msg)}</div>` : ''}
+          <h1>${signup ? 'إنشاء حساب' : esc(CFG.appName)}</h1>
+          <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'تسجيل الدخول لإدارة مخزون الصالون'}</p>
+          ${msg ? `<div class="notice ${msg.ok ? 'info' : 'danger'}">${esc(msg.text || msg)}</div>` : ''}
+          ${signup ? `<div class="field">
+            <label for="full_name">الاسم</label>
+            <input class="input" id="full_name" name="name" autocomplete="name" required>
+          </div>` : ''}
           <div class="field">
-            <label for="login">اسم المستخدم أو البريد</label>
-            <input class="input" id="login" name="username" dir="ltr" autocapitalize="none" autocomplete="username" required>
+            <label for="email">البريد الإلكتروني</label>
+            <input class="input" id="email" name="email" type="${signup ? 'email' : 'text'}" dir="ltr" autocapitalize="none" autocomplete="${signup ? 'email' : 'username'}" required>
           </div>
           <div class="field">
             <label for="password">كلمة المرور</label>
-            <input class="input" id="password" name="password" type="password" dir="ltr" autocomplete="current-password" required>
+            <input class="input" id="password" name="password" type="password" dir="ltr" ${signup ? 'minlength="8"' : ''} autocomplete="${signup ? 'new-password' : 'current-password'}" required>
+            ${signup ? '<div class="hint">8 خانات على الأقل.</div>' : ''}
           </div>
-          <button class="btn primary block" type="submit">دخول</button>
+          <button class="btn primary block" type="submit">${signup ? 'تسجيل' : 'دخول'}</button>
+          <p class="small muted" style="text-align:center;margin:16px 0 0">
+            ${signup ? 'لديك حساب؟ <a href="#" id="switch-mode">تسجيل الدخول</a>' : 'ليس لديك حساب؟ <a href="#" id="switch-mode">إنشاء حساب</a>'}
+          </p>
         </form>
       </div>`;
-    $('#login-form').addEventListener('submit', async (e) => {
+    $('#switch-mode').onclick = (e) => { e.preventDefault(); renderLogin(null, signup ? 'login' : 'signup'); };
+    $('#auth-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = $('button[type=submit]', e.target);
       await busy(btn, async () => {
-        const { error } = await sb.auth.signInWithPassword({ email: toEmail($('#login').value), password: $('#password').value });
-        if (error) toast(errMsg(error), true);
+        const email = toEmail($('#email').value);
+        const password = $('#password').value;
+        if (!signup) {
+          const { error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) toast(errMsg(error), true);
+          return;
+        }
+        const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: $('#full_name').value.trim() } } });
+        if (error) return toast(/registered|exists/i.test(error.message) ? 'هذا البريد مسجل من قبل، سجّل الدخول' : errMsg(error), true);
+        if (!data.session) renderLogin({ ok: true, text: 'تم إنشاء الحساب. سجّل الدخول بعد اعتماده من مدير النظام.' });
       });
     });
   }
 
   function renderPending() {
     S.shellReady = false;
+    const p = S.profile;
     $('#app').innerHTML = `
       <div class="auth"><div class="auth-card">
         <div class="auth-logo">${I.bag}</div>
-        <h1>الحساب بانتظار التفعيل</h1>
-        <p class="sub">تم تسجيل دخولك، لكن حسابك غير مفعّل بعد. تواصلي مع مديرة النظام لتفعيله.</p>
-        <button class="btn block" id="pending-out">تسجيل الخروج</button>
+        <h1>الحساب بانتظار الاعتماد</h1>
+        <p class="sub">أهلاً ${esc(p?.full_name || '')}، تم تسجيل حسابك وسيظهر لمدير النظام لاعتماده وتحديد صلاحياتك. بعد الاعتماد اضغط «تحديث».</p>
+        <div class="actions"><button class="btn primary" id="pending-refresh" style="flex:1">تحديث</button><button class="btn" id="pending-out" style="flex:1">تسجيل الخروج</button></div>
       </div></div>`;
     $('#pending-out').onclick = () => sb.auth.signOut();
+    $('#pending-refresh').onclick = () => boot();
   }
 
   function renderSetPassword() {
@@ -207,7 +227,7 @@
       <div class="auth"><form class="auth-card" id="setpw">
         <div class="auth-logo">${I.bag}</div>
         <h1>تعيين كلمة المرور</h1>
-        <p class="sub">اختاري كلمة مرور جديدة لحسابك</p>
+        <p class="sub">اختر كلمة مرور جديدة لحسابك</p>
         <div class="field"><label>كلمة المرور الجديدة</label><input class="input" type="password" id="pw1" dir="ltr" minlength="8" required autocomplete="new-password"></div>
         <div class="field"><label>تأكيد كلمة المرور</label><input class="input" type="password" id="pw2" dir="ltr" minlength="8" required autocomplete="new-password"></div>
         <button class="btn primary block">حفظ</button>
@@ -344,7 +364,7 @@
   }
 
   /* ======================= item picker ======================= */
-  function itemPicker(container, { value = null, onPick, activeOnly = true, placeholder = 'ابحثي عن الصنف…' } = {}) {
+  function itemPicker(container, { value = null, onPick, activeOnly = true, placeholder = 'ابحث عن الصنف…' } = {}) {
     container.classList.add('picker');
     container.innerHTML = `<input class="input" type="search" placeholder="${esc(placeholder)}" autocomplete="off"><div class="picker-list" hidden></div>`;
     const input = $('input', container);
@@ -398,9 +418,11 @@
       q(sb.from('stock_movements').select('id,item_id,movement_type,qty,reason,created_by,created_at').order('created_at', { ascending: false }).limit(8)),
     ]);
     if (!alive()) return;
+    const pendingUsers = isAdmin() ? [...S.profiles.values()].filter((p) => !p.is_active && !p.approved_at).length : 0;
     const hello = (S.profile.full_name || '').split(' ')[0];
     view.innerHTML = `
       <p class="muted" style="margin:0 0 14px">أهلاً ${esc(hello)}، هذا ملخص المخزون اليوم.</p>
+      ${pendingUsers ? `<a class="notice info" style="display:block" href="#/users">يوجد ${pendingUsers} ${pendingUsers === 1 ? 'طلب تسجيل' : 'طلبات تسجيل'} بانتظار اعتمادك ←</a>` : ''}
       <div class="stats">
         <a class="stat danger" href="#/shopping"><div class="label">أصناف ناقصة</div><div class="value num">${low.length}</div></a>
         <a class="stat warn" href="#expiring"><div class="label">تقرب صلاحيتها تنتهي</div><div class="value num">${expiring.length}</div></a>
@@ -480,7 +502,7 @@
         else if (itemsFilter.cat !== 'all') list = list.filter((i) => String(i.category_id) === String(itemsFilter.cat));
       }
       $('#items-list').innerHTML = list.length ? list.map(itemRow).join('')
-        : `<div class="empty">${S.items.length ? 'لا توجد أصناف مطابقة' : (isAdmin() ? 'لا توجد أصناف بعد. ابدئي بإضافة أول صنف.' : 'لا توجد أصناف بعد')}</div>`;
+        : `<div class="empty">${S.items.length ? 'لا توجد أصناف مطابقة' : (isAdmin() ? 'لا توجد أصناف بعد. ابدأ بإضافة أول صنف.' : 'لا توجد أصناف بعد')}</div>`;
     };
     drawChips(); draw();
     $('#item-q').addEventListener('input', (e) => { itemsFilter.q = e.target.value; draw(); });
@@ -619,9 +641,9 @@
       const it = picker.get();
       const qty = Number($('#issue-qty').value);
       const reason = $('#issue-reason').value.trim();
-      if (!it) return toast('اختاري الصنف أولاً', true);
-      if (!(qty > 0)) return toast('أدخلي كمية صحيحة', true);
-      if (type !== 'issue' && !reason) return toast('اكتبي السبب', true);
+      if (!it) return toast('اختر الصنف أولاً', true);
+      if (!(qty > 0)) return toast('أدخل كمية صحيحة', true);
+      if (type !== 'issue' && !reason) return toast('اكتب السبب', true);
       if (qty > Number(it.qty_on_hand)) return toast(`الرصيد المتاح ${num(it.qty_on_hand)} ${it.unit} فقط`, true);
       await busy($('#issue-submit'), async () => {
         try {
@@ -650,7 +672,7 @@
         </div>
         <a class="btn primary" href="#/invoice/new">${I.plus} فاتورة جديدة</a>
       </div>
-      ${!isManager() ? '<div class="notice info">تظهر هنا الفواتير التي أدخلتِها. المخزون يتحدث بعد اعتماد مديرة النظام للفاتورة.</div>' : ''}
+      ${!isManager() ? '<div class="notice info">تظهر هنا الفواتير التي أدخلتها. المخزون يتحدث بعد اعتماد مدير النظام للفاتورة.</div>' : ''}
       <div class="list" id="inv-list"></div>`;
     const draw = () => {
       $$('#inv-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === invTab));
@@ -672,7 +694,7 @@
     await reloadItems();
     if (id === 'new') return invoiceEditor(view, null, []);
     const inv = await q(sb.from('purchase_invoices').select('*').eq('id', Number(id)).maybeSingle());
-    if (!inv) { view.innerHTML = '<div class="notice danger">الفاتورة غير موجودة أو لا تملكين صلاحية عرضها</div>'; return; }
+    if (!inv) { view.innerHTML = '<div class="notice danger">الفاتورة غير موجودة أو لا تملك صلاحية عرضها</div>'; return; }
     const lines = await q(sb.from('purchase_invoice_lines').select('*').eq('invoice_id', inv.id).order('id'));
     const canEdit = inv.status === 'draft' && (isManager() || inv.created_by === S.profile.id);
     if (canEdit) return invoiceEditor(view, inv, lines);
@@ -723,11 +745,11 @@
     const activeSuppliers = S.suppliers.filter((s) => s.is_active || s.id === inv?.supplier_id);
     view.innerHTML = `
       <form id="inv-form">
-        ${isNew ? '<div class="notice info">سجّلي بيانات الفاتورة كما هي. لا يتحدث المخزون إلا بعد اعتماد الفاتورة من مديرة النظام.</div>' : `<div class="notice warn">هذه الفاتورة مسودة${inv.created_by !== S.profile.id ? ` أدخلتها ${esc(personName(inv.created_by))}` : ''}، ولم تُضف للمخزون بعد.</div>`}
+        ${isNew ? '<div class="notice info">سجّل بيانات الفاتورة كما هي. لا يتحدث المخزون إلا بعد اعتماد الفاتورة من مدير النظام.</div>' : `<div class="notice warn">هذه الفاتورة مسودة${inv.created_by !== S.profile.id ? ` أدخلتها ${esc(personName(inv.created_by))}` : ''}، ولم تُضف للمخزون بعد.</div>`}
         <div class="card">
           <div class="field"><label>المورد</label>
             <div style="display:flex;gap:8px">
-              <select class="input" name="supplier_id" id="inv-sup"><option value="">اختاري المورد</option>
+              <select class="input" name="supplier_id" id="inv-sup"><option value="">اختر المورد</option>
                 ${activeSuppliers.map((s) => `<option value="${s.id}" ${s.id === inv?.supplier_id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select>
               ${isAdmin() ? `<button type="button" class="btn" id="add-sup" title="مورد جديد">${I.plus}</button>` : ''}
             </div></div>
@@ -739,7 +761,7 @@
             <div class="hint">للمطابقة مع مجموع البنود.</div></div>
           <div class="field"><label>صورة الفاتورة</label>
             <input class="input" type="file" id="inv-file" accept="image/*,application/pdf">
-            ${inv?.image_path ? '<div class="hint">توجد صورة محفوظة. اختاري ملفاً جديداً فقط إذا أردتِ استبدالها.</div>' : ''}</div>
+            ${inv?.image_path ? '<div class="hint">توجد صورة محفوظة. اختر ملفاً جديداً فقط عند الحاجة لاستبدالها.</div>' : ''}</div>
           <div class="field" style="margin-bottom:0"><label>ملاحظات</label><textarea class="input" name="notes">${esc(inv?.notes || '')}</textarea></div>
         </div>
 
@@ -766,7 +788,7 @@
       const w = $('#diff-warn');
       if (declared !== '' && Math.abs(Number(declared) - t) > 0.5) {
         w.hidden = false;
-        w.textContent = `يوجد فرق ${money(Math.abs(Number(declared) - t))} بين مجموع البنود وإجمالي الفاتورة. قد يكون بسبب الضريبة أو خصم، تأكدي قبل الاعتماد.`;
+        w.textContent = `يوجد فرق ${money(Math.abs(Number(declared) - t))} بين مجموع البنود وإجمالي الفاتورة. قد يكون بسبب الضريبة أو خصم، تأكد قبل الاعتماد.`;
       } else w.hidden = true;
     };
     const drawLines = () => {
@@ -785,7 +807,7 @@
         const box = $(`[data-picker="${k}"]`, linesEl);
         itemPicker(box, {
           value: l.item_id,
-          placeholder: 'اختاري الصنف…',
+          placeholder: 'اختر الصنف…',
           onPick: (it) => {
             l.item_id = it ? it.id : null;
             const exp = $(`.line[data-k="${k}"] [data-exp]`, linesEl);
@@ -818,12 +840,12 @@
     drawLines();
 
     const validate = () => {
-      if (!state.lines.length) return 'أضيفي بنداً واحداً على الأقل';
+      if (!state.lines.length) return 'أضف بنداً واحداً على الأقل';
       for (const [k, l] of state.lines.entries()) {
-        if (!l.item_id) return `اختاري الصنف في البند ${k + 1}`;
-        if (!(Number(l.qty) > 0)) return `أدخلي كمية صحيحة في البند ${k + 1}`;
-        if (l.unit_cost === '' || !(Number(l.unit_cost) >= 0)) return `أدخلي سعر الوحدة في البند ${k + 1}`;
-        if (itemById(l.item_id)?.track_expiry && !l.expiry_date) return `أدخلي تاريخ الصلاحية في البند ${k + 1}`;
+        if (!l.item_id) return `اختر الصنف في البند ${k + 1}`;
+        if (!(Number(l.qty) > 0)) return `أدخل كمية صحيحة في البند ${k + 1}`;
+        if (l.unit_cost === '' || !(Number(l.unit_cost) >= 0)) return `أدخل سعر الوحدة في البند ${k + 1}`;
+        if (itemById(l.item_id)?.track_expiry && !l.expiry_date) return `أدخل تاريخ الصلاحية في البند ${k + 1}`;
       }
       return null;
     };
@@ -937,7 +959,7 @@
     if (!alive()) return;
     const types = [['all', 'الكل'], ['purchase', 'شراء'], ['issue', 'صرف'], ['damage', 'تالف'], ['expired', 'منتهي']];
     view.innerHTML = `
-      ${!isManager() ? '<div class="notice info">يظهر هنا سجل الحركات التي سجّلتِها أنتِ.</div>' : ''}
+      ${!isManager() ? '<div class="notice info">يظهر هنا سجل الحركات التي سجّلتها أنت.</div>' : ''}
       <div class="chips" id="mv-chips"></div>
       <div class="list" id="mv-list"></div>
       <p class="muted small">يعرض آخر 400 حركة.</p>`;
@@ -1014,20 +1036,62 @@
 
   /* ---------- users (admin) ---------- */
   async function pageUsers(view) {
-    const profs = await q(sb.from('profiles').select('id,full_name,login,role,is_active,created_at').order('created_at'));
+    const profs = await q(sb.from('profiles').select('id,full_name,login,role,is_active,approved_at,created_at').order('created_at'));
     S.profiles = new Map(profs.map((p) => [p.id, p]));
-    view.innerHTML = `
-      <div class="toolbar"><div class="grow muted small" style="flex:1">أضيفي حساب لكل موظفة، وتدخل باسم المستخدم وكلمة المرور.</div>
-        <button class="btn primary" id="user-new">${I.plus} مستخدم جديد</button></div>
-      <div class="list">${profs.map((p) => `
+    const pending = profs.filter((p) => !p.is_active && !p.approved_at);
+    const others = profs.filter((p) => p.is_active || p.approved_at);
+    const userRow = (p) => `
         <button class="row" data-id="${p.id}">
           <span class="avatar">${esc(initial(p.full_name || p.login))}</span>
-          <div class="grow"><div class="title">${esc(p.full_name || '—')}${p.id === S.profile.id ? ' <span class="muted small">(أنتِ)</span>' : ''}</div><div class="meta" dir="ltr" style="text-align:right">${esc(p.login || '')}</div></div>
+          <div class="grow"><div class="title">${esc(p.full_name || '—')}${p.id === S.profile.id ? ' <span class="muted small">(أنت)</span>' : ''}</div><div class="meta" dir="ltr" style="text-align:right">${esc(p.login || '')}</div></div>
           <div class="end"><span class="badge ${p.role === 'admin' ? 'accent' : p.role === 'partner' ? 'gold' : ''}">${ROLE_LABEL[p.role]}</span>
             ${p.is_active ? '' : '<div style="margin-top:4px"><span class="badge danger">موقوف</span></div>'}</div>
-        </button>`).join('')}</div>`;
+        </button>`;
+    view.innerHTML = `
+      ${pending.length ? `
+        <div class="section-title"><h2>طلبات تسجيل بانتظار الاعتماد (${pending.length})</h2></div>
+        <div class="list">${pending.map((p) => `
+          <div class="row">
+            <span class="avatar">${esc(initial(p.full_name || p.login))}</span>
+            <div class="grow"><div class="title">${esc(p.full_name || '—')}</div><div class="meta" dir="ltr" style="text-align:right">${esc(p.login || '')} · ${fmtDate(p.created_at)}</div></div>
+            <button class="btn sm primary" data-approve="${p.id}">اعتماد</button>
+            <button class="btn sm danger" data-reject="${p.id}">رفض</button>
+          </div>`).join('')}</div>` : ''}
+      <div class="section-title"><h2>المستخدمون</h2><button class="btn sm" id="user-new">${I.plus} إضافة مستخدم</button></div>
+      <div class="list">${others.map(userRow).join('') || '<div class="empty">لا يوجد مستخدمون</div>'}</div>
+      <p class="muted small">يسجّل المستخدم من صفحة «إنشاء حساب»، ثم يظهر هنا لاعتماده وتحديد صلاحيته. ويمكن أيضاً إضافة مستخدم مباشرة باسم مستخدم وكلمة مرور.</p>`;
     $('#user-new').onclick = () => userCreateForm(() => route());
-    $$('.list .row', view).forEach((b) => b.addEventListener('click', () => userEditForm(S.profiles.get(b.dataset.id), () => route())));
+    $$('button.row[data-id]', view).forEach((b) => b.addEventListener('click', () => userEditForm(S.profiles.get(b.dataset.id), () => route())));
+    $$('[data-approve]', view).forEach((b) => b.onclick = () => approveUserForm(S.profiles.get(b.dataset.approve), () => route()));
+    $$('[data-reject]', view).forEach((b) => b.onclick = async () => {
+      const p = S.profiles.get(b.dataset.reject);
+      if (!(await confirmBox('رفض الطلب', `رفض طلب «${esc(p.full_name || p.login)}»؟ يبقى الحساب موقوفاً ولا يستطيع الدخول للنظام.`, 'رفض', true))) return;
+      try { await q(sb.rpc('mark_profile_rejected', { p_id: p.id })); toast('تم رفض الطلب'); route(); }
+      catch (err) { toast(errMsg(err), true); }
+    });
+  }
+
+  function approveUserForm(p, after) {
+    modal(`
+      <h3>اعتماد ${esc(p.full_name || p.login)}</h3>
+      <p class="muted" style="margin-top:-8px" dir="ltr">${esc(p.login || '')}</p>
+      <form id="ap-form">
+        <div class="field"><label>الصلاحية</label><select class="input" name="role">${roleOptions('staff')}</select>
+          <div class="hint">الموظف: صرف وإدخال فواتير مسودة بدون رؤية الأسعار. الشريك: يرى كل شيء والتقارير. مدير النظام: كل الصلاحيات.</div></div>
+        <div class="field"><label>الاسم</label><input class="input" name="full_name" value="${esc(p.full_name || '')}" required></div>
+        <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">اعتماد الحساب</button></div>
+      </form>`, (el, close) => {
+      $('#ap-form', el).addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        await busy($('button.primary', el), async () => {
+          try {
+            await q(sb.from('profiles').update({ role: f.get('role'), full_name: f.get('full_name').trim(), is_active: true }).eq('id', p.id));
+            toast('تم اعتماد الحساب'); close(); after && after();
+          } catch (err) { toast(errMsg(err), true); }
+        });
+      });
+    });
   }
 
   async function invokeAdmin(body) {
@@ -1053,7 +1117,7 @@
         <div class="field"><label>اسم المستخدم للدخول</label><input class="input" name="login" dir="ltr" required pattern="[a-zA-Z0-9._\\-]{3,32}" autocapitalize="none" placeholder="noura">
           <div class="hint">حروف إنجليزية وأرقام فقط، بدون مسافات.</div></div>
         <div class="field"><label>كلمة المرور</label><input class="input" name="password" dir="ltr" required minlength="8" autocomplete="new-password">
-          <div class="hint">8 خانات على الأقل. أعطيها للموظفة، وتقدر تغيّرها بعد الدخول.</div></div>
+          <div class="hint">8 خانات على الأقل. يمكن للمستخدم تغييرها بعد الدخول.</div></div>
         <div class="field"><label>الصلاحية</label><select class="input" name="role">${roleOptions('staff')}</select></div>
         <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">إنشاء الحساب</button></div>
       </form>`, (el, close) => {
@@ -1145,7 +1209,7 @@
     $$('[data-cat-edit]', view).forEach((b) => b.onclick = () => categoryForm(S.categories.find((c) => c.id === Number(b.dataset.catEdit))));
     $$('[data-cat-del]', view).forEach((b) => b.onclick = async () => {
       const c = S.categories.find((x) => x.id === Number(b.dataset.catDel));
-      if (S.items.some((i) => i.category_id === c.id)) return toast('لا يمكن حذف فئة فيها أصناف. انقلي الأصناف لفئة أخرى أولاً.', true);
+      if (S.items.some((i) => i.category_id === c.id)) return toast('لا يمكن حذف فئة فيها أصناف. انقل الأصناف لفئة أخرى أولاً.', true);
       if (!(await confirmBox('حذف الفئة', `حذف فئة «${esc(c.name)}»؟`, 'حذف', true))) return;
       try { await q(sb.from('categories').delete().eq('id', c.id)); toast('تم الحذف'); route(); } catch (err) { toast(errMsg(err), true); }
     });

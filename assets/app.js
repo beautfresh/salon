@@ -291,7 +291,7 @@
     $('#app').innerHTML = `
       <div class="shell">
         <aside class="sidebar">
-          <div class="brand"><span class="mark"><img src="book/assets/rosette-1.svg" alt=""></span>${esc(CFG.appName)}</div>
+          <div class="brand"><img class="logo" src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش"><span>لوحة الإدارة</span></div>
           <nav>${navLinks().map((l) => l.sep ? '<div class="sep"></div>' : `<a href="${l.href}" data-nav="${l.key}"><span class="ic">${l.icon}</span>${l.label}</a>`).join('')}</nav>
           <div class="foot">
             <div style="color:#fff;font-weight:600">${esc(p.full_name || p.login)}</div>
@@ -301,7 +301,7 @@
         </aside>
         <div class="main">
           <header class="topbar">
-            <h1 id="page-title"></h1>
+            <div class="tb-title"><img class="tb-logo" src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش"><h1 id="page-title"></h1></div>
             <div class="who"><span class="hide-sm">${esc(p.full_name || p.login)}</span><span class="avatar">${esc(initial(p.full_name || p.login))}</span></div>
           </header>
           <div class="content" id="view"></div>
@@ -428,8 +428,30 @@
     if (!alive()) return;
     const pendingUsers = isAdmin() ? [...S.profiles.values()].filter((p) => !p.is_active && !p.approved_at).length : 0;
     const hello = (S.profile.full_name || '').split(' ')[0];
+    const dayStart = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }) + 'T00:00:00+03:00');
+    let bk = { today: [], pending: 0, next: null };
+    try {
+      const [td, pd, nx] = await Promise.all([
+        q(sb.from('home_bookings').select('id,customer_name,starts_at,status').gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 86400000).toISOString()).neq('status', 'cancelled').order('starts_at')),
+        sb.from('home_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        q(sb.from('home_bookings').select('id,customer_name,starts_at,district_name').gte('starts_at', new Date().toISOString()).in('status', ['pending', 'confirmed']).order('starts_at').limit(1)),
+      ]);
+      bk = { today: td, pending: pd.count || 0, next: nx[0] || null };
+    } catch (_) { /* bookings unavailable */ }
+    if (!alive()) return;
+    const hourNow = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }));
+    const greet = hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
-      <p class="muted" style="margin:0 0 14px">أهلاً ${esc(hello)}، هذا ملخص المخزون اليوم.</p>
+      <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="book/assets/rosette-1.svg" alt=""></div>
+      <a class="bk-card" href="#/bookings${bk.pending ? '?t=pending' : '?t=today'}">
+        <div class="bk-top"><span class="bk-label">الحجوزات المنزلية</span><span class="bk-go">عرض الحجوزات ←</span></div>
+        <div class="bk-nums">
+          <div><b class="num">${bk.today.length}</b><span>حجوزات اليوم</span></div>
+          <div class="${bk.pending ? 'hot' : ''}"><b class="num">${bk.pending}</b><span>بانتظار التأكيد</span></div>
+        </div>
+        <div class="bk-next">${bk.next ? `الموعد الجاي: <b>${esc(bk.next.customer_name)}</b> · ${esc(fmtDateTime(bk.next.starts_at))}${bk.next.district_name ? ' · ' + esc(bk.next.district_name) : ''}` : 'ما فيه مواعيد قادمة'}</div>
+      </a>
+      <div class="section-title"><h2>المخزون</h2></div>
       <div id="push-home"></div>
       ${pendingUsers ? `<a class="notice info" style="display:block" href="#/users">يوجد ${pendingUsers} ${pendingUsers === 1 ? 'طلب تسجيل' : 'طلبات تسجيل'} بانتظار اعتمادك ←</a>` : ''}
       <div class="stats">

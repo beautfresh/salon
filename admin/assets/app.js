@@ -165,10 +165,11 @@
     const signup = mode === 'signup';
     $('#app').innerHTML = `
       <div class="auth">
+        <aside class="auth-brand" aria-hidden="true"><img src="../home/assets/Beautfresh-brown.svg" alt=""><span>The Fresh Version of You</span></aside>
         <form class="auth-card" id="auth-form" autocomplete="on">
-          <img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
+          <img class="auth-logo-sm" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش">
           <h1>${signup ? 'إنشاء حساب' : esc(CFG.appName)}</h1>
-          <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'تسجيل الدخول لإدارة مخزون الصالون'}</p>
+          <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'الحجوزات والمخزون، في مكان واحد.'}</p>
           ${msg ? `<div class="notice ${msg.ok ? 'info' : 'danger'}">${esc(msg.text || msg)}</div>` : ''}
           ${signup ? `<div class="field">
             <label for="full_name">الاسم</label>
@@ -187,6 +188,7 @@
           <p class="small muted" style="text-align:center;margin:16px 0 0">
             ${signup ? 'لديك حساب؟ <a href="#" id="switch-mode">تسجيل الدخول</a>' : 'ليس لديك حساب؟ <a href="#" id="switch-mode">إنشاء حساب</a>'}
           </p>
+          <a class="auth-install" href="install.html">ثبّت التطبيق على جوالك ←</a>
         </form>
       </div>`;
     $('#switch-mode').onclick = (e) => { e.preventDefault(); renderLogin(null, signup ? 'login' : 'signup'); };
@@ -1415,6 +1417,7 @@
       <div id="push-box"></div>
       <div class="list">
         ${links.map((l) => `<a class="row" href="${l.href}"><span class="ic" style="color:var(--accent)">${l.icon}</span><div class="grow title">${l.label}</div></a>`).join('')}
+        <a class="row" href="install.html"><span class="ic" style="color:var(--accent)">${I.home}</span><div class="grow title">ثبّت التطبيق على الجوال</div></a>
         <button class="row" id="m-pw"><span class="ic" style="color:var(--accent)">${I.key}</span><div class="grow title">تغيير كلمة المرور</div></button>
         <button class="row" id="m-out"><span class="ic" style="color:var(--danger)">${I.logout}</span><div class="grow title" style="color:var(--danger)">تسجيل الخروج</div></button>
       </div>`;

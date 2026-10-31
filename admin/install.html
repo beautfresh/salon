@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#E8DFD1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>ثبّت تطبيق بيوتفريش</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="icon" href="../home/assets/rosette-1.svg" type="image/svg+xml">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="بيوتفريش">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #E8DFD1; --paper: #F3EDE4; --soft: #DCCFBD; --oud: #5A2A22; --oud-2: #47211B; --ink: #4A2620; --ink-2: #7A5D51; --line: #D3C3AE; --on: #F3EBDF; --ease: cubic-bezier(.2,.7,.2,1); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { background: var(--bg); color: var(--ink); font-family: "Tajawal", system-ui, sans-serif; font-size: 16px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    a { color: var(--oud); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 28px max(20px, env(safe-area-inset-left)) calc(40px + env(safe-area-inset-bottom)); }
+    .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; }
+    .top img { height: 40px; }
+    .top a { font-size: 14px; text-decoration: none; }
+    h1 { font-size: clamp(32px, 6vw, 48px); font-weight: 300; line-height: 1.2; margin: 0 0 8px; }
+    .lead { color: var(--ink-2); margin: 0 0 22px; max-width: 46ch; }
+    .seg { display: inline-flex; padding: 5px; gap: 4px; background: var(--soft); border-radius: 999px; margin-bottom: 26px; }
+    .seg button { border: 0; background: none; font: inherit; color: var(--ink-2); padding: 9px 22px; border-radius: 999px; cursor: pointer; transition: background .3s, color .3s; }
+    .seg button.on { background: var(--oud); color: var(--on); }
+    .stage { display: grid; grid-template-columns: 320px 1fr; gap: 44px; align-items: center; }
+
+    /* phone */
+    .phone { width: 300px; height: 600px; margin: 0 auto; border-radius: 46px; background: #1d1412; padding: 12px; box-shadow: 0 40px 60px -30px rgba(74, 34, 27, .55); position: relative; }
+    .screen { position: relative; width: 100%; height: 100%; border-radius: 36px; overflow: hidden; background: #FBF8F3; }
+    .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 90px; height: 24px; border-radius: 20px; background: #1d1412; z-index: 9; }
+    .browser { position: absolute; inset: 0; display: flex; flex-direction: column; }
+    .page { flex: 1; background: var(--bg); padding: 46px 18px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .page img { width: 120px; margin-top: 30px; }
+    .page .ln { width: 70%; height: 10px; border-radius: 6px; background: var(--soft); }
+    .page .ln.s { width: 50%; }
+    .bar { height: 74px; background: #F4F1EC; border-top: 1px solid #E2DCD3; display: flex; align-items: center; justify-content: space-around; padding-bottom: 10px; color: #7b7b7b; }
+    .bar svg { width: 24px; height: 24px; }
+    .urlbar { position: absolute; top: 38px; left: 12px; right: 12px; height: 34px; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #555; box-shadow: 0 1px 2px rgba(0,0,0,.08); direction: ltr; gap: 6px; }
+    .android .urlbar { justify-content: space-between; padding: 0 12px; }
+    .dots3 { font-size: 18px; letter-spacing: -2px; color: #555; }
+    .hl { position: relative; }
+    .hl::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 2px solid var(--oud); animation: ping 1.4s var(--ease) infinite; }
+    @keyframes ping { 0% { transform: scale(.7); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+    .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #F2F2F4; border-radius: 22px 22px 0 0; padding: 14px 12px 22px; transform: translateY(105%); transition: transform .6s var(--ease); z-index: 5; box-shadow: 0 -10px 30px rgba(0,0,0,.12); }
+    .sheet.up { transform: none; }
+    .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: #c9c9cc; margin: 0 auto 12px; }
+    .sheet .row { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px 14px; font-size: 14px; color: #222; border-bottom: 1px solid #eee; }
+    .sheet .row:first-of-type { border-radius: 12px 12px 0 0; }
+    .sheet .row:last-of-type { border-radius: 0 0 12px 12px; border-bottom: 0; }
+    .sheet .row.focus { background: #efe4da; color: var(--oud); font-weight: 500; }
+    .menu { position: absolute; top: 76px; right: 10px; width: 200px; background: #fff; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.18); padding: 6px 0; transform-origin: top right; transform: scale(.6); opacity: 0; transition: all .45s var(--ease); z-index: 5; }
+    .menu.up { transform: none; opacity: 1; }
+    .menu div { padding: 10px 14px; font-size: 13px; color: #333; }
+    .menu div.focus { background: #efe4da; color: var(--oud); font-weight: 500; }
+    .dialog { position: absolute; inset: 0; background: rgba(0,0,0,.28); display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .4s; z-index: 6; }
+    .dialog.up { opacity: 1; }
+    .dialog .box { width: 82%; background: #fff; border-radius: 18px; padding: 18px; font-size: 13px; color: #333; transform: translateY(14px); transition: transform .5s var(--ease); }
+    .dialog.up .box { transform: none; }
+    .dialog .box .app { display: flex; gap: 10px; align-items: center; margin: 10px 0 14px; }
+    .dialog .box .app img { width: 42px; border-radius: 10px; }
+    .dialog .box .acts { display: flex; justify-content: flex-start; gap: 10px; }
+    .dialog .box .acts span { padding: 7px 14px; border-radius: 999px; }
+    .dialog .box .acts .go { background: var(--oud); color: var(--on); }
+    .home { position: absolute; inset: 0; background: linear-gradient(160deg, #cbb8a6, #8e6f5f); padding: 60px 22px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 12px; align-content: start; opacity: 0; transition: opacity .6s; z-index: 7; }
+    .home.up { opacity: 1; }
+    .home i { display: block; aspect-ratio: 1; border-radius: 14px; background: rgba(255,255,255,.35); }
+    .home .me { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #fff; font-size: 10px; font-style: normal; }
+    .home .me img { width: 100%; border-radius: 14px; box-shadow: 0 6px 14px rgba(0,0,0,.25); animation: popin .8s var(--ease) .3s both; }
+    @keyframes popin { from { transform: scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    /* steps */
+    .steps { display: grid; gap: 10px; counter-reset: s; }
+    .step { display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; padding: 16px 18px; border-radius: 22px; background: transparent; border: 1px solid transparent; cursor: pointer; transition: background .35s, border-color .35s; text-align: right; font: inherit; color: inherit; width: 100%; }
+    .step .n { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-weight: 500; transition: all .35s; }
+    .step b { display: block; font-weight: 500; font-size: 18px; }
+    .step span { color: var(--ink-2); font-size: 15px; }
+    .step.on { background: var(--paper); border-color: var(--line); }
+    .step.on .n { background: var(--oud); color: var(--on); border-color: var(--oud); }
+    .step.done .n { border-color: var(--oud); color: var(--oud); }
+    .nav { display: flex; gap: 10px; margin-top: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: 999px; border: 1px solid var(--oud); background: var(--oud); color: var(--on); font: inherit; font-weight: 500; cursor: pointer; text-decoration: none; }
+    .btn.ghost { background: transparent; color: var(--oud); }
+    .install { margin-top: 24px; padding: 20px; border-radius: 22px; background: linear-gradient(140deg, var(--oud), var(--oud-2)); color: var(--on); display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .install .btn { background: var(--on); color: var(--oud); border-color: var(--on); }
+    .tip { margin-top: 18px; padding: 14px 16px; border-radius: 18px; background: var(--paper); font-size: 14px; color: var(--ink-2); }
+    .tip b { color: var(--ink); font-weight: 500; }
+    @media (max-width: 760px) {
+      .stage { grid-template-columns: 1fr; gap: 24px; }
+      .phone { width: 250px; height: 500px; border-radius: 40px; }
+      .screen { border-radius: 30px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .hl::after, .home .me img { animation: none; } .sheet, .menu, .dialog, .home { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top"><img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><a href="./">← لوحة الإدارة</a></div>
+    <h1>بيوتفريش على جوالك.</h1>
+    <p class="lead">ثبّتوا لوحة الإدارة كتطبيق على الشاشة الرئيسية، تفتح بضغطة وتوصلك إشعارات الحجوزات أول بأول.</p>
+    <div class="seg" role="tablist"><button id="t-ios" role="tab">آيفون</button><button id="t-and" role="tab">أندرويد</button></div>
+
+    <div class="stage">
+      <div class="phone" aria-hidden="true">
+        <div class="screen" id="screen">
+          <div class="notch"></div>
+          <div class="browser">
+            <div class="urlbar" id="urlbar"></div>
+            <div class="page"><img src="../home/assets/Beautfresh-brown.svg" alt=""><div class="ln"></div><div class="ln s"></div><div class="ln"></div></div>
+            <div class="bar" id="bar"></div>
+          </div>
+          <div class="sheet" id="sheet"><div class="grab"></div><div class="row">نسخ</div><div class="row">إضافة إلى المفضلة</div><div class="row focus">إضافة إلى الشاشة الرئيسية <span>⊕</span></div><div class="row">طباعة</div></div>
+          <div class="menu" id="menu"><div>علامة تبويب جديدة</div><div>السجل</div><div>التنزيلات</div><div class="focus">تثبيت التطبيق</div><div>الإعدادات</div></div>
+          <div class="dialog" id="dialog"><div class="box"><div id="dlg-title">إضافة إلى الشاشة الرئيسية</div><div class="app"><img src="assets/icon-192.png" alt=""><div><b>بيوتفريش</b><div style="color:#888;font-size:11px">beautfresh.com</div></div></div><div class="acts"><span class="go" id="dlg-go">إضافة</span><span>إلغاء</span></div></div></div>
+          <div class="home" id="home"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="me"><img src="assets/icon-192.png" alt="">بيوتفريش</i></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="steps" id="steps"></div>
+        <div class="nav"><button class="btn ghost" id="prev">السابق</button><button class="btn" id="next">التالي</button></div>
+        <div class="install" id="android-install" hidden><div><b>جوالك يدعم التثبيت المباشر</b><div style="font-size:14px;opacity:.85">اضغطوا وينضاف التطبيق للشاشة الرئيسية.</div></div><button class="btn" id="do-install">ثبّت الآن</button></div>
+        <div class="tip" id="tip"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const $ = (s) => document.querySelector(s);
+      const ua = navigator.userAgent;
+      const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      let os = isIOS ? 'ios' : /android/i.test(ua) ? 'and' : 'ios';
+      let i = 0, timer = null, deferred = null;
+      const share = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
+      const ic = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+      const STEPS = {
+        ios: [
+          { t: 'افتحوا الرابط في سفاري', d: 'beautfresh.com/admin من متصفح سفاري تحديدًا، مو من داخل إنستقرام أو واتساب.' },
+          { t: 'اضغطوا زر المشاركة', d: 'المربع اللي فيه سهم لفوق، تحت في شريط سفاري.' },
+          { t: 'اختاروا «إضافة إلى الشاشة الرئيسية»', d: 'انزلوا في القائمة شوي لين تلقونها.' },
+          { t: 'اضغطوا «إضافة»', d: 'فوق على اليسار، وخلّوا الاسم «بيوتفريش».' },
+          { t: 'افتحوه من الشاشة الرئيسية', d: 'من الأيقونة الجديدة، وفعّلوا الإشعارات من الإعدادات داخل التطبيق.' },
+        ],
+        and: [
+          { t: 'افتحوا الرابط في كروم', d: 'beautfresh.com/admin من متصفح Chrome.' },
+          { t: 'اضغطوا النقاط الثلاث', d: 'فوق على اليمين بجانب شريط العنوان.' },
+          { t: 'اختاروا «تثبيت التطبيق»', d: 'أو «إضافة إلى الشاشة الرئيسية» حسب جوالك.' },
+          { t: 'اضغطوا «تثبيت»', d: 'ويطلع التطبيق في الشاشة الرئيسية وقائمة التطبيقات.' },
+          { t: 'افتحوه من الشاشة الرئيسية', d: 'من الأيقونة الجديدة، وفعّلوا الإشعارات من الإعدادات داخل التطبيق.' },
+        ],
+      };
+      const TIPS = {
+        ios: '<b>مهم:</b> إشعارات الآيفون ما تشتغل إلا من التطبيق المثبّت، ويحتاج iOS 16.4 أو أحدث.',
+        and: '<b>ملاحظة:</b> إذا ما لقيتوا «تثبيت التطبيق»، حدّثوا كروم من المتجر وجربوا مرة ثانية.',
+      };
+      function phone() {
+        const s = i;
+        $('#urlbar').innerHTML = os === 'ios' ? '🔒 beautfresh.com' : `<span>🔒 beautfresh.com</span><span class="dots3 ${s === 1 ? 'hl' : ''}">⋮</span>`;
+        $('#bar').innerHTML = os === 'ios'
+          ? [ic('<path d="M15 18l-6-6 6-6"/>'), ic('<path d="M9 18l6-6-6-6"/>'), `<span class="${s === 1 ? 'hl' : ''}">${share}</span>`, ic('<path d="M4 6h16M4 12h16M4 18h16"/>'), ic('<rect x="4" y="4" width="16" height="16" rx="3"/>')].join('')
+          : [ic('<path d="M15 18l-6-6 6-6"/>'), ic('<circle cx="12" cy="12" r="8"/>'), ic('<rect x="5" y="5" width="14" height="14" rx="2"/>')].join('');
+        $('#sheet').classList.toggle('up', os === 'ios' && s === 2);
+        $('#menu').classList.toggle('up', os === 'and' && s === 2);
+        $('#dialog').classList.toggle('up', s === 3);
+        $('#dlg-title').textContent = os === 'ios' ? 'إضافة إلى الشاشة الرئيسية' : 'تثبيت التطبيق؟';
+        $('#dlg-go').textContent = os === 'ios' ? 'إضافة' : 'تثبيت';
+        $('#dlg-go').classList.toggle('hl', s === 3);
+        $('#home').classList.toggle('up', s === 4);
+      }
+      function render() {
+        const list = STEPS[os];
+        $('#t-ios').classList.toggle('on', os === 'ios'); $('#t-and').classList.toggle('on', os === 'and');
+        $('#steps').innerHTML = list.map((x, k) => `<button class="step ${k === i ? 'on' : k < i ? 'done' : ''}" data-k="${k}"><span class="n">${k < i ? '✓' : k + 1}</span><div><b>${x.t}</b><span>${x.d}</span></div></button>`).join('');
+        $('#prev').disabled = i === 0; $('#prev').style.opacity = i === 0 ? .4 : 1;
+        $('#next').textContent = i === list.length - 1 ? 'من البداية' : 'التالي';
+        $('#tip').innerHTML = TIPS[os];
+        $('#android-install').hidden = !(os === 'and' && deferred);
+        phone();
+      }
+      const go = (k) => { i = (k + STEPS[os].length) % STEPS[os].length; render(); restart(); };
+      const restart = () => { clearInterval(timer); if (!matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(() => { i = (i + 1) % STEPS[os].length; render(); }, 3800); };
+      $('#steps').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) go(+b.dataset.k); });
+      $('#next').onclick = () => go(i + 1);
+      $('#prev').onclick = () => go(i - 1);
+      $('#t-ios').onclick = () => { os = 'ios'; i = 0; render(); restart(); };
+      $('#t-and').onclick = () => { os = 'and'; i = 0; render(); restart(); };
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; render(); });
+      $('#do-install').onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; render(); };
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+      render(); restart();
+    })();
+  </script>
+</body>
+</html>

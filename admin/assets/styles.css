@@ -348,3 +348,25 @@ a.stat:hover { transform: translateY(-2px); box-shadow: 0 14px 26px -18px rgba(7
 .modal { animation: modalIn .35s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes modalIn { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .content > *, .modal, .hello img { animation: none; } }
+
+/* ---------- auth v2 ---------- */
+.auth { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0; background: var(--bg); }
+.auth-brand { display: none; }
+.auth-card { margin: auto; width: min(400px, calc(100% - 32px)); border-radius: 28px; padding: 34px 26px 26px; box-shadow: 0 30px 60px -40px rgba(74, 34, 27, .5); animation: viewIn .6s cubic-bezier(.2,.7,.2,1) both; }
+.auth-logo-sm { height: 54px; width: auto; margin: 0 auto 18px; display: block; }
+.auth-card h1 { text-align: center; font-weight: 500; }
+.auth-card p.sub { text-align: center; }
+.auth-install { display: block; text-align: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--accent); font-weight: 500; }
+.auth { min-height: 100vh; min-height: 100dvh; align-content: center; padding: 24px 0;
+  background: radial-gradient(900px 420px at 50% -10%, #DCCFBD 0%, transparent 70%), var(--bg); }
+@media (min-width: 900px) {
+  .auth { grid-template-columns: 1.1fr 1fr; padding: 0; align-content: stretch; }
+  .auth-brand { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; position: relative; overflow: hidden;
+    background: linear-gradient(150deg, #5A2A22 0%, #3F1D17 100%); }
+  .auth-brand::before { content: ""; position: absolute; inset: 0; background: url("../../home/assets/rosette-2.svg") 0 0 / 34px 34px; opacity: .06; filter: brightness(0) invert(1); }
+  .auth-brand img { position: relative; width: min(380px, 60%); filter: brightness(0) invert(94%) sepia(9%) saturate(380%) hue-rotate(335deg); animation: drawIn 1.6s cubic-bezier(.2,.7,.2,1) both; }
+  .auth-brand span { position: relative; font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #D9C6B7; animation: viewIn 1s cubic-bezier(.2,.7,.2,1) .8s both; }
+  .auth-logo-sm { display: none; }
+  .auth-card { box-shadow: none; background: transparent; border: 0; }
+}
+@keyframes drawIn { from { clip-path: inset(0 0 0 100%); opacity: .3; } to { clip-path: inset(0); opacity: 1; } }

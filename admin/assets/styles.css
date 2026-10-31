@@ -525,3 +525,26 @@ button.link { border: 0; background: none; color: var(--accent); font: inherit; 
 .tgt-empty { position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; margin: -6px 0 14px; padding: 8px 14px; border-radius: 999px; border: 1px dashed rgba(243, 235, 223, .4); background: transparent; color: #E6D6C8; font: inherit; font-size: 13px; cursor: pointer; }
 .tgt-empty svg { width: 15px; height: 15px; }
 .cl-stats .lv b { font-size: 14px; line-height: 1.5; }
+/* home pulse */
+.pulse { margin-bottom: 14px; padding: 14px; border-radius: 24px; background: linear-gradient(150deg, #5A2A22 0%, #3F1D17 100%); color: #F3EBDF; position: relative; overflow: hidden; box-shadow: 0 22px 40px -28px rgba(74, 34, 27, .8); }
+.pulse::after { content: ""; position: absolute; inset: 0; background: url("../../home/assets/rosette-2.svg") 0 0 / 30px 30px; opacity: .05; filter: brightness(0) invert(1); pointer-events: none; }
+.lens.sm { margin: 0 0 12px; background: rgba(243, 235, 223, .1); border-color: transparent; position: relative; z-index: 1; }
+.lens.sm a { color: #D9C6B7; padding: 5px 14px; font-size: 13px; }
+.lens.sm a.on { background: #F3EBDF; color: #5A2A22; box-shadow: none; }
+.pulse-body { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: center; color: inherit; text-decoration: none; position: relative; z-index: 1; padding: 0 4px; }
+.pulse-body span { display: block; font-size: 12px; color: #D9C6B7; }
+.pulse-body b { font-size: 24px; font-weight: 600; }
+.pulse-body em { font-style: normal; font-size: 12px; margin-inline-start: 6px; } .pulse-body em.up { color: #CFE3C2; } .pulse-body em.down { color: #F2C3B5; }
+.pulse-ring { --p: 0; width: 88px; height: 88px; border-radius: 50%; display: grid; place-content: center; text-align: center; background: radial-gradient(closest-side, #4A231C 78%, transparent 80%), conic-gradient(#F3EBDF calc(var(--p) * 1%), rgba(243, 235, 223, .15) 0); }
+.pulse-ring b { font-size: 18px !important; } .pulse-ring span { font-size: 9.5px !important; line-height: 1.3; max-width: 64px; }
+.pulse-ring.empty { background: none; border: 1px dashed rgba(243, 235, 223, .35); }
+.pulse-cta { display: block; margin-top: 12px; padding: 9px 14px; border-radius: 14px; background: rgba(243, 235, 223, .1); color: #F3EBDF; font-size: 13px; position: relative; z-index: 1; }
+@media (max-width: 420px) { .pulse-body b { font-size: 20px; } .pulse-ring { width: 76px; height: 76px; } }
+.alerts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.alert { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: transform .25s; animation: viewIn .5s both; }
+.alert:hover { transform: translateY(-2px); }
+.alert b { display: block; font-size: 14.5px; font-weight: 600; } .alert div span { font-size: 12.5px; color: var(--muted); }
+.al-ic { width: 38px; height: 38px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--accent); font-size: 18px; }
+.al-ic svg, .al-ic img { width: 19px; height: 19px; }
+.alert.warn .al-ic { background: var(--warn-soft); color: var(--warn); } .alert.danger .al-ic { background: var(--danger-soft); color: var(--danger); }
+.alert.gold .al-ic { background: var(--gold-soft); } .alert.ok .al-ic { background: var(--ok-soft); }

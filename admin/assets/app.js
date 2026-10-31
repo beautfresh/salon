@@ -456,10 +456,53 @@
       bk = { today: td, pending: pd.count || 0, next: nx[0] || null };
     } catch (_) { /* bookings unavailable */ }
     if (!alive()) return;
+    const tk = todayR();
+    let hl = _p.get('l') || (() => { try { return localStorage.getItem('bf-home-lens'); } catch { return null; } })() || 'd';
+    if (!['d', 'w', 'm'].includes(hl)) hl = 'd';
+    try { localStorage.setItem('bf-home-lens', hl); } catch {}
+    const [hs, he] = lensRange(hl, D(tk));
+    const yday = dk(lensShift('d', D(tk), -1));
+    const [fr, tg, yc, cl, oc, L] = await Promise.all([
+      isManager() ? q(sb.rpc('fin_range', { p_from: dk(hs), p_to: dk(he) })).catch(() => null) : null,
+      isManager() ? q(sb.from('fin_targets').select('revenue').eq('month', monthKey(D(tk))).maybeSingle()).catch(() => null) : null,
+      isManager() ? q(sb.from('fin_daily').select('day').eq('day', yday).maybeSingle()).catch(() => 'x') : 'x',
+      q(sb.from('clients_overview').select('id,name,phone,birthday,segment,stamps,last_visit').limit(3000)).catch(() => []),
+      sb.from('client_feedback').select('id', { count: 'exact', head: true }).eq('kind', 'complaint').eq('status', 'open').then((x) => ({ count: x.count || 0 }), () => ({ count: 0 })),
+      loyalty().catch(() => ({ active: false })),
+    ]);
+    let mrev = null;
+    if (isManager() && tg && hl !== 'm') { const [ms, me] = lensRange('m', D(tk)); const mr = await q(sb.rpc('fin_range', { p_from: dk(ms), p_to: dk(me) })).catch(() => null); mrev = mr?.revenue; }
+    else if (fr && hl === 'm') mrev = fr.revenue;
+    if (!alive()) return;
+    const soon = (c) => { if (!c.birthday) return null; const b = D(c.birthday); const t = D(tk); let n = new Date(t.getFullYear(), b.getMonth(), b.getDate(), 12); if (n < t) n = new Date(t.getFullYear() + 1, b.getMonth(), b.getDate(), 12); const d = Math.round((n - t) / 86400000); return d <= 7 ? d : null; };
+    const bdays = cl.map((c) => [c, soon(c)]).filter((x) => x[1] != null).sort((a, b) => a[1] - b[1]);
+    const ready = L.active ? cl.filter((c) => c.stamps >= L.stamps).length : 0;
+    const away = cl.filter((c) => c.segment === 'away').length;
+    const alerts = [];
+    if (isManager() && yc === null && D(yday).getDay() !== 5) alerts.push(['warn', I.coin, 'أمس ما انقفل', 'سجّلوا مبيعاته عشان تكتمل الأرقام', `#/closing?d=${yday}`]);
+    if (oc.count) alerts.push(['danger', I.heart, `${oc.count === 1 ? 'شكوى مفتوحة' : oc.count + ' شكاوى مفتوحة'}`, 'ردّوا عليها وسجّلوا الحل', '#/feedback?t=open']);
+    bdays.slice(0, 3).forEach(([c, d]) => alerts.push(['gold', '🎂', `ميلاد ${esc(firstName(c.name))} ${d === 0 ? 'اليوم' : d === 1 ? 'بكرة' : d === 2 ? 'بعد يومين' : `بعد ${d} أيام`}`, 'رسالة تهنئة صغيرة تفرق', `#/client/${c.id}`]));
+    if (ready) alerts.push(['ok', `<img src="${ROSETTE}" alt="">`, `${ready === 1 ? 'عميلة وصلت' : ready + ' عميلات وصلوا'} لمكافأة الولاء`, 'بلغوهم عشان يستلمونها', '#/clients?s=reward']);
+    if (away) alerts.push(['', I.heart, `${away} ${away === 1 ? 'عميلة غابت' : away <= 10 ? 'عميلات غابوا' : 'عميلة غابوا'} أكثر من ٤٥ يوم`, 'رسالة «وحشتينا» ممكن ترجّعهم', '#/clients?s=away']);
+    const HL = { d: 'اليوم', w: 'الأسبوع', m: 'الشهر' };
+    const fdelta = fr && fr.prev_revenue > 0 ? Math.round(((fr.revenue - fr.prev_revenue) / fr.prev_revenue) * 100) : null;
+    const tpct = tg && mrev != null ? Math.min(100, (mrev / Number(tg.revenue)) * 100) : null;
+    const pulse = !fr ? '' : `<div class="pulse">
+        <div class="lens sm">${Object.entries(HL).map(([k, l]) => `<a href="#/home?l=${k}" class="${k === hl ? 'on' : ''}">${l}</a>`).join('')}</div>
+        <a class="pulse-body" href="#/finance?l=${hl}&at=${tk}">
+          <div><span>مبيعات ${HL[hl] === 'اليوم' ? 'اليوم' : 'هذا ' + HL[hl]}</span><b class="num">${sar(fr.revenue)}</b>${fdelta != null ? `<em class="${fdelta >= 0 ? 'up' : 'down'}">${fdelta >= 0 ? '▲' : '▼'} ${Math.abs(fdelta)}٪</em>` : ''}</div>
+          <div><span>صافي الربح</span><b class="num">${sar(fr.net)}</b></div>
+          ${tpct != null ? `<div class="pulse-ring" style="--p:${tpct}"><b class="num">${Math.round(tpct)}٪</b><span>من هدف الشهر</span></div>` : `<div class="pulse-ring empty"><span>حطّوا هدف للشهر</span></div>`}
+        </a>
+        ${hl === 'd' && !fr.closed_days && D(tk).getDay() !== 5 ? `<a class="pulse-cta" href="#/closing">آخر الدوام لا تنسون إقفال اليوم ←</a>` : ''}
+      </div>`;
+    const alertsHtml = alerts.length ? `<div class="section-title"><h2>يحتاج انتباهك</h2></div><div class="alerts">${alerts.map(([c, ic, t, sub, h]) => `<a class="alert ${c}" href="${h}"><span class="al-ic">${ic}</span><div><b>${t}</b><span>${sub}</span></div></a>`).join('')}</div>` : '';
     const hourNow = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }));
     const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
+      ${pulse}
+      ${alertsHtml}
       <a class="bk-card" href="#/bookings${bk.pending ? '?t=pending' : '?t=today'}">
         <div class="bk-top"><span class="bk-label">الحجوزات المنزلية</span><span class="bk-go">عرض الحجوزات ←</span></div>
         <div class="bk-nums">

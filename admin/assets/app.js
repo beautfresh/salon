@@ -278,6 +278,7 @@
       { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
     ];
     L.push({ href: '#/clients', label: 'العميلات', icon: I.heart, key: 'clients' });
+    L.push({ href: '#/team', label: 'الفريق', icon: I.users, key: 'team' });
     L.push({ href: '#/marketing', label: 'التسويق', icon: I.mega, key: 'marketing' });
     if (isManager()) L.push({ href: '#/finance', label: 'المالية', icon: I.coin, key: 'finance' });
     L.push(
@@ -352,6 +353,8 @@
     clients: { title: 'العميلات', nav: 'clients', fn: pageClients },
     client: { title: 'ملف العميلة', nav: 'clients', fn: pageClient },
     feedback: { title: 'الآراء والملاحظات', nav: 'clients', fn: pageFeedback },
+    team: { title: 'الفريق', nav: 'team', fn: pageTeam },
+    member: { title: 'ملف الموظفة', nav: 'team', fn: pageMember },
     marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
@@ -473,6 +476,11 @@
       sb.from('client_feedback').select('id', { count: 'exact', head: true }).eq('kind', 'complaint').eq('status', 'open').then((x) => ({ count: x.count || 0 }), () => ({ count: 0 })),
       loyalty().catch(() => ({ active: false })),
     ]);
+    const [tpv, tms, tlv] = isManager() ? await Promise.all([
+      q(sb.from('team_private').select('*')).catch(() => []),
+      q(sb.from('team_members').select('id,name,active')).catch(() => []),
+      sb.from('team_leaves').select('id', { count: 'exact', head: true }).eq('status', 'pending').then((x) => x.count || 0, () => 0),
+    ]) : [[], [], 0];
     let mrev = null;
     if (isManager() && tg && hl !== 'm') { const [ms, me] = lensRange('m', D(tk)); const mr = await q(sb.rpc('fin_range', { p_from: dk(ms), p_to: dk(me) })).catch(() => null); mrev = mr?.revenue; }
     else if (fr && hl === 'm') mrev = fr.revenue;
@@ -483,6 +491,8 @@
     const away = cl.filter((c) => c.segment === 'away').length;
     const alerts = [];
     if (isManager() && yc === null && D(yday).getDay() !== 5) alerts.push(['warn', I.coin, 'أمس ما انقفل', 'سجّلوا مبيعاته عشان تكتمل الأرقام', `#/closing?d=${yday}`]);
+    if (tlv) alerts.push(['warn', I.users, tlv === 1 ? 'طلب إجازة بانتظار اعتمادك' : `${tlv} طلبات إجازة بانتظار اعتمادك`, 'اعتمدوها أو ردّوا عليها', '#/team?t=leaves']);
+    tpv.forEach((p) => { const m = tms.find((x) => x.id === p.member_id && x.active); if (!m) return; docState(p).forEach((d) => alerts.push([d.cls, I.key, docTxt(d), esc(m.name), `#/member/${m.id}`])); });
     if (oc.count) alerts.push(['danger', I.heart, `${oc.count === 1 ? 'شكوى مفتوحة' : oc.count + ' شكاوى مفتوحة'}`, 'ردّوا عليها وسجّلوا الحل', '#/feedback?t=open']);
     bdays.slice(0, 3).forEach(([c, d]) => alerts.push(['gold', '🎂', `ميلاد ${esc(firstName(c.name))} ${d === 0 ? 'اليوم' : d === 1 ? 'بكرة' : d === 2 ? 'بعد يومين' : `بعد ${d} أيام`}`, 'رسالة تهنئة صغيرة تفرق', `#/client/${c.id}`]));
     if (ready) alerts.push(['ok', `<img src="${ROSETTE}" alt="">`, `${ready === 1 ? 'عميلة وصلت' : ready + ' عميلات وصلوا'} لمكافأة الولاء`, 'بلغوهم عشان يستلمونها', '#/clients?s=reward']);
@@ -2288,6 +2298,276 @@
         try { if (!isNew) await q(sb.from('mkt_posts').update(row).eq('id', p.id)); else await q(sb.from('mkt_posts').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
       });
       $('#p-del', el)?.addEventListener('click', async () => { try { await q(sb.from('mkt_posts').delete().eq('id', p.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+    });
+  }
+
+  /* ======================= team ======================= */
+  const TROLE = { nails: 'أخصائية أظافر', hair: 'أخصائية شعر', makeup: 'خبيرة مكياج', lashes: 'رموش وحواجب', reception: 'استقبال', manager: 'مديرة الصالون', cleaner: 'خدمات ونظافة', other: 'أخرى' };
+  const LKIND = { annual: 'سنوية', sick: 'مرضية', emergency: 'اضطرارية', unpaid: 'بدون راتب', other: 'أخرى' };
+  const LST = { pending: ['بانتظار الاعتماد', 'warn'], approved: ['معتمدة', 'ok'], rejected: ['مرفوضة', 'danger'] };
+  const DOCS = [['iqama_expiry', 'الإقامة'], ['health_card_expiry', 'الشهادة الصحية'], ['passport_expiry', 'الجواز'], ['contract_end', 'العقد']];
+  const TCOLORS = ['#5A2A22', '#B88A68', '#8E6A3A', '#7A5D51', '#C77B5A', '#4A2620', '#A0705A', '#6B4A3A'];
+  const WEEK = [6, 0, 1, 2, 3, 4, 5];
+  const hm = (t) => (t ? t.slice(0, 5) : '');
+  const h12 = (t) => { if (!t) return ''; const [h, m] = t.split(':').map(Number); const hh = h % 12 || 12; return `${hh}${m ? ':' + String(m).padStart(2, '0') : ''}${h < 12 ? 'ص' : 'م'}`; };
+  const mins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const onLeave = (leaves, mid, day) => leaves.find((l) => l.member_id === mid && l.status === 'approved' && l.from_day <= day && l.to_day >= day);
+  function docState(p) {
+    if (!p) return [];
+    return DOCS.map(([k, l]) => { if (!p[k]) return null; const u = until(p[k]); return u <= 45 ? { k, l, u, cls: u < 0 ? 'danger' : u <= 14 ? 'danger' : 'warn' } : null; }).filter(Boolean);
+  }
+  const docTxt = (d) => (d.u < 0 ? `${d.l} منتهية` : d.u === 0 ? `${d.l} تنتهي اليوم` : `${d.l} بعد ${daysTxt(d.u)}`);
+
+  async function teamData() {
+    const [members, shifts, leaves, priv] = await Promise.all([
+      q(sb.from('team_members').select('*').order('active', { ascending: false }).order('name')),
+      q(sb.from('team_shifts').select('*')),
+      q(sb.from('team_leaves').select('*').order('from_day', { ascending: false }).limit(300)),
+      isManager() ? q(sb.from('team_private').select('*')) : [],
+    ]);
+    return { members, shifts, leaves, priv: new Map(priv.map((p) => [p.member_id, p])) };
+  }
+
+  async function pageTeam(view, _a, params, alive) {
+    const tab = params.get('t') || 'today';
+    const T = await teamData();
+    if (!alive()) return;
+    const tabs = [['today', 'اليوم'], ['shifts', 'المناوبات'], ['leaves', 'الإجازات'], ...(isManager() ? [['pay', 'الرواتب']] : [])];
+    const pend = T.leaves.filter((l) => l.status === 'pending').length;
+    const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/team?t=${k}" class="${k === tab ? 'on' : ''}">${l}${k === 'leaves' && pend && isManager() ? ` <i class="dotn">${pend}</i>` : ''}</a>`).join('')}</div>`;
+    if (tab === 'shifts') return teamShifts(view, T, head);
+    if (tab === 'leaves') return teamLeaves(view, T, head);
+    if (tab === 'pay' && isManager()) return teamPay(view, T, head, params, alive);
+    const tk = todayR(), wd = D(tk).getDay();
+    const act = T.members.filter((m) => m.active);
+    const today = act.map((m) => ({ m, s: T.shifts.find((s) => s.member_id === m.id && s.weekday === wd), l: onLeave(T.leaves, m.id, tk) }));
+    const working = today.filter((x) => x.s && !x.l);
+    const nowM = (() => { const t = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hour12: false }); return mins(t); })();
+    const H0 = Math.min(10 * 60, ...working.map((x) => mins(x.s.starts))), H1 = Math.max(22 * 60, ...working.map((x) => { const e = mins(x.s.ends); return e <= mins(x.s.starts) ? e + 1440 : e; }));
+    const pos = (v) => ((v - H0) / (H1 - H0)) * 100;
+    const hours = []; for (let h = Math.ceil(H0 / 60); h <= Math.floor(H1 / 60); h += 2) hours.push(h);
+    const docsAll = isManager() ? act.flatMap((m) => docState(T.priv.get(m.id)).map((d) => ({ m, d }))) : [];
+    view.innerHTML = `${head}
+      <div class="today-card">
+        <div class="tc-top"><div><span>اليوم في بيوتفريش</span><b>${WDAYS[wd]} ${D(tk).getDate()} ${MONTHS_AR[D(tk).getMonth()]}</b></div><div class="tc-n"><b class="num">${working.length}</b><span>على رأس العمل</span></div></div>
+        ${working.length ? `<div class="gantt">
+          <div class="g-hours">${hours.map((h) => `<span style="inset-inline-start:${pos(h * 60)}%">${h12(String(h % 24).padStart(2, '0') + ':00')}</span>`).join('')}</div>
+          ${working.map(({ m, s }) => { const a = mins(s.starts); let b = mins(s.ends); if (b <= a) b += 1440; const on = nowM >= a && nowM < b; return `<a class="g-row" href="#/member/${m.id}"><span class="g-name">${esc(firstName(m.name))}</span><div class="g-track"><i class="${on ? 'on' : ''}" style="inset-inline-start:${pos(a)}%;width:${pos(b) - pos(a)}%;--c:${m.color}">${h12(s.starts)}–${h12(s.ends)}</i></div></a>`; }).join('')}
+          ${nowM >= H0 && nowM <= H1 ? `<div class="g-now" style="inset-inline-start:calc(72px + (100% - 72px) * ${pos(nowM) / 100})"></div>` : ''}
+        </div>` : '<p class="tc-empty">ما فيه مناوبات مسجلة لليوم. رتّبوها من «المناوبات».</p>'}
+        ${today.filter((x) => x.l).length ? `<div class="tc-off">إجازة اليوم: ${today.filter((x) => x.l).map((x) => esc(firstName(x.m.name))).join('، ')}</div>` : ''}
+      </div>
+      ${docsAll.length ? `<div class="section-title"><h2>وثائق تحتاج تجديد</h2></div><div class="alerts">${docsAll.map(({ m, d }) => `<a class="alert ${d.cls}" href="#/member/${m.id}"><span class="al-ic">${I.key}</span><div><b>${docTxt(d)}</b><span>${esc(m.name)}</span></div></a>`).join('')}</div>` : ''}
+      <div class="section-title"><h2>الفريق</h2>${isManager() ? `<button class="btn sm" id="tm-new">${I.plus} موظفة</button>` : ''}</div>
+      <div class="team-grid">${T.members.length ? T.members.map((m) => { const x = today.find((t) => t.m.id === m.id); const ds = isManager() ? docState(T.priv.get(m.id)) : []; return `
+        <a class="tm-card ${m.active ? '' : 'off'}" href="#/member/${m.id}" style="--c:${m.color}">
+          <span class="tm-av">${esc(initial(m.name))}</span>
+          <b>${esc(m.name)}</b><span class="tm-role">${TROLE[m.role_title]}</span>
+          <span class="tm-today">${!m.active ? 'موقوفة' : x?.l ? 'إجازة اليوم' : x?.s ? `اليوم ${h12(x.s.starts)}–${h12(x.s.ends)}` : 'ما عندها دوام اليوم'}</span>
+          ${ds.length ? `<span class="tm-doc ${ds[0].cls}">${docTxt(ds[0])}</span>` : ''}
+        </a>`; }).join('') : `<div class="empty" style="grid-column:1/-1">${isManager() ? 'أضيفوا الفريق عشان تبدأ المناوبات والإجازات.' : 'ما فيه فريق مسجل'}</div>`}</div>`;
+    $('#tm-new')?.addEventListener('click', () => memberForm(null, null, (id) => { location.hash = `#/member/${id}`; }));
+  }
+
+  function teamShifts(view, T, head) {
+    const act = T.members.filter((m) => m.active);
+    const tk = todayR(), wd = D(tk).getDay();
+    const hrs = (m) => T.shifts.filter((s) => s.member_id === m.id).reduce((a, s) => { let d = mins(s.ends) - mins(s.starts); if (d <= 0) d += 1440; return a + d; }, 0) / 60;
+    view.innerHTML = `${head}
+      <div class="shift-wrap"><table class="shift">
+        <thead><tr><th></th>${WEEK.map((d) => `<th class="${d === wd ? 'today' : ''}">${['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'][d]}</th>`).join('')}<th>ساعات</th></tr></thead>
+        <tbody>${act.map((m) => `<tr><th><span class="sw-dot" style="background:${m.color}"></span>${esc(firstName(m.name))}</th>${WEEK.map((d) => { const s = T.shifts.find((x) => x.member_id === m.id && x.weekday === d); return `<td><button class="sc ${s ? 'has' : ''}" ${isManager() ? '' : 'disabled'} data-m="${m.id}" data-d="${d}" style="--c:${m.color}">${s ? `${h12(s.starts)}<br>${h12(s.ends)}` : '—'}</button></td>`; }).join('')}<td class="num hrs">${hrs(m) ? Math.round(hrs(m)) : '—'}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">أضيفوا الفريق أول</td></tr>'}
+        <tr class="cover"><th>العدد</th>${WEEK.map((d) => { const n = act.filter((m) => T.shifts.some((x) => x.member_id === m.id && x.weekday === d)).length; return `<td><span class="${n === 0 ? 'zero' : ''}">${n}</span></td>`; }).join('')}<td></td></tr></tbody>
+      </table></div>
+      ${isManager() ? '<p class="muted small mt">اضغطوا على أي خانة عشان تحددون الدوام. المناوبة تتكرر كل أسبوع، والإجازات المعتمدة تنخصم منها تلقائيًا.</p>' : ''}`;
+    $$('.sc[data-m]', view).forEach((b) => b.addEventListener('click', () => {
+      const m = T.members.find((x) => x.id === Number(b.dataset.m)); const d = Number(b.dataset.d);
+      const s = T.shifts.find((x) => x.member_id === m.id && x.weekday === d);
+      const last = T.shifts.find((x) => x.member_id === m.id);
+      modal(`
+        <h3>${esc(firstName(m.name))} · ${WDAYS[d]}</h3>
+        <div class="chips wrap" style="margin-bottom:12px">${[['10:00', '18:00', 'صباحي'], ['14:00', '22:00', 'مسائي'], ['12:00', '22:00', 'كامل']].map(([a, z, l]) => `<button type="button" class="chip" data-a="${a}" data-z="${z}">${l} ${h12(a)}–${h12(z)}</button>`).join('')}</div>
+        <div class="grid2"><div class="field"><label>من</label><input class="input" type="time" id="h-a" value="${hm(s?.starts || last?.starts || '14:00')}"></div><div class="field"><label>إلى</label><input class="input" type="time" id="h-z" value="${hm(s?.ends || last?.ends || '22:00')}"></div></div>
+        <label class="check" style="margin-bottom:12px"><input type="checkbox" id="h-all"> طبّق نفس الوقت على كل أيام دوامها</label>
+        <div class="actions end">${s ? '<button class="btn danger" id="h-off">إجازة أسبوعية</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="h-save">حفظ</button></div>`, (el, close) => {
+        $$('[data-a]', el).forEach((c) => c.onclick = () => { $('#h-a', el).value = c.dataset.a; $('#h-z', el).value = c.dataset.z; });
+        $('#h-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+          const a = $('#h-a', el).value, z = $('#h-z', el).value; if (!a || !z || a === z) return toast('حددوا الوقت', true);
+          const days = $('#h-all', el).checked ? [...new Set([d, ...T.shifts.filter((x) => x.member_id === m.id).map((x) => x.weekday)])] : [d];
+          try { await q(sb.from('team_shifts').upsert(days.map((w) => ({ member_id: m.id, weekday: w, starts: a, ends: z })), { onConflict: 'member_id,weekday' })); close(); route(); } catch (err) { toast(errMsg(err), true); }
+        });
+        $('#h-off', el)?.addEventListener('click', (e) => busy(e.currentTarget, async () => { try { await q(sb.from('team_shifts').delete().eq('id', s.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } }));
+      });
+    }));
+  }
+
+  function teamLeaves(view, T, head) {
+    const name = (id) => T.members.find((m) => m.id === id)?.name || '—';
+    const days = (l) => Math.round((D(l.to_day) - D(l.from_day)) / 86400000) + 1;
+    const tk = todayR();
+    const groups = [['pending', T.leaves.filter((l) => l.status === 'pending')], ['now', T.leaves.filter((l) => l.status === 'approved' && l.to_day >= tk)], ['past', T.leaves.filter((l) => l.status !== 'pending' && !(l.status === 'approved' && l.to_day >= tk)).slice(0, 40)]];
+    const GT = { pending: 'بانتظار الاعتماد', now: 'الحالية والقادمة', past: 'السابقة' };
+    view.innerHTML = `${head}
+      <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="lv-new">${I.plus} طلب إجازة</button></div>
+      ${groups.map(([k, ls]) => ls.length ? `<div class="section-title"><h2>${GT[k]}</h2></div><div class="list">${ls.map((l) => {
+        const m = T.members.find((x) => x.id === l.member_id);
+        return `<div class="row"><span class="cav" style="background:${m?.color || '#5A2A22'};color:#F3EBDF">${esc(initial(name(l.member_id)))}</span>
+          <div class="grow"><div class="title">${esc(name(l.member_id))} <span class="muted small">· ${LKIND[l.kind]}</span></div><div class="meta">${dShort(l.from_day)}${l.to_day !== l.from_day ? ` – ${dShort(l.to_day)}` : ''} · ${daysTxt(days(l))}${l.note ? ' · ' + esc(l.note) : ''}</div></div>
+          <div class="end">${l.status === 'pending' && isManager() ? `<button class="btn sm primary" data-ok="${l.id}">اعتماد</button> <button class="btn sm" data-no="${l.id}">رفض</button>` : `<span class="badge ${LST[l.status][1]}">${LST[l.status][0]}</span>`}</div></div>`;
+      }).join('')}</div>` : '').join('') || '<div class="list"><div class="empty">ما فيه إجازات</div></div>'}`;
+    $('#lv-new').onclick = () => leaveForm(T);
+    const decide = (id, status) => busy(null, async () => { try { await q(sb.from('team_leaves').update({ status, decided_by: S.profile.id }).eq('id', id)); toast(status === 'approved' ? 'تم الاعتماد' : 'تم الرفض'); route(); } catch (err) { toast(errMsg(err), true); } });
+    $$('[data-ok]', view).forEach((b) => b.onclick = () => decide(Number(b.dataset.ok), 'approved'));
+    $$('[data-no]', view).forEach((b) => b.onclick = () => decide(Number(b.dataset.no), 'rejected'));
+  }
+
+  function leaveForm(T, memberId) {
+    const mine = T.members.find((m) => m.profile_id === S.profile.id);
+    const sel = memberId || mine?.id || '';
+    let kind = 'annual';
+    modal(`
+      <h3>طلب إجازة</h3>
+      <div class="field"><label>الموظفة</label><select class="input" id="l-m" ${!isManager() && mine ? 'disabled' : ''}>${T.members.filter((m) => m.active).map((m) => `<option value="${m.id}" ${m.id === sel ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>النوع</label><div class="chips wrap" id="l-k">${Object.entries(LKIND).map(([k, l]) => `<button type="button" class="chip ${k === kind ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>من</label><input class="input" type="date" id="l-a" value="${todayR()}"></div><div class="field"><label>إلى</label><input class="input" type="date" id="l-z" value="${todayR()}"></div></div>
+      <div class="field"><label>ملاحظة</label><input class="input" id="l-n" maxlength="300"></div>
+      ${isManager() ? '<label class="check" style="margin-bottom:12px"><input type="checkbox" id="l-ok" checked> اعتمدها مباشرة</label>' : ''}
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="l-save">إرسال</button></div>`, (el, close) => {
+      $$('#l-k .chip', el).forEach((b) => b.onclick = () => { kind = b.dataset.k; $$('#l-k .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $('#l-a', el).onchange = () => { if ($('#l-z', el).value < $('#l-a', el).value) $('#l-z', el).value = $('#l-a', el).value; };
+      $('#l-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { member_id: Number($('#l-m', el).value), kind, from_day: $('#l-a', el).value, to_day: $('#l-z', el).value, note: $('#l-n', el).value.trim() || null };
+        if (!row.member_id) return toast('اختاروا الموظفة', true);
+        if (row.to_day < row.from_day) return toast('تاريخ النهاية قبل البداية', true);
+        try {
+          const ins = await q(sb.from('team_leaves').insert(row).select('id').single());
+          if ($('#l-ok', el)?.checked) await q(sb.from('team_leaves').update({ status: 'approved', decided_by: S.profile.id }).eq('id', ins.id));
+          toast(isManager() ? 'تم الحفظ' : 'انرسل الطلب للإدارة'); close(); route();
+        } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  async function teamPay(view, T, head, params, alive) {
+    const m0 = params.get('m') ? D(params.get('m')) : D(monthKey(D(todayR())));
+    const mk = monthKey(m0);
+    const sales = await q(sb.from('team_sales').select('*').eq('month', mk));
+    if (!alive()) return;
+    const act = T.members.filter((m) => m.active);
+    const row = (m) => { const p = T.priv.get(m.id) || {}; const s = sales.find((x) => x.member_id === m.id) || {}; const sal = Number(p.salary || 0), pct = Number(p.commission_pct || 0), sv = Number(s.sales || 0), bn = Number(s.bonus || 0); return { m, sal, pct, sv, bn, com: (sv * pct) / 100 }; };
+    const rows = act.map(row);
+    const tot = rows.reduce((a, r) => ({ sal: a.sal + r.sal, com: a.com + r.com, bn: a.bn + r.bn, sv: a.sv + r.sv }), { sal: 0, com: 0, bn: 0, sv: 0 });
+    const prev = monthKey(new Date(m0.getFullYear(), m0.getMonth() - 1, 1, 12)), next = monthKey(new Date(m0.getFullYear(), m0.getMonth() + 1, 1, 12));
+    view.innerHTML = `${head}
+      <div class="fin-head"><a class="icon-btn" href="#/team?t=pay&m=${prev}">›</a><h2>${MONTHS_AR[m0.getMonth()]} ${m0.getFullYear()}</h2><a class="icon-btn" href="#/team?t=pay&m=${next}">‹</a></div>
+      <div class="seg-tiles">
+        <div class="seg-tile"><b class="num">${sar(tot.sal)}</b><span>الرواتب</span></div>
+        <div class="seg-tile gold"><b class="num">${sar(tot.com + tot.bn)}</b><span>العمولات والمكافآت</span></div>
+        <div class="seg-tile ok"><b class="num">${sar(tot.sv)}</b><span>مبيعات الفريق</span></div>
+        <div class="seg-tile on"><b class="num">${sar(tot.sal + tot.com + tot.bn)}</b><span>الإجمالي</span></div>
+      </div>
+      <div class="pay-list">${rows.map((r) => `
+        <div class="pay" data-m="${r.m.id}" style="--c:${r.m.color}">
+          <div class="pay-h"><span class="tm-av sm">${esc(initial(r.m.name))}</span><div class="grow"><b>${esc(r.m.name)}</b><span>${TROLE[r.m.role_title]} · راتب ${sar(r.sal)} · عمولة ${r.pct}٪</span></div><b class="num pay-t">${sar(r.sal + r.com + r.bn)}</b></div>
+          <div class="pay-in"><label class="mfield"><span>مبيعاتها هالشهر</span><input class="input num" type="number" min="0" data-k="sales" value="${r.sv || ''}" placeholder="0"></label>
+            <label class="mfield"><span>مكافأة</span><input class="input num" type="number" min="0" data-k="bonus" value="${r.bn || ''}" placeholder="0"></label>
+            <div class="mfield"><span>العمولة</span><b class="num pay-c">${sar(r.com)}</b></div></div>
+        </div>`).join('') || '<div class="list"><div class="empty">أضيفوا الفريق وحددوا رواتبهم من ملف كل موظفة.</div></div>'}</div>
+      ${rows.length ? `<div class="actions mt"><button class="btn" id="pay-exp">سجّلها في مصروفات ${MONTHS_AR[m0.getMonth()]}</button></div><p class="muted small">تنضاف سطرين للمصروفات: الرواتب، والعمولات والمكافآت. الأفضل تسجلونها مرة وحدة آخر الشهر.</p>` : ''}`;
+    $$('.pay', view).forEach((card) => {
+      const mid = Number(card.dataset.m); let t;
+      card.addEventListener('input', () => {
+        const r = rows.find((x) => x.m.id === mid); const sv = Number($('[data-k=sales]', card).value) || 0, bn = Number($('[data-k=bonus]', card).value) || 0;
+        $('.pay-c', card).textContent = sar((sv * r.pct) / 100); $('.pay-t', card).textContent = sar(r.sal + (sv * r.pct) / 100 + bn);
+        clearTimeout(t); t = setTimeout(async () => { try { await q(sb.from('team_sales').upsert({ member_id: mid, month: mk, sales: sv, bonus: bn })); } catch (err) { toast(errMsg(err), true); } }, 600);
+      });
+    });
+    $('#pay-exp')?.addEventListener('click', async (e) => {
+      const fresh = await q(sb.from('team_sales').select('*').eq('month', mk));
+      const com = act.reduce((a, m) => { const p = T.priv.get(m.id) || {}; const s = fresh.find((x) => x.member_id === m.id) || {}; return a + (Number(s.sales || 0) * Number(p.commission_pct || 0)) / 100 + Number(s.bonus || 0); }, 0);
+      if (!(await confirmBox('تسجيل في المصروفات', `رواتب ${sar(tot.sal)} ر.س، وعمولات ومكافآت ${sar(com)} ر.س.`, 'سجّل'))) return;
+      const day = dk(new Date(m0.getFullYear(), m0.getMonth() + 1, 0, 12));
+      const ins = [tot.sal > 0 && { day, category: 'salaries', amount: tot.sal, note: `رواتب ${MONTHS_AR[m0.getMonth()]}` }, com > 0 && { day, category: 'commissions', amount: Math.round(com * 100) / 100, note: `عمولات ومكافآت ${MONTHS_AR[m0.getMonth()]}` }].filter(Boolean);
+      busy(e.target, async () => { try { if (ins.length) await q(sb.from('fin_expenses').insert(ins)); toast('انضافت للمصروفات'); } catch (err) { toast(errMsg(err), true); } });
+    });
+  }
+
+  async function pageMember(view, args, _p, alive) {
+    const id = Number(args[0]);
+    const T = await teamData();
+    if (!alive()) return;
+    const m = T.members.find((x) => x.id === id);
+    if (!m) { view.innerHTML = '<div class="notice danger">ما لقينا الموظفة</div>'; return; }
+    setTitle(m.name);
+    const p = T.priv.get(id);
+    const tk = todayR();
+    const ls = T.leaves.filter((l) => l.member_id === id);
+    const usedYear = ls.filter((l) => l.status === 'approved' && l.kind === 'annual' && l.from_day.slice(0, 4) === tk.slice(0, 4)).reduce((a, l) => a + Math.round((D(l.to_day) - D(l.from_day)) / 86400000) + 1, 0);
+    const tenure = m.start_date ? Math.floor((D(tk) - D(m.start_date)) / (86400000 * 30.44)) : null;
+    const prof = m.profile_id ? S.profiles.get(m.profile_id) : null;
+    view.innerHTML = `
+      <div class="cl-hero" style="--c:${m.color}">
+        <span class="tm-av big">${esc(initial(m.name))}</span>
+        <div class="grow"><h2>${esc(m.name)}</h2><div class="cl-sub"><span>${TROLE[m.role_title]}</span>${m.phone ? `<span class="num" dir="ltr">${esc(m.phone)}</span>` : ''}${!m.active ? '<span class="badge">موقوفة</span>' : ''}${prof ? `<span class="badge accent">لها حساب في النظام</span>` : ''}</div></div>
+        <div class="cl-acts">${m.phone ? `<a class="icon-btn" href="https://wa.me/${waNum(m.phone)}" target="_blank" rel="noopener">${I.wa}</a>` : ''}${isManager() ? `<button class="icon-btn" id="m-edit">${I.edit}</button>` : ''}</div>
+      </div>
+      <div class="cl-stats">
+        <div><b class="num">${tenure != null ? (tenure >= 12 ? `${Math.floor(tenure / 12)}س ${tenure % 12}ش` : `${tenure} ش`) : '—'}</b><span>معنا من</span></div>
+        <div><b class="num">${T.shifts.filter((s) => s.member_id === id).length}</b><span>أيام دوام</span></div>
+        <div><b class="num">${usedYear}</b><span>إجازة سنوية هالسنة</span></div>
+        <div><b class="num">${ls.filter((l) => l.status === 'pending').length}</b><span>طلب معلق</span></div>
+      </div>
+      <div class="section-title"><h2>دوامها الأسبوعي</h2></div>
+      <div class="week7">${WEEK.map((d) => { const s = T.shifts.find((x) => x.member_id === id && x.weekday === d); return `<div class="${s ? 'on' : ''} ${d === D(tk).getDay() ? 'today' : ''}"><span>${['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'][d]}</span><b>${s ? `${h12(s.starts)}<br>${h12(s.ends)}` : 'إجازة'}</b></div>`; }).join('')}</div>
+      ${m.skills ? `<div class="section-title"><h2>تتقن</h2></div><div class="chips wrap">${m.skills.split(/[،,]/).map((x) => x.trim()).filter(Boolean).map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}
+      ${isManager() ? `<div class="section-title"><h2>الوثائق والعقد</h2></div>
+        <div class="docs">${DOCS.map(([k, l]) => { const v = p?.[k]; const u = v ? until(v) : null; const cls = u == null ? 'none' : u < 0 ? 'danger' : u <= 14 ? 'danger' : u <= 45 ? 'warn' : 'ok'; return `<div class="doc ${cls}"><span>${l}</span><b>${v ? dShort(v) + ' ' + D(v).getFullYear() : 'غير مسجل'}</b><em>${u == null ? '' : u < 0 ? `منتهية من ${daysTxt(-u)}` : `باقي ${daysTxt(u)}`}</em></div>`; }).join('')}</div>
+        <div class="cl-stats" style="grid-template-columns:repeat(2,1fr)"><div><b class="num">${p?.salary != null ? sar(p.salary) : '—'}</b><span>الراتب</span></div><div><b class="num">${p?.commission_pct != null ? Number(p.commission_pct) + '٪' : '—'}</b><span>العمولة من مبيعاتها</span></div></div>
+        ${p?.notes ? `<div class="card note-card">${esc(p.notes)}</div>` : ''}` : ''}
+      <div class="section-title"><h2>الإجازات</h2><button class="btn sm" id="m-leave">${I.plus} طلب إجازة</button></div>
+      <div class="list">${ls.length ? ls.slice(0, 20).map((l) => `<div class="row"><div class="grow"><div class="title">${LKIND[l.kind]}</div><div class="meta">${dShort(l.from_day)}${l.to_day !== l.from_day ? ` – ${dShort(l.to_day)}` : ''} ${D(l.from_day).getFullYear()}${l.note ? ' · ' + esc(l.note) : ''}</div></div><span class="badge ${LST[l.status][1]}">${LST[l.status][0]}</span></div>`).join('') : '<div class="empty">ما فيه إجازات</div>'}</div>`;
+    $('#m-edit')?.addEventListener('click', () => memberForm(m, p, () => route()));
+    $('#m-leave').onclick = () => leaveForm(T, id);
+  }
+
+  function memberForm(m, p, done) {
+    let role = m?.role_title || 'nails', color = m?.color || TCOLORS[Math.floor(Math.random() * TCOLORS.length)], active = m ? m.active : true;
+    const profs = [...S.profiles.values()].filter((x) => x.is_active);
+    modal(`
+      <h3>${m ? 'تعديل بيانات الموظفة' : 'موظفة جديدة'}</h3>
+      <div class="field"><label>الاسم</label><input class="input" id="t-name" maxlength="60" value="${esc(m?.name || '')}"></div>
+      <div class="field"><label>التخصص</label><div class="chips wrap" id="t-role">${Object.entries(TROLE).map(([k, l]) => `<button type="button" class="chip ${k === role ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>الجوال</label><input class="input num" id="t-phone" dir="ltr" inputmode="tel" value="${esc(m?.phone || '')}" placeholder="05xxxxxxxx"></div>
+      <div class="field"><label>بداية العمل</label><input class="input" type="date" id="t-start" value="${m?.start_date || ''}"></div></div>
+      <div class="field"><label>لونها في الجداول</label><div class="colors" id="t-col">${TCOLORS.map((c) => `<button type="button" class="${c === color ? 'on' : ''}" data-c="${c}" style="background:${c}"></button>`).join('')}</div></div>
+      <div class="field"><label>تتقن <span class="muted small">(افصلوا بفاصلة)</span></label><input class="input" id="t-skills" maxlength="300" value="${esc(m?.skills || '')}" placeholder="جيل، أكريليك، رسم أظافر"></div>
+      <div class="field"><label>حسابها في النظام <span class="muted small">(اختياري)</span></label><select class="input" id="t-prof"><option value="">—</option>${profs.map((x) => `<option value="${x.id}" ${x.id === m?.profile_id ? 'selected' : ''}>${esc(x.full_name || x.login)}</option>`).join('')}</select></div>
+      <div class="close-h" style="margin-top:6px">للإدارة فقط</div>
+      <div class="grid2"><div class="field"><label>الراتب</label><input class="input num" type="number" min="0" id="t-sal" value="${p?.salary ?? ''}"></div><div class="field"><label>العمولة ٪</label><input class="input num" type="number" min="0" max="100" step="0.5" id="t-pct" value="${p?.commission_pct ?? ''}"></div></div>
+      <div class="grid2">${DOCS.map(([k, l]) => `<div class="field"><label>انتهاء ${l}</label><input class="input" type="date" id="t-${k}" value="${p?.[k] || ''}"></div>`).join('')}</div>
+      <p class="muted small" style="margin-top:-4px">نحفظ تواريخ الانتهاء بس، بدون أرقام الهويات.</p>
+      <div class="field"><label>ملاحظات</label><textarea class="input" id="t-notes" rows="2" maxlength="1000">${esc(p?.notes || '')}</textarea></div>
+      ${m ? `<label class="toggle-row"><span><b>على رأس العمل</b><small>الموقوفة ما تطلع في المناوبات</small></span><button type="button" class="sw ${active ? 'on' : ''}" id="t-act"></button></label>` : ''}
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="t-save">حفظ</button></div>`, (el, close) => {
+      $$('#t-role .chip', el).forEach((b) => b.onclick = () => { role = b.dataset.k; $$('#t-role .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $$('#t-col button', el).forEach((b) => b.onclick = () => { color = b.dataset.c; $$('#t-col button', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $('#t-act', el)?.addEventListener('click', (e) => { active = !active; e.currentTarget.classList.toggle('on', active); });
+      $('#t-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const phone = normPhone($('#t-phone', el).value);
+        if ($('#t-name', el).value.trim().length < 2) return toast('اكتبوا الاسم', true);
+        if (phone && !/^05\d{8}$/.test(phone)) return toast('رقم الجوال غير صحيح', true);
+        const row = { name: $('#t-name', el).value.trim(), role_title: role, phone: phone || null, start_date: $('#t-start', el).value || null, color, skills: $('#t-skills', el).value.trim() || null, profile_id: $('#t-prof', el).value || null, active };
+        const num = (id) => { const v = $(id, el).value; return v === '' ? null : Number(v); };
+        const pr = { salary: num('#t-sal'), commission_pct: num('#t-pct'), notes: $('#t-notes', el).value.trim() || null };
+        DOCS.forEach(([k]) => { pr[k] = $(`#t-${k}`, el).value || null; });
+        try {
+          let id = m?.id;
+          if (m) await q(sb.from('team_members').update(row).eq('id', m.id));
+          else id = (await q(sb.from('team_members').insert(row).select('id').single())).id;
+          await q(sb.from('team_private').upsert({ member_id: id, ...pr }));
+          toast('تم الحفظ'); close(); done && done(id);
+        } catch (err) { toast(err.code === '23505' ? 'هذا الحساب مربوط بموظفة ثانية' : errMsg(err), true); }
+      });
     });
   }
 

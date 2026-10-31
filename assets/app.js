@@ -166,7 +166,7 @@
     $('#app').innerHTML = `
       <div class="auth">
         <form class="auth-card" id="auth-form" autocomplete="on">
-          <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفرش" style="height:56px;width:auto;margin-bottom:18px">
+          <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
           <h1>${signup ? 'إنشاء حساب' : esc(CFG.appName)}</h1>
           <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'تسجيل الدخول لإدارة مخزون الصالون'}</p>
           ${msg ? `<div class="notice ${msg.ok ? 'info' : 'danger'}">${esc(msg.text || msg)}</div>` : ''}
@@ -213,7 +213,7 @@
     const p = S.profile;
     $('#app').innerHTML = `
       <div class="auth"><div class="auth-card">
-        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفرش" style="height:56px;width:auto;margin-bottom:18px">
+        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
         <h1>الحساب بانتظار الاعتماد</h1>
         <p class="sub">أهلاً ${esc(p?.full_name || '')}، تم تسجيل حسابك وسيظهر لمدير النظام لاعتماده وتحديد صلاحياتك. بعد الاعتماد اضغط «تحديث».</p>
         <div class="actions"><button class="btn primary" id="pending-refresh" style="flex:1">تحديث</button><button class="btn" id="pending-out" style="flex:1">تسجيل الخروج</button></div>
@@ -226,7 +226,7 @@
     S.shellReady = false;
     $('#app').innerHTML = `
       <div class="auth"><form class="auth-card" id="setpw">
-        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفرش" style="height:56px;width:auto;margin-bottom:18px">
+        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
         <h1>تعيين كلمة المرور</h1>
         <p class="sub">اختر كلمة مرور جديدة لحسابك</p>
         <div class="field"><label>كلمة المرور الجديدة</label><input class="input" type="password" id="pw1" dir="ltr" minlength="8" required autocomplete="new-password"></div>
@@ -1437,7 +1437,7 @@
     const totalLine = b.total != null ? `الإجمالي: ${money(b.total)}` : '';
     const link = `${BOOK_SITE}#/b/${b.access_token}`;
     return [
-      { key: 'confirm', label: 'تأكيد الحجز', text: `أهلًا ${first} 🤍\nتم تأكيد وقتك الخاص مع بيوتفرش\nرقم الحجز: ${b.code}\nالخدمة: ${svc}\nالموعد: ${when}\n${totalLine}${staff ? `\nالأخصائية: ${staff}` : ''}\nنحتاج مكان فيه إضاءة جيدة وكرسي وفيش كهرباء قريب.\nتفاصيل حجزك: ${link}` },
+      { key: 'confirm', label: 'تأكيد الحجز', text: `أهلًا ${first} 🤍\nتم تأكيد وقتك الخاص مع بيوتفريش\nرقم الحجز: ${b.code}\nالخدمة: ${svc}\nالموعد: ${when}\n${totalLine}${staff ? `\nالأخصائية: ${staff}` : ''}\nنحتاج مكان فيه إضاءة جيدة وكرسي وفيش كهرباء قريب.\nتفاصيل حجزك: ${link}` },
       { key: 'pay', label: 'رابط الدفع', text: `أهلًا ${first} 🤍\nهذا رابط الدفع لحجزك ${b.code}:\n[رابط الدفع]\n${totalLine}` },
       { key: 'remind', label: 'تذكير', text: `أهلًا ${first}، نذكّرك بزيارتنا ${when} لخدمة ${svc}.\nإذا احتجتي تعديل، بلغينا ونراجع التوفّر 🤍` },
       { key: 'onway', label: 'في الطريق', text: `أهلًا ${first}، ${staff ? `أخصائيتك ${staff}` : 'أخصائيتك'} في الطريق إليكِ 🤍\nالوصول المتوقع خلال [المدة].` },

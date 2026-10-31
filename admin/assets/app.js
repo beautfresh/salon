@@ -166,7 +166,7 @@
     $('#app').innerHTML = `
       <div class="auth">
         <form class="auth-card" id="auth-form" autocomplete="on">
-          <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
+          <img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
           <h1>${signup ? 'إنشاء حساب' : esc(CFG.appName)}</h1>
           <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'تسجيل الدخول لإدارة مخزون الصالون'}</p>
           ${msg ? `<div class="notice ${msg.ok ? 'info' : 'danger'}">${esc(msg.text || msg)}</div>` : ''}
@@ -213,7 +213,7 @@
     const p = S.profile;
     $('#app').innerHTML = `
       <div class="auth"><div class="auth-card">
-        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
+        <img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
         <h1>الحساب بانتظار الاعتماد</h1>
         <p class="sub">أهلاً ${esc(p?.full_name || '')}، تم تسجيل حسابك وسيظهر لمدير النظام لاعتماده وتحديد صلاحياتك. بعد الاعتماد اضغط «تحديث».</p>
         <div class="actions"><button class="btn primary" id="pending-refresh" style="flex:1">تحديث</button><button class="btn" id="pending-out" style="flex:1">تسجيل الخروج</button></div>
@@ -226,7 +226,7 @@
     S.shellReady = false;
     $('#app').innerHTML = `
       <div class="auth"><form class="auth-card" id="setpw">
-        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
+        <img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش" style="height:56px;width:auto;margin-bottom:18px">
         <h1>تعيين كلمة المرور</h1>
         <p class="sub">اختر كلمة مرور جديدة لحسابك</p>
         <div class="field"><label>كلمة المرور الجديدة</label><input class="input" type="password" id="pw1" dir="ltr" minlength="8" required autocomplete="new-password"></div>
@@ -291,7 +291,7 @@
     $('#app').innerHTML = `
       <div class="shell">
         <aside class="sidebar">
-          <div class="brand"><img class="logo" src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش"><span>لوحة الإدارة</span></div>
+          <div class="brand"><img class="logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><span>لوحة الإدارة</span></div>
           <nav>${navLinks().map((l) => l.sep ? '<div class="sep"></div>' : `<a href="${l.href}" data-nav="${l.key}"><span class="ic">${l.icon}</span>${l.label}</a>`).join('')}</nav>
           <div class="foot">
             <div style="color:#fff;font-weight:600">${esc(p.full_name || p.login)}</div>
@@ -301,7 +301,7 @@
         </aside>
         <div class="main">
           <header class="topbar">
-            <div class="tb-title"><img class="tb-logo" src="book/assets/Beautfresh-brown.svg" alt="بيوتفريش"><h1 id="page-title"></h1></div>
+            <div class="tb-title"><img class="tb-logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><h1 id="page-title"></h1></div>
             <div class="who"><span class="hide-sm">${esc(p.full_name || p.login)}</span><span class="avatar">${esc(initial(p.full_name || p.login))}</span></div>
           </header>
           <div class="content" id="view"></div>
@@ -442,7 +442,7 @@
     const hourNow = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }));
     const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
-      <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="book/assets/rosette-1.svg" alt=""></div>
+      <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
       <a class="bk-card" href="#/bookings${bk.pending ? '?t=pending' : '?t=today'}">
         <div class="bk-top"><span class="bk-label">الحجوزات المنزلية</span><span class="bk-go">عرض الحجوزات ←</span></div>
         <div class="bk-nums">
@@ -1430,7 +1430,7 @@
   const PAY_METHODS = ['ركاز', 'رابط دفع', 'تحويل بنكي', 'مدى عند الزيارة', 'نقدًا'];
   const SVC_CAT = { nails: 'الأظافر', hair: 'الشعر', package: 'الباقات', other: 'أخرى' };
   const WDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-  const BOOK_SITE = new URL('book/', location.href.split('#')[0]).href;
+  const BOOK_SITE = new URL('../home/', location.href.split('#')[0]).href;
 
   const rDay = (ts) => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
   const rTime = (ts) => {

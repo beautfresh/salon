@@ -117,6 +117,7 @@
 
   /* ======================= icons ======================= */
   const I = {
+    coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M8 14h3M8 17h6"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>',
     box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>',
@@ -270,6 +271,9 @@
     const L = [
       { href: '#/home', label: 'الرئيسية', icon: I.home, key: 'home' },
       { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
+    ];
+    if (isManager()) L.push({ href: '#/finance', label: 'المالية', icon: I.coin, key: 'finance' });
+    L.push(
       { sep: true },
       { href: '#/items', label: 'الأصناف', icon: I.box, key: 'items' },
       { href: '#/issue', label: 'صرف من المخزون', icon: I.out, key: 'issue' },
@@ -277,7 +281,7 @@
       { sep: true },
       { href: '#/shopping', label: 'قائمة المشتريات', icon: I.cart, key: 'shopping' },
       { href: '#/movements', label: 'سجل الحركات', icon: I.list, key: 'movements' },
-    ];
+    );
     if (isManager()) L.push({ href: '#/reports', label: 'التقارير', icon: I.chart, key: 'reports' });
     if (isAdmin()) {
       L.push({ sep: true });
@@ -338,6 +342,9 @@
     bookings: { title: 'الحجوزات المنزلية', nav: 'bookings', fn: pageBookings },
     booking: { title: 'تفاصيل الحجز', nav: 'bookings', fn: pageBooking },
     homesvc: { title: 'خدمات هوم والإعدادات', nav: 'bookings', fn: pageHomeSvc, manager: true },
+    finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
+    closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
+    expenses: { title: 'المصروفات', nav: 'finance', fn: pageExpenses, manager: true },
     items: { title: 'الأصناف', nav: 'items', fn: pageItems },
     item: { title: 'تفاصيل الصنف', nav: 'items', fn: pageItem },
     issue: { title: 'صرف من المخزون', nav: 'issue', fn: pageIssue },
@@ -1738,6 +1745,154 @@
     $$('[data-off]', view).forEach((b) => b.onclick = () => busy(b, async () => {
       try { await q(sb.from('home_blackouts').delete().eq('day', b.dataset.off)); route(); } catch (err) { toast(errMsg(err), true); }
     }));
+  }
+
+  /* ======================= finance ======================= */
+  const EXP_CAT = { rent: 'إيجار', salaries: 'رواتب', commissions: 'عمولات', utilities: 'كهرباء وماء', telecom: 'إنترنت واتصالات', marketing: 'تسويق وإعلانات', maintenance: 'صيانة', government: 'رسوم حكومية وتراخيص', subscriptions: 'اشتراكات وأنظمة', hospitality: 'ضيافة', transport: 'مشاوير وتوصيل', supplies_other: 'مستلزمات خارج المخزون', other: 'أخرى' };
+  const PAY_KEYS = [['cash', 'كاش'], ['card', 'شبكة'], ['transfer', 'تحويل'], ['online', 'رابط دفع'], ['bnpl', 'تابي وتمارا'], ['other', 'أخرى']];
+  const SALE_CATS = [['nails', 'أظافر'], ['hair', 'شعر'], ['makeup', 'مكياج'], ['lashes', 'رموش وحواجب'], ['products', 'منتجات'], ['other_cat', 'أخرى']];
+  const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const sar = (v) => `${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  const todayR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
+
+  function bars(rows, max, labelFn) {
+    return rows.map(([k, v]) => `<div class="fbar"><div class="fbar-top"><span>${esc(labelFn(k))}</span><b class="num">${sar(v)}</b></div><div class="fbar-track"><i style="width:${max ? Math.max(2, (v / max) * 100) : 0}%"></i></div></div>`).join('');
+  }
+
+  async function pageFinance(view, _a, params, alive) {
+    const now = new Date(todayR() + 'T12:00:00');
+    const m = params.get('m') ? new Date(params.get('m') + 'T12:00:00') : new Date(now.getFullYear(), now.getMonth(), 1, 12);
+    const r = await q(sb.rpc('fin_month', { p_month: monthKey(m) }));
+    if (!alive()) return;
+    const prev = new Date(m.getFullYear(), m.getMonth() - 1, 1, 12), next = new Date(m.getFullYear(), m.getMonth() + 1, 1, 12);
+    const isCurrent = m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth();
+    const delta = r.prev_revenue > 0 ? Math.round(((r.revenue - r.prev_revenue) / r.prev_revenue) * 100) : null;
+    const maxDay = Math.max(1, ...r.days.map((d) => Number(d.salon) + Number(d.home)));
+    const todayKey = todayR();
+    const unclosed = r.days.filter((d) => d.day < todayKey && !d.closed && Number(d.home) === 0).length;
+    const best = [...r.days].sort((a, b) => (b.salon + b.home) - (a.salon + a.home))[0];
+    const wk = Array(7).fill(0), wkN = Array(7).fill(0);
+    r.days.forEach((d) => { if (d.closed) { const w = new Date(d.day + 'T12:00:00').getDay(); wk[w] += Number(d.salon); wkN[w]++; } });
+    const wkAvg = wk.map((s, i) => (wkN[i] ? s / wkN[i] : null));
+    const valid = wkAvg.map((v, i) => [i, v]).filter((x) => x[1] != null);
+    const weak = valid.length >= 4 ? valid.sort((a, b) => a[1] - b[1])[0] : null;
+    const strong = valid.length >= 4 ? [...valid].sort((a, b) => b[1] - a[1])[0] : null;
+    const methods = PAY_KEYS.map(([k, l]) => [l, Number(r.methods[k] || 0)]).filter((x) => x[1] > 0);
+    const cats = SALE_CATS.map(([k, l]) => [l, Number(r.cats[k === 'other_cat' ? 'other' : k] || 0)]).filter((x) => x[1] > 0);
+    const exps = Object.entries(r.exp_cats).map(([k, v]) => [EXP_CAT[k] || k, Number(v)]).sort((a, b) => b[1] - a[1]);
+    const ident = (x) => x;
+    view.innerHTML = `
+      <div class="fin-head">
+        <a class="icon-btn" href="#/finance?m=${monthKey(prev).slice(0, 10)}" aria-label="الشهر السابق">›</a>
+        <h2>${MONTHS_AR[m.getMonth()]} ${m.getFullYear()}</h2>
+        <a class="icon-btn ${isCurrent ? 'off' : ''}" href="#/finance?m=${monthKey(next).slice(0, 10)}" aria-label="الشهر التالي">‹</a>
+      </div>
+      <div class="actions" style="margin-bottom:14px"><a class="btn primary" href="#/closing">${I.plus} إقفال اليوم</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(m).slice(0, 10)}">المصروفات</a></div>
+      ${unclosed && isCurrent ? `<a class="notice warn" style="display:block" href="#/closing">فيه ${unclosed} ${unclosed === 1 ? 'يوم' : 'أيام'} هذا الشهر بدون إقفال ←</a>` : ''}
+      <div class="fin-hero">
+        <div class="fin-hero-top"><span>صافي الربح</span>${delta != null ? `<span class="chip-d ${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}٪ مبيعات عن الشهر الماضي</span>` : ''}</div>
+        <div class="fin-net num ${r.net < 0 ? 'neg' : ''}">${sar(r.net)} <small>ر.س</small></div>
+        <div class="fin-split">
+          <div><span>المبيعات</span><b class="num">${sar(r.revenue)}</b><em>الصالون ${sar(r.salon)} · المنزلية ${sar(r.home)}</em></div>
+          <div><span>المشتريات</span><b class="num">${sar(r.purchases)}</b><em>فواتير معتمدة</em></div>
+          <div><span>المصروفات</span><b class="num">${sar(r.expenses)}</b><em>${exps.length} تصنيف</em></div>
+        </div>
+      </div>
+      ${r.partners.length ? `<div class="partners">${r.partners.map((p) => `<div class="partner"><span class="pav">${esc(initial(p.name))}</span><div><div class="pn">${esc(p.name)} <small>${Number(p.pct)}٪</small></div><b class="num">${sar(p.amount)} ر.س</b></div></div>`).join('')}</div>` : ''}
+
+      <div class="section-title"><h2>المبيعات يومًا بيوم</h2><span class="muted small"><i class="lg s"></i> الصالون <i class="lg h"></i> المنزلية</span></div>
+      <div class="card"><div class="dchart">${r.days.map((d) => { const t = Number(d.salon) + Number(d.home); const future = d.day > todayKey; return `<div class="dcol ${future ? 'fut' : ''} ${d.day === todayKey ? 'today' : ''}" title="${d.day} · ${sar(t)} ر.س"><div class="dstack" style="height:${(t / maxDay) * 100}%"><i class="h" style="flex:${d.home}"></i><i class="s" style="flex:${d.salon}"></i></div><span>${Number(d.day.slice(8))}</span>${!future && !d.closed ? '<em></em>' : ''}</div>`; }).join('')}</div>
+        <div class="dinsights">
+          ${best && (best.salon + best.home) > 0 ? `<div><span>أفضل يوم</span><b>${Number(best.day.slice(8))} ${MONTHS_AR[m.getMonth()]} · ${sar(best.salon + best.home)} ر.س</b></div>` : ''}
+          ${r.methods.clients ? `<div><span>متوسط الفاتورة</span><b class="num">${sar(r.salon / r.methods.clients)} ر.س</b></div>` : ''}
+          ${weak && strong && weak[0] !== strong[0] ? `<div><span>ملاحظة</span><b>${WDAYS[weak[0]]} أضعف أيامك، مبيعاته ${Math.round((weak[1] / strong[1]) * 100)}٪ من ${WDAYS[strong[0]]}</b></div>` : ''}
+        </div>
+      </div>
+
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>طرق الدفع</h2></div><div class="card">${methods.length ? bars(methods, Math.max(...methods.map((x) => x[1])), ident) : '<div class="empty">ما فيه إقفالات هذا الشهر</div>'}</div></div>
+        <div><div class="section-title"><h2>المبيعات حسب القسم</h2></div><div class="card">${cats.length ? bars(cats, Math.max(...cats.map((x) => x[1])), ident) : '<div class="empty">سجّلوا تفصيل الأقسام في الإقفال اليومي عشان يطلع هنا</div>'}</div></div>
+      </div>
+      <div class="section-title"><h2>المصروفات</h2><a class="small" href="#/expenses?m=${monthKey(m).slice(0, 10)}">كل المصروفات</a></div>
+      <div class="card">${exps.length ? bars(exps, exps[0][1], ident) : '<div class="empty">ما فيه مصروفات مسجلة هذا الشهر</div>'}</div>`;
+    $('#exp-new').onclick = () => expenseForm(null, () => route());
+  }
+
+  function expenseForm(e, done) {
+    modal(`
+      <h3>${e ? 'تعديل مصروف' : 'مصروف جديد'}</h3>
+      <div class="grid2"><div class="field"><label>المبلغ (ر.س)</label><input class="input num" id="x-amt" type="number" inputmode="decimal" min="0" step="0.01" value="${e?.amount ?? ''}"></div>
+      <div class="field"><label>التاريخ</label><input class="input" id="x-day" type="date" value="${e?.day || todayR()}"></div></div>
+      <div class="field"><label>التصنيف</label><div class="chips wrap" id="x-cat">${Object.entries(EXP_CAT).map(([k, l]) => `<button type="button" class="chip ${(e?.category || 'other') === k ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>الجهة</label><input class="input" id="x-vendor" value="${esc(e?.vendor || '')}" placeholder="مثلًا: شركة الكهرباء"></div>
+      <div class="field"><label>طريقة الدفع</label><select class="input" id="x-method">${['', 'تحويل', 'شبكة', 'كاش', 'سداد'].map((x) => `<option ${x === (e?.method || '') ? 'selected' : ''} value="${x}">${x || '—'}</option>`).join('')}</select></div></div>
+      <div class="field"><label>ملاحظة</label><input class="input" id="x-note" value="${esc(e?.note || '')}"></div>
+      <div class="actions end mt">${e ? '<button class="btn" id="x-del" style="color:var(--danger);margin-inline-end:auto">حذف</button>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="x-save">حفظ</button></div>`, (el, close) => {
+      let cat = e?.category || 'other';
+      $('#x-cat', el).onclick = (ev) => { const b = ev.target.closest('[data-k]'); if (!b) return; cat = b.dataset.k; $$('#x-cat .chip', el).forEach((c) => c.classList.toggle('on', c === b)); };
+      $('#x-save', el).onclick = (ev) => busy(ev.currentTarget, async () => {
+        const amount = Number($('#x-amt', el).value);
+        if (!(amount > 0)) return toast('اكتب المبلغ', true);
+        const row = { amount, day: $('#x-day', el).value, category: cat, vendor: $('#x-vendor', el).value.trim() || null, method: $('#x-method', el).value || null, note: $('#x-note', el).value.trim() || null };
+        try { if (e) await q(sb.from('fin_expenses').update(row).eq('id', e.id)); else await q(sb.from('fin_expenses').insert(row)); toast('تم الحفظ'); close(); done && done(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#x-del', el)?.addEventListener('click', async () => {
+        if (!(await confirmBox('حذف المصروف', 'يُحذف المصروف نهائيًا من التقارير.', 'حذف', true))) return;
+        try { await q(sb.from('fin_expenses').delete().eq('id', e.id)); toast('تم الحذف'); close(); done && done(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  async function pageExpenses(view, _a, params, alive) {
+    const m = params.get('m') ? new Date(params.get('m') + 'T12:00:00') : new Date(todayR().slice(0, 8) + '01T12:00:00');
+    const d0 = monthKey(m), d1 = monthKey(new Date(m.getFullYear(), m.getMonth() + 1, 1, 12));
+    const rows = await q(sb.from('fin_expenses').select('*').gte('day', d0).lt('day', d1).order('day', { ascending: false }).order('id', { ascending: false }));
+    if (!alive()) return;
+    const total = rows.reduce((s, x) => s + Number(x.amount), 0);
+    view.innerHTML = `
+      <div class="fin-head"><a class="icon-btn" href="#/expenses?m=${monthKey(new Date(m.getFullYear(), m.getMonth() - 1, 1, 12))}">›</a><h2>مصروفات ${MONTHS_AR[m.getMonth()]}</h2><a class="icon-btn" href="#/expenses?m=${d1}">‹</a></div>
+      <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="exp-new">${I.plus} مصروف جديد</button><a class="btn" href="#/finance?m=${d0}">التقرير المالي</a></div>
+      <div class="list">${rows.length ? rows.map((x) => `<button class="row" data-id="${x.id}"><div class="grow"><div class="title">${esc(EXP_CAT[x.category])}${x.vendor ? ` · <span class="muted">${esc(x.vendor)}</span>` : ''}</div><div class="meta">${fmtDate(x.day)}${x.method ? ' · ' + esc(x.method) : ''}${x.note ? ' · ' + esc(x.note) : ''}</div></div><div class="end num" style="font-weight:700">${money(x.amount)}</div></button>`).join('') + `<div class="row"><div class="grow" style="font-weight:700">الإجمالي</div><div class="end num" style="font-weight:700">${money(total)}</div></div>` : '<div class="empty">ما فيه مصروفات في هذا الشهر</div>'}</div>`;
+    $('#exp-new').onclick = () => expenseForm(null, () => route());
+    $$('[data-id]', view).forEach((b) => b.onclick = () => expenseForm(rows.find((x) => x.id === Number(b.dataset.id)), () => route()));
+  }
+
+  async function pageClosing(view, _a, params, alive) {
+    const day = params.get('d') || todayR();
+    const ex = await q(sb.from('fin_daily').select('*').eq('day', day).maybeSingle());
+    if (!alive()) return;
+    const v = (k) => (ex && ex[k] != null && Number(ex[k]) !== 0 ? Number(ex[k]) : '');
+    view.innerHTML = `
+      <div class="card close-card">
+        <div class="field"><label>اليوم</label><input class="input" type="date" id="c-day" value="${day}" max="${todayR()}"></div>
+        ${ex ? '<div class="notice info">هذا اليوم مُقفل من قبل، أي تعديل يحدّث الإقفال.</div>' : ''}
+        <h3 class="close-h">المبالغ حسب طريقة الدفع</h3>
+        <div class="money-grid">${PAY_KEYS.map(([k, l]) => `<label class="mfield"><span>${l}</span><input class="input num" type="number" inputmode="decimal" min="0" step="0.01" data-pay="${k}" value="${v(k)}" placeholder="0"></label>`).join('')}</div>
+        <div class="close-total"><span>إجمالي اليوم</span><b class="num" id="c-total">0</b></div>
+        <div class="field"><label>عدد العميلات</label><input class="input num" type="number" inputmode="numeric" min="0" id="c-clients" value="${ex?.clients ?? ''}" placeholder="اختياري، ويطلع منه متوسط الفاتورة"></div>
+        <details ${ex && SALE_CATS.some(([k]) => ex[k] != null) ? 'open' : ''}><summary class="close-h">تفصيل حسب القسم (اختياري)</summary>
+          <div class="money-grid">${SALE_CATS.map(([k, l]) => `<label class="mfield"><span>${l}</span><input class="input num" type="number" inputmode="decimal" min="0" step="0.01" data-cat="${k}" value="${ex && ex[k] != null ? Number(ex[k]) : ''}" placeholder="0"></label>`).join('')}</div>
+          <div class="muted small" id="c-catrem"></div>
+        </details>
+        <div class="field mt"><label>ملاحظة</label><input class="input" id="c-note" value="${esc(ex?.note || '')}"></div>
+        <div class="actions end"><button class="btn primary" id="c-save">${ex ? 'تحديث الإقفال' : 'إقفال اليوم'}</button></div>
+      </div>`;
+    const sumOf = (sel) => $$(sel, view).reduce((s, i) => s + (Number(i.value) || 0), 0);
+    const upd = () => {
+      const t = sumOf('[data-pay]'); const c = sumOf('[data-cat]');
+      $('#c-total').textContent = money(t);
+      $('#c-catrem').textContent = c ? (Math.abs(t - c) < 0.01 ? 'التفصيل مطابق للإجمالي ✓' : `الفرق عن الإجمالي: ${money(t - c)}`) : '';
+    };
+    view.addEventListener('input', upd); upd();
+    $('#c-day').onchange = (e) => { location.hash = `#/closing?d=${e.target.value}`; };
+    $('#c-save').onclick = (e) => busy(e.currentTarget, async () => {
+      const row = { day: $('#c-day').value, clients: $('#c-clients').value === '' ? null : Number($('#c-clients').value), note: $('#c-note').value.trim() || null, updated_at: new Date().toISOString(), entered_by: S.profile.id };
+      PAY_KEYS.forEach(([k]) => { row[k] = Number($(`[data-pay="${k}"]`).value) || 0; });
+      SALE_CATS.forEach(([k]) => { const x = $(`[data-cat="${k}"]`).value; row[k] = x === '' ? null : Number(x); });
+      if (PAY_KEYS.every(([k]) => !row[k])) return toast('اكتب مبلغ واحد على الأقل', true);
+      try { await q(sb.from('fin_daily').upsert(row)); toast('تم إقفال اليوم'); location.hash = `#/finance?m=${row.day.slice(0, 8)}01`; } catch (err) { toast(errMsg(err), true); }
+    });
   }
 
   /* ======================= start ======================= */

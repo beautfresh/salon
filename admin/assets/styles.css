@@ -426,3 +426,16 @@ a.stat:hover { transform: translateY(-2px); box-shadow: 0 14px 26px -18px rgba(7
 .close-total { display: flex; justify-content: space-between; align-items: center; margin: 14px 0; padding: 14px 16px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); }
 .close-total b { font-size: 22px; }
 @media (max-width: 520px) { .fin-net { font-size: 38px; } .fin-split b { font-size: 16px; } }
+/* lens */
+.lens { display: flex; gap: 4px; padding: 4px; margin: 0 auto 14px; width: max-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; }
+.lens a { padding: 7px 15px; border-radius: 999px; font-size: 14px; color: var(--ink-2); white-space: nowrap; transition: background .3s, color .3s, box-shadow .3s; }
+.lens a.on { background: #5A2A22; color: #F3EBDF; box-shadow: 0 6px 14px -8px rgba(90, 42, 34, .8); }
+.fin-title { text-align: center; } .fin-title a { display: block; margin-top: 2px; }
+.fin-actions { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.fin-actions .btn { flex: none; }
+.fin-grid > div > .section-title, .card + .section-title, .partners + .section-title { margin-top: 22px; }
+.dchart.wide { gap: 14px; } .dchart.wide .dstack { max-width: 34px; }
+a.dcol { color: inherit; text-decoration: none; }
+.day-open { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; margin-bottom: 12px; border-radius: 18px; border: 1px dashed #B88A68; background: var(--surface); color: var(--ink); }
+.day-open span { font-size: 13px; color: var(--ink-2); }
+.dchart { overflow: hidden; }

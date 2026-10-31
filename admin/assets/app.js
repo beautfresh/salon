@@ -1760,38 +1760,87 @@
     return rows.map(([k, v]) => `<div class="fbar"><div class="fbar-top"><span>${esc(labelFn(k))}</span><b class="num">${sar(v)}</b></div><div class="fbar-track"><i style="width:${max ? Math.max(2, (v / max) * 100) : 0}%"></i></div></div>`).join('');
   }
 
+  const LENSES = [['d', 'اليوم'], ['w', 'الأسبوع'], ['m', 'الشهر'], ['q', 'الربع'], ['y', 'السنة']];
+  const QN = ['الأول', 'الثاني', 'الثالث', 'الرابع'];
+  const dk = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const D = (s) => new Date(s + 'T12:00:00');
+  function lensRange(lens, at) {
+    const y = at.getFullYear(), mo = at.getMonth();
+    if (lens === 'd') return [at, at];
+    if (lens === 'w') { const s = new Date(at); s.setDate(at.getDate() - ((at.getDay() + 1) % 7)); const e = new Date(s); e.setDate(s.getDate() + 6); return [s, e]; }
+    if (lens === 'q') { const q0 = Math.floor(mo / 3) * 3; return [new Date(y, q0, 1, 12), new Date(y, q0 + 3, 0, 12)]; }
+    if (lens === 'y') return [new Date(y, 0, 1, 12), new Date(y, 11, 31, 12)];
+    return [new Date(y, mo, 1, 12), new Date(y, mo + 1, 0, 12)];
+  }
+  function lensShift(lens, at, n) {
+    const d = new Date(at);
+    if (lens === 'd') d.setDate(d.getDate() + n);
+    else if (lens === 'w') d.setDate(d.getDate() + 7 * n);
+    else if (lens === 'm') d.setMonth(d.getMonth() + n, 1);
+    else if (lens === 'q') d.setMonth(d.getMonth() + 3 * n, 1);
+    else d.setFullYear(d.getFullYear() + n, 0, 1);
+    return d;
+  }
+  function lensTitle(lens, s, e) {
+    if (lens === 'd') return `${WDAYS[s.getDay()]} ${s.getDate()} ${MONTHS_AR[s.getMonth()]}`;
+    if (lens === 'w') return s.getMonth() === e.getMonth() ? `${s.getDate()} – ${e.getDate()} ${MONTHS_AR[s.getMonth()]}` : `${s.getDate()} ${MONTHS_AR[s.getMonth()]} – ${e.getDate()} ${MONTHS_AR[e.getMonth()]}`;
+    if (lens === 'q') return `الربع ${QN[Math.floor(s.getMonth() / 3)]} ${s.getFullYear()}`;
+    if (lens === 'y') return `سنة ${s.getFullYear()}`;
+    return `${MONTHS_AR[s.getMonth()]} ${s.getFullYear()}`;
+  }
+  const LENS_PREV = { d: 'أمس', w: 'الأسبوع الماضي', m: 'الشهر الماضي', q: 'الربع الماضي', y: 'السنة الماضية' };
+  const LENS_THIS = { d: 'هذا اليوم', w: 'هذا الأسبوع', m: 'هذا الشهر', q: 'هذا الربع', y: 'هذي السنة' };
+
   async function pageFinance(view, _a, params, alive) {
-    const now = new Date(todayR() + 'T12:00:00');
-    const m = params.get('m') ? new Date(params.get('m') + 'T12:00:00') : new Date(now.getFullYear(), now.getMonth(), 1, 12);
-    const r = await q(sb.rpc('fin_month', { p_month: monthKey(m) }));
-    if (!alive()) return;
-    const prev = new Date(m.getFullYear(), m.getMonth() - 1, 1, 12), next = new Date(m.getFullYear(), m.getMonth() + 1, 1, 12);
-    const isCurrent = m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth();
-    const delta = r.prev_revenue > 0 ? Math.round(((r.revenue - r.prev_revenue) / r.prev_revenue) * 100) : null;
-    const maxDay = Math.max(1, ...r.days.map((d) => Number(d.salon) + Number(d.home)));
+    let lens = params.get('l') || (() => { try { return localStorage.getItem('bf-lens'); } catch { return null; } })() || 'm';
+    if (!LENSES.some((x) => x[0] === lens)) lens = 'm';
+    try { localStorage.setItem('bf-lens', lens); } catch {}
     const todayKey = todayR();
-    const unclosed = r.days.filter((d) => d.day < todayKey && !d.closed && Number(d.home) === 0).length;
+    const at = params.get('at') ? D(params.get('at')) : params.get('m') ? D(params.get('m')) : D(todayKey);
+    const [s, e] = lensRange(lens, at);
+    const r = await q(sb.rpc('fin_range', { p_from: dk(s), p_to: dk(e) }));
+    if (!alive()) return;
+    const link = (l, d) => `#/finance?l=${l}&at=${dk(d)}`;
+    const isCurrent = dk(s) <= todayKey && todayKey <= dk(e);
+    const delta = r.prev_revenue > 0 ? Math.round(((r.revenue - r.prev_revenue) / r.prev_revenue) * 100) : null;
+    const monthly = r.unit === 'month';
+    const maxDay = Math.max(1, ...r.days.map((d) => Number(d.salon) + Number(d.home)));
+    const unclosed = monthly ? 0 : r.days.filter((d) => d.day < todayKey && !d.closed && Number(d.home) === 0).length;
     const best = [...r.days].sort((a, b) => (b.salon + b.home) - (a.salon + a.home))[0];
     const wk = Array(7).fill(0), wkN = Array(7).fill(0);
-    r.days.forEach((d) => { if (d.closed) { const w = new Date(d.day + 'T12:00:00').getDay(); wk[w] += Number(d.salon); wkN[w]++; } });
-    const wkAvg = wk.map((s, i) => (wkN[i] ? s / wkN[i] : null));
-    const valid = wkAvg.map((v, i) => [i, v]).filter((x) => x[1] != null);
-    const weak = valid.length >= 4 ? valid.sort((a, b) => a[1] - b[1])[0] : null;
+    if (!monthly) r.days.forEach((d) => { if (d.closed) { const w = D(d.day).getDay(); wk[w] += Number(d.salon); wkN[w]++; } });
+    const valid = wk.map((v, i) => [i, wkN[i] ? v / wkN[i] : null]).filter((x) => x[1] != null);
+    const weak = valid.length >= 4 ? [...valid].sort((a, b) => a[1] - b[1])[0] : null;
     const strong = valid.length >= 4 ? [...valid].sort((a, b) => b[1] - a[1])[0] : null;
     const methods = PAY_KEYS.map(([k, l]) => [l, Number(r.methods[k] || 0)]).filter((x) => x[1] > 0);
     const cats = SALE_CATS.map(([k, l]) => [l, Number(r.cats[k === 'other_cat' ? 'other' : k] || 0)]).filter((x) => x[1] > 0);
-    const exps = Object.entries(r.exp_cats).map(([k, v]) => [EXP_CAT[k] || k, Number(v)]).sort((a, b) => b[1] - a[1]);
+    const exps = Object.entries(r.exp_cats).map(([k, v]) => [EXP_CAT[k] || k, Number(v)]).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]);
     const ident = (x) => x;
+    const colLabel = (d) => { const x = D(d.day); return monthly ? MONTHS_AR[x.getMonth()].slice(0, 3) : lens === 'w' ? ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'][x.getDay()] : x.getDate(); };
+    const bestLabel = (d) => { const x = D(d.day); return monthly ? `${MONTHS_AR[x.getMonth()]}` : `${WDAYS[x.getDay()]} ${x.getDate()} ${MONTHS_AR[x.getMonth()]}`; };
+    const chart = lens === 'd' ? '' : `
+      <div class="section-title"><h2>${monthly ? 'المبيعات شهرًا بشهر' : 'المبيعات يومًا بيوم'}</h2><span class="muted small"><i class="lg s"></i> الصالون <i class="lg h"></i> المنزلية</span></div>
+      <div class="card"><div class="dchart ${lens === 'w' ? 'wide' : ''}">${r.days.map((d) => { const t = Number(d.salon) + Number(d.home); const future = d.day > todayKey; return `<a class="dcol ${future ? 'fut' : ''} ${d.day === todayKey ? 'today' : ''}" ${monthly ? `href="${link('m', D(d.day))}"` : `href="${link('d', D(d.day))}"`} title="${d.day} · ${sar(t)} ر.س"><div class="dstack" style="height:${(t / maxDay) * 100}%"><i class="h" style="flex:${d.home}"></i><i class="s" style="flex:${d.salon}"></i></div><span>${colLabel(d)}</span>${!future && !d.closed ? '<em></em>' : ''}</a>`; }).join('')}</div>
+        <div class="dinsights">
+          ${best && (best.salon + best.home) > 0 ? `<div><span>${monthly ? 'أفضل شهر' : 'أفضل يوم'}</span><b>${bestLabel(best)} · ${sar(best.salon + best.home)} ر.س</b></div>` : ''}
+          ${r.methods.clients ? `<div><span>متوسط الفاتورة</span><b class="num">${sar(r.salon / r.methods.clients)} ر.س</b></div>` : ''}
+          ${!monthly && r.closed_days ? `<div><span>متوسط اليوم</span><b class="num">${sar(r.salon / r.closed_days)} ر.س</b></div>` : ''}
+          ${weak && strong && weak[0] !== strong[0] ? `<div><span>ملاحظة</span><b>${WDAYS[weak[0]]} أضعف أيامك، مبيعاته ${Math.round((weak[1] / strong[1]) * 100)}٪ من ${WDAYS[strong[0]]}</b></div>` : ''}
+        </div>
+      </div>`;
+    const dayCard = lens !== 'd' ? '' : (r.closed_days ? '' : `<a class="day-open" href="#/closing?d=${dk(s)}"><b>${dk(s) > todayKey ? 'هذا اليوم ما جا بعد' : 'هذا اليوم ما انقفل'}</b><span>${dk(s) > todayKey ? 'تقدرون تشوفونه بعد ما يخلص الدوام' : 'سجّلوا مبيعاته من إقفال اليوم ←'}</span></a>`);
     view.innerHTML = `
+      <div class="lens" role="group" aria-label="العدسة">${LENSES.map(([k, l]) => `<a href="${link(k, at)}" class="${k === lens ? 'on' : ''}">${l}</a>`).join('')}</div>
       <div class="fin-head">
-        <a class="icon-btn" href="#/finance?m=${monthKey(prev).slice(0, 10)}" aria-label="الشهر السابق">›</a>
-        <h2>${MONTHS_AR[m.getMonth()]} ${m.getFullYear()}</h2>
-        <a class="icon-btn ${isCurrent ? 'off' : ''}" href="#/finance?m=${monthKey(next).slice(0, 10)}" aria-label="الشهر التالي">‹</a>
+        <a class="icon-btn" href="${link(lens, lensShift(lens, at, -1))}" aria-label="السابق">›</a>
+        <div class="fin-title"><h2>${lensTitle(lens, s, e)}</h2>${!isCurrent ? `<a class="small" href="${link(lens, D(todayKey))}">ارجع للحالي</a>` : ''}</div>
+        <a class="icon-btn ${dk(e) >= todayKey ? 'off' : ''}" href="${link(lens, lensShift(lens, at, 1))}" aria-label="التالي">‹</a>
       </div>
-      <div class="actions" style="margin-bottom:14px"><a class="btn primary" href="#/closing">${I.plus} إقفال اليوم</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(m).slice(0, 10)}">المصروفات</a></div>
-      ${unclosed && isCurrent ? `<a class="notice warn" style="display:block" href="#/closing">فيه ${unclosed} ${unclosed === 1 ? 'يوم' : 'أيام'} هذا الشهر بدون إقفال ←</a>` : ''}
+      <div class="fin-actions"><a class="btn primary" href="#/closing${lens === 'd' ? `?d=${dk(s)}` : ''}">${I.plus} إقفال اليوم</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(s)}">المصروفات</a></div>
+      ${unclosed && isCurrent && lens !== 'd' ? `<a class="notice warn" style="display:block" href="#/closing">فيه ${unclosed} ${unclosed === 1 ? 'يوم' : unclosed <= 10 ? 'أيام' : 'يوم'} ${LENS_THIS[lens]} بدون إقفال ←</a>` : ''}
+      ${dayCard}
       <div class="fin-hero">
-        <div class="fin-hero-top"><span>صافي الربح</span>${delta != null ? `<span class="chip-d ${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}٪ مبيعات عن الشهر الماضي</span>` : ''}</div>
+        <div class="fin-hero-top"><span>صافي الربح</span>${delta != null ? `<span class="chip-d ${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}٪ مبيعات عن ${LENS_PREV[lens]}</span>` : ''}</div>
         <div class="fin-net num ${r.net < 0 ? 'neg' : ''}">${sar(r.net)} <small>ر.س</small></div>
         <div class="fin-split">
           <div><span>المبيعات</span><b class="num">${sar(r.revenue)}</b><em>الصالون ${sar(r.salon)} · المنزلية ${sar(r.home)}</em></div>
@@ -1799,23 +1848,14 @@
           <div><span>المصروفات</span><b class="num">${sar(r.expenses)}</b><em>${exps.length} تصنيف</em></div>
         </div>
       </div>
-      ${r.partners.length ? `<div class="partners">${r.partners.map((p) => `<div class="partner"><span class="pav">${esc(initial(p.name))}</span><div><div class="pn">${esc(p.name)} <small>${Number(p.pct)}٪</small></div><b class="num">${sar(p.amount)} ر.س</b></div></div>`).join('')}</div>` : ''}
-
-      <div class="section-title"><h2>المبيعات يومًا بيوم</h2><span class="muted small"><i class="lg s"></i> الصالون <i class="lg h"></i> المنزلية</span></div>
-      <div class="card"><div class="dchart">${r.days.map((d) => { const t = Number(d.salon) + Number(d.home); const future = d.day > todayKey; return `<div class="dcol ${future ? 'fut' : ''} ${d.day === todayKey ? 'today' : ''}" title="${d.day} · ${sar(t)} ر.س"><div class="dstack" style="height:${(t / maxDay) * 100}%"><i class="h" style="flex:${d.home}"></i><i class="s" style="flex:${d.salon}"></i></div><span>${Number(d.day.slice(8))}</span>${!future && !d.closed ? '<em></em>' : ''}</div>`; }).join('')}</div>
-        <div class="dinsights">
-          ${best && (best.salon + best.home) > 0 ? `<div><span>أفضل يوم</span><b>${Number(best.day.slice(8))} ${MONTHS_AR[m.getMonth()]} · ${sar(best.salon + best.home)} ر.س</b></div>` : ''}
-          ${r.methods.clients ? `<div><span>متوسط الفاتورة</span><b class="num">${sar(r.salon / r.methods.clients)} ر.س</b></div>` : ''}
-          ${weak && strong && weak[0] !== strong[0] ? `<div><span>ملاحظة</span><b>${WDAYS[weak[0]]} أضعف أيامك، مبيعاته ${Math.round((weak[1] / strong[1]) * 100)}٪ من ${WDAYS[strong[0]]}</b></div>` : ''}
-        </div>
-      </div>
-
+      ${r.partners.length && lens !== 'd' ? `<div class="partners">${r.partners.map((p) => `<div class="partner"><span class="pav">${esc(initial(p.name))}</span><div><div class="pn">${esc(p.name)} <small>${Number(p.pct)}٪</small></div><b class="num">${sar(p.amount)} ر.س</b></div></div>`).join('')}</div>` : ''}
+      ${chart}
       <div class="fin-grid">
-        <div><div class="section-title"><h2>طرق الدفع</h2></div><div class="card">${methods.length ? bars(methods, Math.max(...methods.map((x) => x[1])), ident) : '<div class="empty">ما فيه إقفالات هذا الشهر</div>'}</div></div>
+        <div><div class="section-title"><h2>طرق الدفع</h2></div><div class="card">${methods.length ? bars(methods, Math.max(...methods.map((x) => x[1])), ident) : `<div class="empty">ما فيه إقفالات ${LENS_THIS[lens]}</div>`}</div></div>
         <div><div class="section-title"><h2>المبيعات حسب القسم</h2></div><div class="card">${cats.length ? bars(cats, Math.max(...cats.map((x) => x[1])), ident) : '<div class="empty">سجّلوا تفصيل الأقسام في الإقفال اليومي عشان يطلع هنا</div>'}</div></div>
       </div>
-      <div class="section-title"><h2>المصروفات</h2><a class="small" href="#/expenses?m=${monthKey(m).slice(0, 10)}">كل المصروفات</a></div>
-      <div class="card">${exps.length ? bars(exps, exps[0][1], ident) : '<div class="empty">ما فيه مصروفات مسجلة هذا الشهر</div>'}</div>`;
+      <div class="section-title"><h2>المصروفات</h2><a class="small" href="#/expenses?m=${monthKey(s)}">كل المصروفات</a></div>
+      <div class="card">${exps.length ? bars(exps, exps[0][1], ident) : `<div class="empty">ما فيه مصروفات ${LENS_THIS[lens]}</div>`}</div>`;
     $('#exp-new').onclick = () => expenseForm(null, () => route());
   }
 
@@ -1891,7 +1931,7 @@
       PAY_KEYS.forEach(([k]) => { row[k] = Number($(`[data-pay="${k}"]`).value) || 0; });
       SALE_CATS.forEach(([k]) => { const x = $(`[data-cat="${k}"]`).value; row[k] = x === '' ? null : Number(x); });
       if (PAY_KEYS.every(([k]) => !row[k])) return toast('اكتب مبلغ واحد على الأقل', true);
-      try { await q(sb.from('fin_daily').upsert(row)); toast('تم إقفال اليوم'); location.hash = `#/finance?m=${row.day.slice(0, 8)}01`; } catch (err) { toast(errMsg(err), true); }
+      try { await q(sb.from('fin_daily').upsert(row)); toast('تم إقفال اليوم'); location.hash = `#/finance?l=d&at=${row.day}`; } catch (err) { toast(errMsg(err), true); }
     });
   }
 

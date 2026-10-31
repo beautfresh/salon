@@ -117,6 +117,10 @@
 
   /* ======================= icons ======================= */
   const I = {
+    heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
+    wa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.6-2-1-.9.9a3.6 3.6 0 0 1-1.9-1.9l.9-.9-1-2L9 9.5z"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
     coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M8 14h3M8 17h6"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>',
@@ -272,6 +276,7 @@
       { href: '#/home', label: 'الرئيسية', icon: I.home, key: 'home' },
       { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
     ];
+    L.push({ href: '#/clients', label: 'العميلات', icon: I.heart, key: 'clients' });
     if (isManager()) L.push({ href: '#/finance', label: 'المالية', icon: I.coin, key: 'finance' });
     L.push(
       { sep: true },
@@ -342,6 +347,9 @@
     bookings: { title: 'الحجوزات المنزلية', nav: 'bookings', fn: pageBookings },
     booking: { title: 'تفاصيل الحجز', nav: 'bookings', fn: pageBooking },
     homesvc: { title: 'خدمات هوم والإعدادات', nav: 'bookings', fn: pageHomeSvc, manager: true },
+    clients: { title: 'العميلات', nav: 'clients', fn: pageClients },
+    client: { title: 'ملف العميلة', nav: 'clients', fn: pageClient },
+    feedback: { title: 'الآراء والملاحظات', nav: 'clients', fn: pageFeedback },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
     expenses: { title: 'المصروفات', nav: 'finance', fn: pageExpenses, manager: true },
@@ -1747,12 +1755,305 @@
     }));
   }
 
+  /* ======================= clients ======================= */
+  const SEG = { new: ['جديدة', 'accent'], regular: ['دائمة', 'ok'], vip: ['VIP', 'gold'], away: ['غابت عنّا', 'warn'] };
+  const SRC = { salon: 'الصالون', home: 'هوم', instagram: 'انستقرام', tiktok: 'تيك توك', snap: 'سناب', referral: 'من صديقة', walkin: 'مرّت علينا', other: 'أخرى' };
+  const QUICK_SVC = ['مانيكير', 'بديكير', 'جيل', 'أكريليك', 'استشوار', 'صبغة', 'قص', 'بروتين', 'مكياج', 'رموش', 'حواجب'];
+  const FB_KIND = { praise: ['مديح', 'ok'], complaint: ['شكوى', 'danger'], suggestion: ['اقتراح', 'accent'] };
+  const FB_CH = { salon: 'في الصالون', whatsapp: 'واتساب', instagram: 'انستقرام', google: 'قوقل', call: 'اتصال', other: 'أخرى' };
+  const ago = (d) => {
+    if (!d) return 'ما زارتنا بعد';
+    const n = Math.round((D(todayR()) - D(d)) / 86400000);
+    if (n <= 0) return 'اليوم'; if (n === 1) return 'أمس'; if (n === 2) return 'قبل يومين';
+    if (n < 11) return `قبل ${n} أيام`; if (n < 60) return `قبل ${n} يوم`;
+    const m = Math.round(n / 30); return m < 11 ? `قبل ${m} أشهر` : m < 12 ? `قبل ${m} شهر` : 'قبل أكثر من سنة';
+  };
+  const firstName = (n) => String(n || '').trim().split(/\s+/)[0];
+  const ROSETTE = '../home/assets/rosette-1.svg';
+  let LOYAL = null;
+  async function loyalty() { if (!LOYAL) LOYAL = await q(sb.from('loyalty_settings').select('*').eq('id', 1).maybeSingle()) || { stamps: 6, reward: 'خدمة هدية', active: true }; return LOYAL; }
+
+  function stampRow(n, total, size = '') {
+    return `<div class="stamps ${size}">${Array.from({ length: total }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="--d:${i * 60}ms">${i < n ? `<img src="${ROSETTE}" alt="">` : `<b>${i + 1}</b>`}</i>`).join('')}</div>`;
+  }
+
+  async function pageClients(view, _a, params, alive) {
+    const seg = params.get('s') || 'all';
+    const [rows, L] = await Promise.all([q(sb.from('clients_overview').select('*').order('last_visit', { ascending: false, nullsFirst: false }).limit(3000)), loyalty()]);
+    if (!alive()) return;
+    const mNow = new Date(todayR()).getMonth();
+    const bday = (c) => c.birthday && D(c.birthday).getMonth() === mNow;
+    const count = { all: rows.length, regular: 0, vip: 0, away: 0, new: 0, bday: rows.filter(bday).length, reward: rows.filter((c) => L.active && c.stamps >= L.stamps).length };
+    rows.forEach((c) => { count[c.segment]++; });
+    const tiles = [['all', 'كل العميلات', ''], ['regular', 'دائمات', 'ok'], ['vip', 'VIP', 'gold'], ['away', 'غابوا عنّا', 'warn']];
+    view.innerHTML = `
+      <div class="seg-tiles">${tiles.map(([k, l, c]) => `<a class="seg-tile ${c} ${seg === k ? 'on' : ''}" href="#/clients?s=${k}"><b class="num">${count[k]}</b><span>${l}</span></a>`).join('')}</div>
+      <div class="chips wrap" style="margin:12px 0">
+        <a class="chip ${seg === 'new' ? 'on' : ''}" href="#/clients?s=new">جديدات (${count.new})</a>
+        <a class="chip ${seg === 'bday' ? 'on' : ''}" href="#/clients?s=bday">🎂 ميلادها هالشهر (${count.bday})</a>
+        ${L.active ? `<a class="chip ${seg === 'reward' ? 'on' : ''}" href="#/clients?s=reward">مكافأتها جاهزة (${count.reward})</a>` : ''}
+      </div>
+      <div class="cl-bar"><input class="input" id="cl-q" type="search" placeholder="بحث بالاسم أو الجوال" autocomplete="off">
+        <button class="btn primary" id="cl-new">${I.plus} عميلة</button></div>
+      <div class="actions" style="margin:-4px 0 14px"><a class="btn sm" href="#/feedback">الآراء والملاحظات</a>${isManager() ? '<button class="btn sm" id="cl-loyal">بطاقة الولاء</button>' : ''}</div>
+      ${seg === 'away' && count.away ? '<div class="notice info">هذولي آخر زيارة لهم قبل أكثر من ٤٥ يوم. رسالة «وحشتينا» وحدة ممكن ترجّعهم.</div>' : ''}
+      <div class="list" id="cl-list"></div>`;
+    const list = $('#cl-list');
+    const pool = rows.filter((c) => seg === 'all' ? true : seg === 'bday' ? bday(c) : seg === 'reward' ? L.active && c.stamps >= L.stamps : c.segment === seg);
+    const draw = () => {
+      const t = $('#cl-q').value.trim().replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+      const res = t ? pool.filter((c) => c.name.includes(t) || (c.phone || '').includes(t.replace(/\D/g, '') || '~')) : pool;
+      list.innerHTML = res.length ? res.slice(0, 300).map((c) => `
+        <a class="row" href="#/client/${c.id}">
+          <span class="cav ${c.segment}">${esc(initial(c.name))}</span>
+          <div class="grow"><div class="title">${esc(c.name)} ${c.segment !== 'new' ? `<span class="badge ${SEG[c.segment][1]}">${SEG[c.segment][0]}</span>` : ''}</div>
+            <div class="meta">${ago(c.last_visit)}${c.visits ? ` · ${c.visits} ${c.visits === 1 ? 'زيارة' : c.visits <= 10 ? 'زيارات' : 'زيارة'}` : ''}${c.spend > 0 ? ` · ${sar(c.spend)} ر.س` : ''}</div></div>
+          <div class="end">${L.active ? `<span class="mini-st ${c.stamps >= L.stamps ? 'full' : ''}"><img src="${ROSETTE}" alt="">${Math.min(c.stamps, L.stamps)}/${L.stamps}</span>` : ''}
+            ${seg === 'away' && c.phone ? `<span class="wa-mini" data-wa="${c.id}">وحشتينا</span>` : ''}</div>
+        </a>`).join('') : `<div class="empty">${rows.length ? 'ما فيه نتائج' : 'ابدؤوا بإضافة أول عميلة. وكل حجز منزلي يكتمل ينضاف هنا تلقائيًا.'}</div>`;
+      $$('[data-wa]', list).forEach((b) => b.addEventListener('click', (e) => {
+        e.preventDefault(); const c = rows.find((x) => String(x.id) === b.dataset.wa);
+        window.open(`https://wa.me/${waNum(c.phone)}?text=${encodeURIComponent(waTpl(c, L).miss)}`, '_blank', 'noopener');
+      }));
+    };
+    $('#cl-q').addEventListener('input', draw); draw();
+    $('#cl-new').onclick = () => clientForm(null, (id) => { location.hash = `#/client/${id}`; });
+    $('#cl-loyal')?.addEventListener('click', loyaltyForm);
+  }
+
+  function waTpl(c, L) {
+    const n = firstName(c.name); const left = Math.max(0, L.stamps - c.stamps);
+    return {
+      thanks: `هلا ${n} 🤍\nشكرًا لزيارتك بيوتفريش اليوم، إن شاء الله عجبتك النتيجة.\nرأيك يهمنا، وإذا فيه أي ملاحظة قولي لنا.`,
+      miss: `هلا ${n} 🤍\nوحشتينا في بيوتفريش! صار لك فترة ما جيتي.\nودّك نرتب لك موعد هالأسبوع؟`,
+      bday: `كل عام وأنتِ بخير يا ${n} 🎂\nبمناسبة ميلادك، هديتك من بيوتفريش بانتظارك هالشهر.`,
+      stamps: left ? `هلا ${n} 🤍\nباقي لك ${left === 1 ? 'زيارة وحدة' : left === 2 ? 'زيارتين' : left + ' زيارات'} وتوصلين لمكافأتك في بيوتفريش: ${L.reward}.` : `هلا ${n} 🤍\nمبروك! وصلتي لمكافأتك في بيوتفريش: ${L.reward}.\nنستناك بزيارتك الجاية.`,
+      remind: `هلا ${n} 🤍\nنذكّرك بموعدك في بيوتفريش.\nإذا تبين تغيرين الوقت كلمينا هنا.`,
+    };
+  }
+
+  async function pageClient(view, args, _p, alive) {
+    const id = Number(args[0]);
+    const [c, visits, reds, fb, L] = await Promise.all([
+      q(sb.from('clients_overview').select('*').eq('id', id).maybeSingle()),
+      q(sb.from('client_visits').select('*').eq('client_id', id).order('day', { ascending: false }).order('id', { ascending: false }).limit(200)),
+      q(sb.from('loyalty_redemptions').select('*').eq('client_id', id).order('day', { ascending: false })),
+      q(sb.from('client_feedback').select('*').eq('client_id', id).order('day', { ascending: false })),
+      loyalty(),
+    ]);
+    if (!alive()) return;
+    if (!c) { view.innerHTML = '<div class="notice danger">ما لقينا هذي العميلة</div>'; return; }
+    setTitle(c.name);
+    const avg = c.visits ? c.spend / c.visits : 0;
+    const full = L.active && c.stamps >= L.stamps;
+    const T = waTpl(c, L);
+    const tpls = [['thanks', 'شكر بعد الزيارة'], ['remind', 'تذكير بموعد'], ['stamps', full ? 'مكافأتك جاهزة' : 'كم باقي للمكافأة'], ['miss', 'وحشتينا'], ['bday', 'عيد ميلاد']];
+    let freq = null;
+    if (visits.length >= 3) { const ds = visits.map((v) => D(v.day)).sort((a, b) => a - b); freq = Math.round((ds[ds.length - 1] - ds[0]) / 86400000 / (ds.length - 1)); }
+    const nextDue = freq && c.last_visit ? new Date(D(c.last_visit).getTime() + freq * 86400000) : null;
+    view.innerHTML = `
+      <div class="cl-hero">
+        <span class="cav big ${c.segment}">${esc(initial(c.name))}</span>
+        <div class="grow"><h2>${esc(c.name)}</h2>
+          <div class="cl-sub"><span class="badge ${SEG[c.segment][1]}">${SEG[c.segment][0]}</span>${c.phone ? `<span class="num" dir="ltr">${esc(c.phone)}</span>` : ''}${c.birthday ? `<span>🎂 ${D(c.birthday).getDate()} ${MONTHS_AR[D(c.birthday).getMonth()]}</span>` : ''}<span>${SRC[c.source] || ''}</span></div></div>
+        <div class="cl-acts">${c.phone ? `<a class="icon-btn" href="https://wa.me/${waNum(c.phone)}" target="_blank" rel="noopener" aria-label="واتساب">${I.wa}</a><a class="icon-btn" href="tel:${esc(c.phone)}" aria-label="اتصال">${I.phone}</a>` : ''}<button class="icon-btn" id="c-edit" aria-label="تعديل">${I.edit}</button></div>
+      </div>
+      <div class="cl-stats">
+        <div><b class="num">${c.visits}</b><span>زيارة</span></div>
+        <div><b class="num">${sar(c.spend)}</b><span>إجمالي ر.س</span></div>
+        <div><b class="num">${sar(avg)}</b><span>متوسط الزيارة</span></div>
+        <div class="lv"><b>${c.last_visit ? ago(c.last_visit) : '—'}</b><span>آخر زيارة</span></div>
+      </div>
+      ${freq ? `<div class="cl-rhythm">${I.cal}<span>تزورنا كل <b>${freq}</b> يوم تقريبًا${nextDue ? `، وزيارتها الجاية المتوقعة ${D(dk(nextDue)) < D(todayR()) ? `<b class="late">تأخرت ${Math.round((D(todayR()) - nextDue) / 86400000)} يوم</b>` : `حوالي <b>${nextDue.getDate()} ${MONTHS_AR[nextDue.getMonth()]}</b>`}` : ''}</span></div>` : ''}
+
+      ${L.active ? `<div class="loyal-card ${full ? 'full' : ''}">
+        <div class="lc-top"><img class="lc-logo" src="../home/assets/Beautfresh-brown.svg" alt=""><span>بطاقة الولاء</span></div>
+        ${stampRow(Math.min(c.stamps, L.stamps), L.stamps)}
+        <div class="lc-foot">${full ? `<b>وصلت لمكافأتها 🤍</b><span>${esc(L.reward)}</span>` : `<span>باقي ${L.stamps - c.stamps} وتوصل لـ: ${esc(L.reward)}</span>`}</div>
+        <div class="lc-acts"><button class="btn on-oud" id="c-visit">${I.plus} ختم زيارة</button>${full ? '<button class="btn on-oud ghost" id="c-redeem">استلمت المكافأة</button>' : ''}</div>
+      </div>` : `<div class="actions"><button class="btn primary" id="c-visit">${I.plus} زيارة</button></div>`}
+
+      <div class="section-title"><h2>رسالة جاهزة</h2></div>
+      <div class="chips wrap">${c.phone ? tpls.map(([k, l]) => `<a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(c.phone)}?text=${encodeURIComponent(T[k])}">${l}</a>`).join('') : '<span class="muted small">أضيفوا رقم جوالها عشان تطلع الرسائل</span>'}</div>
+
+      ${c.prefs || c.notes ? `<div class="fin-grid">
+        ${c.prefs ? `<div><div class="section-title"><h2>تفضيلاتها</h2></div><div class="card note-card">${esc(c.prefs)}</div></div>` : ''}
+        ${c.notes ? `<div><div class="section-title"><h2>ملاحظات</h2></div><div class="card note-card">${esc(c.notes)}</div></div>` : ''}
+      </div>` : `<button class="add-note" id="c-addpref">${I.plus} أضيفوا تفضيلاتها: لونها المفضل، شكل الأظافر، أي حساسية…</button>`}
+
+      <div class="section-title"><h2>الزيارات</h2><span class="muted small">${visits.length}</span></div>
+      <div class="list">${visits.length ? visits.map((v) => `
+        <div class="row"><span class="vdot ${v.channel}">${v.channel === 'home' ? I.home : '<img src="' + ROSETTE + '" alt="">'}</span>
+          <div class="grow"><div class="title">${esc(v.services || (v.channel === 'home' ? 'زيارة منزلية' : 'زيارة'))}</div><div class="meta">${D(v.day).getDate()} ${MONTHS_AR[D(v.day).getMonth()]} ${D(v.day).getFullYear()} · ${v.channel === 'home' ? 'هوم' : 'الصالون'}${v.note ? ' · ' + esc(v.note) : ''}</div></div>
+          <div class="end">${v.amount != null ? `<b class="num">${sar(v.amount)}</b> <span class="muted small">ر.س</span>` : ''}${isManager() && !v.booking_id ? `<button class="x-btn" data-delv="${v.id}" aria-label="حذف">×</button>` : ''}</div></div>`).join('') : '<div class="empty">ما فيه زيارات مسجلة</div>'}</div>
+      ${reds.length ? `<p class="muted small mt">استلمت مكافأة الولاء ${reds.length} ${reds.length === 1 ? 'مرة' : 'مرات'}، آخرها ${ago(reds[0].day)}.</p>` : ''}
+
+      <div class="section-title"><h2>آراؤها</h2><button class="btn sm" id="c-fb">${I.plus} رأي أو ملاحظة</button></div>
+      ${fb.length ? `<div class="list">${fb.map(fbRow).join('')}</div>` : '<div class="muted small">ما فيه شي مسجل</div>'}
+      ${isManager() ? '<div class="actions end mt"><button class="btn danger sm" id="c-del">حذف ملف العميلة</button></div>' : ''}`;
+    $('#c-edit').onclick = () => clientForm(c, () => route());
+    $('#c-addpref')?.addEventListener('click', () => clientForm(c, () => route()));
+    $('#c-visit').onclick = () => visitForm(c, () => route());
+    $('#c-fb').onclick = () => feedbackForm(null, c, () => route());
+    $('#c-redeem')?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      try { await q(sb.from('loyalty_redemptions').insert({ client_id: c.id, reward: L.reward })); toast('تم تسجيل المكافأة، البطاقة بدأت من جديد'); route(); } catch (err) { toast(errMsg(err), true); }
+    }));
+    $$('[data-delv]', view).forEach((b) => b.addEventListener('click', async () => {
+      if (!(await confirmBox('حذف الزيارة', 'تنحذف الزيارة من ملفها ومن أختام البطاقة.', 'حذف', true))) return;
+      try { await q(sb.from('client_visits').delete().eq('id', Number(b.dataset.delv))); route(); } catch (err) { toast(errMsg(err), true); }
+    }));
+    bindFb(view);
+    $('#c-del')?.addEventListener('click', async () => {
+      if (!(await confirmBox('حذف ملف العميلة', `ينحذف ملف ${esc(c.name)} وكل زياراتها. ما يمكن التراجع.`, 'حذف', true))) return;
+      try { await q(sb.from('clients').delete().eq('id', c.id)); toast('تم الحذف'); location.hash = '#/clients'; } catch (err) { toast(errMsg(err), true); }
+    });
+  }
+
+  const normPhone = (v) => { let p = String(v || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, ''); if (p.startsWith('966')) p = '0' + p.slice(3); if (/^5\d{8}$/.test(p)) p = '0' + p; return p; };
+
+  function clientForm(c, done) {
+    let src = c?.source || 'salon', vip = !!c?.vip;
+    modal(`
+      <h3>${c ? 'تعديل بيانات العميلة' : 'عميلة جديدة'}</h3>
+      <div class="field"><label>الاسم</label><input class="input" id="k-name" value="${esc(c?.name || '')}" maxlength="60"></div>
+      <div class="grid2"><div class="field"><label>الجوال</label><input class="input num" id="k-phone" inputmode="tel" dir="ltr" placeholder="05xxxxxxxx" value="${esc(c?.phone || '')}"></div>
+      <div class="field"><label>تاريخ الميلاد <span class="muted small">(اختياري)</span></label><input class="input" id="k-bd" type="date" value="${c?.birthday || ''}"></div></div>
+      <div class="field"><label>عرفتنا من</label><div class="chips wrap" id="k-src">${Object.entries(SRC).map(([k, l]) => `<button type="button" class="chip ${k === src ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <label class="toggle-row"><span><b>عميلة VIP</b><small>تطلع بلون مميز في القائمة</small></span><button type="button" class="sw ${vip ? 'on' : ''}" id="k-vip" aria-pressed="${vip}"></button></label>
+      <div class="field"><label>تفضيلاتها</label><textarea class="input" id="k-prefs" rows="2" maxlength="500" placeholder="مثلًا: تحب النود، أظافر قصيرة مربعة، حساسية من…">${esc(c?.prefs || '')}</textarea></div>
+      <div class="field"><label>ملاحظات</label><textarea class="input" id="k-notes" rows="2" maxlength="1000">${esc(c?.notes || '')}</textarea></div>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="k-save">حفظ</button></div>`, (el, close) => {
+      $$('#k-src .chip', el).forEach((b) => b.onclick = () => { src = b.dataset.k; $$('#k-src .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $('#k-vip', el).onclick = (e) => { vip = !vip; e.currentTarget.classList.toggle('on', vip); };
+      $('#k-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const phone = normPhone($('#k-phone', el).value);
+        if ($('#k-name', el).value.trim().length < 2) return toast('اكتبوا الاسم', true);
+        if (phone && !/^05\d{8}$/.test(phone)) return toast('رقم الجوال غير صحيح', true);
+        const row = { name: $('#k-name', el).value.trim(), phone: phone || null, birthday: $('#k-bd', el).value || null, source: src, vip, prefs: $('#k-prefs', el).value.trim() || null, notes: $('#k-notes', el).value.trim() || null };
+        try {
+          let id = c?.id;
+          if (c) await q(sb.from('clients').update(row).eq('id', c.id));
+          else id = (await q(sb.from('clients').insert(row).select('id').single())).id;
+          toast('تم الحفظ'); close(); done && done(id);
+        } catch (err) { toast(err.code === '23505' ? 'هذا الرقم مسجل لعميلة ثانية' : errMsg(err), true); }
+      });
+    });
+  }
+
+  function visitForm(c, done) {
+    let ch = 'salon'; const picked = new Set();
+    modal(`
+      <h3>زيارة لـ ${esc(firstName(c.name))}</h3>
+      <div class="grid2"><div class="field"><label>اليوم</label><input class="input" id="v-day" type="date" value="${todayR()}" max="${todayR()}"></div>
+      <div class="field"><label>المبلغ (ر.س)</label><input class="input num" id="v-amt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="اختياري"></div></div>
+      <div class="field"><label>وين</label><div class="chips" id="v-ch"><button type="button" class="chip on" data-k="salon">الصالون</button><button type="button" class="chip" data-k="home">هوم</button></div></div>
+      <div class="field"><label>الخدمات</label><div class="chips wrap" id="v-q">${QUICK_SVC.map((s) => `<button type="button" class="chip" data-s="${s}">${s}</button>`).join('')}</div>
+        <input class="input mt" id="v-svc" maxlength="300" placeholder="أو اكتبوها"></div>
+      <div class="field"><label>ملاحظة</label><input class="input" id="v-note" maxlength="300" placeholder="مثلًا: لون جديد، أو اسم الموظفة"></div>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="v-save">${I.plus} ختم الزيارة</button></div>`, (el, close) => {
+      $$('#v-ch .chip', el).forEach((b) => b.onclick = () => { ch = b.dataset.k; $$('#v-ch .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $$('#v-q .chip', el).forEach((b) => b.onclick = () => { const s = b.dataset.s; picked.has(s) ? picked.delete(s) : picked.add(s); b.classList.toggle('on'); $('#v-svc', el).value = [...picked].join('، '); });
+      $('#v-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const a = $('#v-amt', el).value;
+        try {
+          await q(sb.from('client_visits').insert({ client_id: c.id, day: $('#v-day', el).value || todayR(), channel: ch, services: $('#v-svc', el).value.trim() || null, amount: a === '' ? null : Number(a), note: $('#v-note', el).value.trim() || null }));
+          const L = await loyalty(); const n = c.stamps + 1;
+          toast(L.active && n === L.stamps ? `ختم ${n} من ${L.stamps} 🤍 وصلت لمكافأتها!` : L.active ? `ختم ${Math.min(n, L.stamps)} من ${L.stamps}` : 'تم تسجيل الزيارة');
+          close(); done && done();
+        } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  async function loyaltyForm() {
+    const L = await loyalty();
+    let on = L.active;
+    modal(`
+      <h3>بطاقة الولاء</h3>
+      <p class="muted" style="margin-top:-6px">كل زيارة تاخذ ختم. لما تكتمل الأختام تستحق العميلة مكافأتها، وتبدأ البطاقة من جديد.</p>
+      <div class="field"><label>عدد الأختام</label><div class="chips" id="l-n">${[5, 6, 8, 10].map((n) => `<button type="button" class="chip ${n === L.stamps ? 'on' : ''}" data-n="${n}">${n}</button>`).join('')}</div></div>
+      <div class="field"><label>المكافأة</label><input class="input" id="l-rw" maxlength="120" value="${esc(L.reward)}" placeholder="مثلًا: مانيكير هدية"></div>
+      <label class="toggle-row"><span><b>البطاقة مفعّلة</b></span><button type="button" class="sw ${on ? 'on' : ''}" id="l-on"></button></label>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="l-save">حفظ</button></div>`, (el, close) => {
+      let n = L.stamps;
+      $$('#l-n .chip', el).forEach((b) => b.onclick = () => { n = Number(b.dataset.n); $$('#l-n .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $('#l-on', el).onclick = (e) => { on = !on; e.currentTarget.classList.toggle('on', on); };
+      $('#l-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        try { await q(sb.from('loyalty_settings').update({ stamps: n, reward: $('#l-rw', el).value.trim() || 'خدمة هدية', active: on }).eq('id', 1)); LOYAL = null; toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  /* ---------- feedback ---------- */
+  function fbRow(f) {
+    return `<div class="row fb ${f.status}">
+      <span class="badge ${FB_KIND[f.kind][1]}">${FB_KIND[f.kind][0]}</span>
+      <div class="grow"><div class="fb-body">${esc(f.body)}</div>
+        <div class="meta">${f.rating ? '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating) + ' · ' : ''}${ago(f.day)}${f.channel ? ' · ' + FB_CH[f.channel] : ''}${f._client ? ` · <a href="#/client/${f.client_id}">${esc(f._client)}</a>` : ''}</div>
+        ${f.resolution ? `<div class="fb-res">✓ ${esc(f.resolution)}</div>` : ''}</div>
+      <div class="end">${f.kind === 'complaint' && f.status === 'open' ? `<button class="btn sm" data-resolve="${f.id}">تم الحل</button>` : ''}</div></div>`;
+  }
+  function bindFb(view) {
+    $$('[data-resolve]', view).forEach((b) => b.addEventListener('click', () => modal(`
+      <h3>كيف انحلت الشكوى؟</h3>
+      <div class="field"><textarea class="input" id="r-txt" rows="3" maxlength="500" placeholder="مثلًا: اعتذرنا وعدّلنا الأظافر مجانًا"></textarea></div>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="r-save">حفظ</button></div>`, (el, close) => {
+      $('#r-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        try { await q(sb.from('client_feedback').update({ status: 'resolved', resolution: $('#r-txt', el).value.trim() || null, resolved_at: new Date().toISOString() }).eq('id', Number(b.dataset.resolve))); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+    })));
+  }
+
+  function feedbackForm(f, c, done) {
+    let kind = 'praise', rating = 0, ch = 'salon';
+    modal(`
+      <h3>رأي أو ملاحظة${c ? ` من ${esc(firstName(c.name))}` : ''}</h3>
+      <div class="field"><label>النوع</label><div class="chips" id="f-k">${Object.entries(FB_KIND).map(([k, [l]]) => `<button type="button" class="chip ${k === kind ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="field"><label>التقييم <span class="muted small">(اختياري)</span></label><div class="rate" id="f-r">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-r="${n}">★</button>`).join('')}</div></div>
+      <div class="field"><label>وصلنا عن طريق</label><div class="chips wrap" id="f-ch">${Object.entries(FB_CH).map(([k, l]) => `<button type="button" class="chip ${k === ch ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="field"><label>وش قالت</label><textarea class="input" id="f-body" rows="3" maxlength="1000"></textarea></div>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="f-save">حفظ</button></div>`, (el, close) => {
+      const pick = (sel, set) => $$(sel + ' .chip', el).forEach((b) => b.onclick = () => { set(b.dataset.k); $$(sel + ' .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      pick('#f-k', (v) => { kind = v; }); pick('#f-ch', (v) => { ch = v; });
+      $$('#f-r button', el).forEach((b) => b.onclick = () => { rating = Number(b.dataset.r) === rating ? 0 : Number(b.dataset.r); $$('#f-r button', el).forEach((x) => x.classList.toggle('on', Number(x.dataset.r) <= rating)); });
+      $('#f-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        if ($('#f-body', el).value.trim().length < 2) return toast('اكتبوا الملاحظة', true);
+        try { await q(sb.from('client_feedback').insert({ client_id: c?.id || null, kind, rating: rating || null, channel: ch, body: $('#f-body', el).value.trim() })); toast('تم الحفظ'); close(); done && done(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  async function pageFeedback(view, _a, params, alive) {
+    const tab = params.get('t') || 'all';
+    const rows = await q(sb.from('client_feedback').select('*, clients(name)').order('day', { ascending: false }).order('id', { ascending: false }).limit(300));
+    if (!alive()) return;
+    rows.forEach((f) => { f._client = f.clients?.name; });
+    const m0 = todayR().slice(0, 7);
+    const mon = rows.filter((f) => f.day.slice(0, 7) === m0);
+    const rated = rows.filter((f) => f.rating);
+    const avg = rated.length ? rated.reduce((s, f) => s + f.rating, 0) / rated.length : null;
+    const open = rows.filter((f) => f.kind === 'complaint' && f.status === 'open').length;
+    const shown = tab === 'open' ? rows.filter((f) => f.kind === 'complaint' && f.status === 'open') : tab === 'all' ? rows : rows.filter((f) => f.kind === tab);
+    view.innerHTML = `
+      <div class="seg-tiles">
+        <div class="seg-tile gold"><b class="num">${avg ? avg.toFixed(1) : '—'}</b><span>متوسط التقييم</span></div>
+        <div class="seg-tile ok"><b class="num">${mon.filter((f) => f.kind === 'praise').length}</b><span>مديح هالشهر</span></div>
+        <div class="seg-tile warn"><b class="num">${open}</b><span>شكوى مفتوحة</span></div>
+        <div class="seg-tile"><b class="num">${mon.filter((f) => f.kind === 'suggestion').length}</b><span>اقتراح هالشهر</span></div>
+      </div>
+      <div class="chips wrap" style="margin:14px 0">${[['all', 'الكل'], ['open', `شكاوى مفتوحة${open ? ` (${open})` : ''}`], ['praise', 'مديح'], ['complaint', 'شكاوى'], ['suggestion', 'اقتراحات']].map(([k, l]) => `<a class="chip ${k === tab ? 'on' : ''}" href="#/feedback?t=${k}">${l}</a>`).join('')}</div>
+      <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="fb-new">${I.plus} رأي أو ملاحظة</button></div>
+      <div class="list">${shown.length ? shown.map(fbRow).join('') : '<div class="empty">ما فيه شي هنا. سجّلوا آراء العميلات أول بأول، من الصالون أو الواتساب أو قوقل، عشان تعرفون وش يحبون ووش يزعجهم.</div>'}</div>`;
+    $('#fb-new').onclick = () => feedbackForm(null, null, () => route());
+    bindFb(view);
+  }
+
   /* ======================= finance ======================= */
   const EXP_CAT = { rent: 'إيجار', salaries: 'رواتب', commissions: 'عمولات', utilities: 'كهرباء وماء', telecom: 'إنترنت واتصالات', marketing: 'تسويق وإعلانات', maintenance: 'صيانة', government: 'رسوم حكومية وتراخيص', subscriptions: 'اشتراكات وأنظمة', hospitality: 'ضيافة', transport: 'مشاوير وتوصيل', supplies_other: 'مستلزمات خارج المخزون', other: 'أخرى' };
   const PAY_KEYS = [['cash', 'كاش'], ['card', 'شبكة'], ['transfer', 'تحويل'], ['online', 'رابط دفع'], ['bnpl', 'تابي وتمارا'], ['other', 'أخرى']];
   const SALE_CATS = [['nails', 'أظافر'], ['hair', 'شعر'], ['makeup', 'مكياج'], ['lashes', 'رموش وحواجب'], ['products', 'منتجات'], ['other_cat', 'أخرى']];
   const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-  const sar = (v) => `${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  const sar = (v) => { const n = Number(v || 0); const t = Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); return n < 0 && t !== '0' ? `\u2066-${t}\u2069` : t; };
   const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   const todayR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
 
@@ -1798,7 +2099,7 @@
     const todayKey = todayR();
     const at = params.get('at') ? D(params.get('at')) : params.get('m') ? D(params.get('m')) : D(todayKey);
     const [s, e] = lensRange(lens, at);
-    const r = await q(sb.rpc('fin_range', { p_from: dk(s), p_to: dk(e) }));
+    const [r, tgt] = await Promise.all([q(sb.rpc('fin_range', { p_from: dk(s), p_to: dk(e) })), lens === 'm' ? q(sb.from('fin_targets').select('revenue').eq('month', monthKey(s)).maybeSingle()) : null]);
     if (!alive()) return;
     const link = (l, d) => `#/finance?l=${l}&at=${dk(d)}`;
     const isCurrent = dk(s) <= todayKey && todayKey <= dk(e);
@@ -1842,6 +2143,7 @@
       <div class="fin-hero">
         <div class="fin-hero-top"><span>صافي الربح</span>${delta != null ? `<span class="chip-d ${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}٪ مبيعات عن ${LENS_PREV[lens]}</span>` : ''}</div>
         <div class="fin-net num ${r.net < 0 ? 'neg' : ''}">${sar(r.net)} <small>ر.س</small></div>
+        ${lens === 'm' ? targetBlock(r, tgt, s, e, todayKey) : ''}
         <div class="fin-split">
           <div><span>المبيعات</span><b class="num">${sar(r.revenue)}</b><em>الصالون ${sar(r.salon)} · المنزلية ${sar(r.home)}</em></div>
           <div><span>المشتريات</span><b class="num">${sar(r.purchases)}</b><em>فواتير معتمدة</em></div>
@@ -1857,6 +2159,36 @@
       <div class="section-title"><h2>المصروفات</h2><a class="small" href="#/expenses?m=${monthKey(s)}">كل المصروفات</a></div>
       <div class="card">${exps.length ? bars(exps, exps[0][1], ident) : `<div class="empty">ما فيه مصروفات ${LENS_THIS[lens]}</div>`}</div>`;
     $('#exp-new').onclick = () => expenseForm(null, () => route());
+    $('#tgt-set')?.addEventListener('click', () => targetForm(monthKey(s), tgt?.revenue, r.prev_revenue));
+  }
+
+  function targetBlock(r, tgt, s, e, todayKey) {
+    if (!tgt) return `<button class="tgt-empty" id="tgt-set">${I.plus} حطّوا هدف مبيعات لهالشهر</button>`;
+    const T = Number(tgt.revenue), pct = Math.min(100, (r.revenue / T) * 100);
+    const total = e.getDate(), passed = todayKey > dk(e) ? total : todayKey < dk(s) ? 0 : D(todayKey).getDate();
+    const left = Math.max(0, T - r.revenue), daysLeft = total - passed;
+    const pace = passed ? (r.revenue / passed) * total : 0;
+    let msg;
+    if (r.revenue >= T) msg = 'وصلتوا للهدف 🤍';
+    else if (!daysLeft) msg = `ناقص ${sar(left)} ر.س عن الهدف`;
+    else msg = `باقي ${sar(left)} ر.س، يعني ${sar(left / daysLeft)} باليوم${passed > 3 ? ` · على هالمعدل بتختمون الشهر بـ ${sar(pace)}` : ''}`;
+    return `<div class="tgt"><div class="tgt-top"><span>الهدف <b class="num">${sar(T)}</b></span><button class="tgt-edit" id="tgt-set" aria-label="تعديل الهدف">${I.edit}</button><b class="num">${Math.round(pct)}٪</b></div>
+      <div class="tgt-track"><i style="width:${pct}%"></i>${passed && passed < total ? `<s style="inset-inline-start:${(passed / total) * 100}%" title="اليوم"></s>` : ''}</div><div class="tgt-msg">${msg}</div></div>`;
+  }
+
+  function targetForm(month, cur, prev) {
+    const sug = prev ? Math.round((prev * 1.1) / 1000) * 1000 : null;
+    modal(`
+      <h3>هدف ${MONTHS_AR[D(month).getMonth()]}</h3>
+      <div class="field"><label>هدف المبيعات (ر.س)</label><input class="input num" id="t-v" type="number" inputmode="numeric" min="1" value="${cur ? Number(cur) : ''}" placeholder="${sug || ''}"></div>
+      ${sug ? `<p class="muted small" style="margin-top:-6px">مبيعات الشهر الماضي ${sar(prev)}، وزيادة ١٠٪ تكون <button type="button" class="link" id="t-sug">${sar(sug)}</button></p>` : ''}
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="t-save">حفظ</button></div>`, (el, close) => {
+      $('#t-sug', el)?.addEventListener('click', () => { $('#t-v', el).value = sug; });
+      $('#t-save', el).onclick = (ev) => busy(ev.currentTarget, async () => {
+        const v = Number($('#t-v', el).value); if (!(v > 0)) return toast('اكتبوا الهدف', true);
+        try { await q(sb.from('fin_targets').upsert({ month, revenue: v })); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
   }
 
   function expenseForm(e, done) {

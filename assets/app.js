@@ -440,7 +440,7 @@
     } catch (_) { /* bookings unavailable */ }
     if (!alive()) return;
     const hourNow = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }));
-    const greet = hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
+    const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="book/assets/rosette-1.svg" alt=""></div>
       <a class="bk-card" href="#/bookings${bk.pending ? '?t=pending' : '?t=today'}">

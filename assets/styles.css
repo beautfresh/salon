@@ -304,7 +304,7 @@ table.tbl td.n, table.tbl th.n { text-align: end; font-variant-numeric: tabular-
 
 /* ---------- brand admin v2 ---------- */
 .sidebar .brand { flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px 12px 22px; }
-.sidebar .brand .logo { height: 44px; width: auto; filter: brightness(0) invert(94%) sepia(9%) saturate(380%) hue-rotate(335deg); }
+.sidebar .brand .logo { height: 58px; width: auto; filter: brightness(0) invert(94%) sepia(9%) saturate(380%) hue-rotate(335deg); }
 .sidebar .brand span { font-size: 12px; font-weight: 500; letter-spacing: .08em; color: #D9C6B7; }
 .sidebar nav a { border-radius: 12px; transition: background .25s, color .25s, transform .25s; }
 .sidebar nav a:hover { transform: translateX(-2px); }

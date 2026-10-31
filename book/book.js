@@ -118,7 +118,7 @@
           <div class="hero-mark" aria-hidden="true"><img src="assets/home-mark.svg" alt=""></div>
           <img class="hero-line" src="assets/home-line.svg" alt="بيوتفريش للخدمات المنزلية">
           <h1 class="hero-title"><span>بيوتفريش،</span> <span>في بيتك.</span></h1>
-          <p class="lead">نجيكِ بالعناية، وتبقى الراحة لكِ.<br>أظافر وشعر بأيادي بيوتفريش، في وقتك ومكانك.</p>
+          <p class="lead">الصالون اللي تحبينه.. يجيك لين بابك.<br>أظافر وشعر بأيادي بيوتفريش، في وقتك ومكانك.</p>
           <div class="cta">
             <a class="btn" href="#/book">${accepting ? 'احجزي موعدك' : 'قريبًا'}<i class="arr" aria-hidden="true">←</i></a>
             <a class="btn ghost" href="#/services">قائمة الخدمات</a>

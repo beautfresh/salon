@@ -3,7 +3,7 @@
 window.APP_CONFIG = {
   supabaseUrl: 'https://enrlujtrysrlzwbjexey.supabase.co',
   supabaseKey: 'sb_publishable_28HPaKcl04mJcGOx28vCWA_9_e14OOJ',
-  appName: 'مخزون الصالون',
+  appName: 'بيوتفرش · الإدارة',
   loginDomain: 'salon.local',
   expiryWarningDays: 60,
   // مفتاح عام لإشعارات الجوال (Web Push)، والمفتاح الخاص محفوظ في قاعدة البيانات

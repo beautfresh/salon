@@ -117,6 +117,7 @@
 
   /* ======================= icons ======================= */
   const I = {
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M8 14h3M8 17h6"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>',
     box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>',
     out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>',
@@ -165,7 +166,7 @@
     $('#app').innerHTML = `
       <div class="auth">
         <form class="auth-card" id="auth-form" autocomplete="on">
-          <div class="auth-logo">${I.bag}</div>
+          <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفرش" style="height:56px;width:auto;margin-bottom:18px">
           <h1>${signup ? 'إنشاء حساب' : esc(CFG.appName)}</h1>
           <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'تسجيل الدخول لإدارة مخزون الصالون'}</p>
           ${msg ? `<div class="notice ${msg.ok ? 'info' : 'danger'}">${esc(msg.text || msg)}</div>` : ''}
@@ -212,7 +213,7 @@
     const p = S.profile;
     $('#app').innerHTML = `
       <div class="auth"><div class="auth-card">
-        <div class="auth-logo">${I.bag}</div>
+        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفرش" style="height:56px;width:auto;margin-bottom:18px">
         <h1>الحساب بانتظار الاعتماد</h1>
         <p class="sub">أهلاً ${esc(p?.full_name || '')}، تم تسجيل حسابك وسيظهر لمدير النظام لاعتماده وتحديد صلاحياتك. بعد الاعتماد اضغط «تحديث».</p>
         <div class="actions"><button class="btn primary" id="pending-refresh" style="flex:1">تحديث</button><button class="btn" id="pending-out" style="flex:1">تسجيل الخروج</button></div>
@@ -225,7 +226,7 @@
     S.shellReady = false;
     $('#app').innerHTML = `
       <div class="auth"><form class="auth-card" id="setpw">
-        <div class="auth-logo">${I.bag}</div>
+        <img src="book/assets/Beautfresh-brown.svg" alt="بيوتفرش" style="height:56px;width:auto;margin-bottom:18px">
         <h1>تعيين كلمة المرور</h1>
         <p class="sub">اختر كلمة مرور جديدة لحسابك</p>
         <div class="field"><label>كلمة المرور الجديدة</label><input class="input" type="password" id="pw1" dir="ltr" minlength="8" required autocomplete="new-password"></div>
@@ -266,6 +267,8 @@
   function navLinks() {
     const L = [
       { href: '#/home', label: 'الرئيسية', icon: I.home, key: 'home' },
+      { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
+      { sep: true },
       { href: '#/items', label: 'الأصناف', icon: I.box, key: 'items' },
       { href: '#/issue', label: 'صرف من المخزون', icon: I.out, key: 'issue' },
       { href: '#/invoices', label: 'فواتير الشراء', icon: I.invoice, key: 'invoices' },
@@ -288,7 +291,7 @@
     $('#app').innerHTML = `
       <div class="shell">
         <aside class="sidebar">
-          <div class="brand"><span class="mark">${I.bag}</span>${esc(CFG.appName)}</div>
+          <div class="brand"><span class="mark"><img src="book/assets/rosette-1.svg" alt=""></span>${esc(CFG.appName)}</div>
           <nav>${navLinks().map((l) => l.sep ? '<div class="sep"></div>' : `<a href="${l.href}" data-nav="${l.key}"><span class="ic">${l.icon}</span>${l.label}</a>`).join('')}</nav>
           <div class="foot">
             <div style="color:#fff;font-weight:600">${esc(p.full_name || p.login)}</div>
@@ -305,7 +308,7 @@
         </div>
         <nav class="bottomnav">
           <a href="#/home" data-nav="home"><span class="ic">${I.home}</span>الرئيسية</a>
-          <a href="#/items" data-nav="items"><span class="ic">${I.box}</span>الأصناف</a>
+          <a href="#/bookings" data-nav="bookings"><span class="ic">${I.cal}</span>الحجوزات</a>
           <a href="#/issue" data-nav="issue" class="primary"><span class="ic">${I.out}</span>صرف</a>
           <a href="#/invoices" data-nav="invoices"><span class="ic">${I.invoice}</span>الفواتير</a>
           <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>الإعدادات</a>
@@ -330,6 +333,9 @@
 
   const ROUTES = {
     home: { title: 'الرئيسية', nav: 'home', fn: pageHome },
+    bookings: { title: 'الحجوزات المنزلية', nav: 'bookings', fn: pageBookings },
+    booking: { title: 'تفاصيل الحجز', nav: 'bookings', fn: pageBooking },
+    homesvc: { title: 'خدمات هوم والإعدادات', nav: 'bookings', fn: pageHomeSvc, manager: true },
     items: { title: 'الأصناف', nav: 'items', fn: pageItems },
     item: { title: 'تفاصيل الصنف', nav: 'items', fn: pageItem },
     issue: { title: 'صرف من المخزون', nav: 'issue', fn: pageIssue },
@@ -1378,7 +1384,7 @@
 
   /* ---------- more (mobile) ---------- */
   async function pageMore(view) {
-    const links = navLinks().filter((l) => !l.sep && !['home', 'items', 'issue', 'invoices', 'more'].includes(l.key));
+    const links = navLinks().filter((l) => !l.sep && !['home', 'bookings', 'issue', 'invoices', 'more'].includes(l.key));
     view.innerHTML = `
       <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
         <span class="avatar" style="width:44px;height:44px;font-size:18px">${esc(initial(S.profile.full_name || S.profile.login))}</span>
@@ -1393,6 +1399,320 @@
     $('#m-pw').onclick = changePassword;
     $('#m-out').onclick = () => sb.auth.signOut();
     renderPushCard($('#push-box'));
+  }
+
+  /* ======================= home-service bookings ======================= */
+  const BK_STATUS = { pending: 'بانتظار التأكيد', confirmed: 'مؤكد', on_way: 'في الطريق', done: 'تمت', cancelled: 'ملغي' };
+  const BK_BADGE = { pending: 'warn', confirmed: 'ok', on_way: 'accent', done: '', cancelled: 'danger' };
+  const PAY_STATUS = { unpaid: 'غير مدفوع', paid: 'مدفوع', refunded: 'مسترجع' };
+  const PAY_METHODS = ['ركاز', 'رابط دفع', 'تحويل بنكي', 'مدى عند الزيارة', 'نقدًا'];
+  const SVC_CAT = { nails: 'الأظافر', hair: 'الشعر', package: 'الباقات', other: 'أخرى' };
+  const WDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const BOOK_SITE = new URL('book/', location.href.split('#')[0]).href;
+
+  const rDay = (ts) => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
+  const rTime = (ts) => {
+    const hm = new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hour12: false });
+    const [h, m] = hm.split(':').map(Number);
+    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'ص' : 'م'}`;
+  };
+  const rHM = (ts) => new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hour12: false });
+  const rDayLabel = (d) => {
+    const [y, m, dd] = d.split('-').map(Number);
+    const dt = new Date(y, m - 1, dd);
+    const t = rDay(Date.now());
+    const tm = rDay(Date.now() + 86400000);
+    const base = dt.toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
+    return d === t ? `اليوم · ${base}` : d === tm ? `بكرة · ${base}` : base;
+  };
+  const waNum = (p) => { const n = String(p || '').replace(/\D/g, ''); return n.startsWith('0') ? '966' + n.slice(1) : n; };
+  const durTxt = (m) => (m < 60 ? `${m} د` : `${Math.floor(m / 60)} س${m % 60 ? ` ${m % 60} د` : ''}`);
+  const bkMinutes = (b) => Math.round((new Date(b.ends_at) - new Date(b.starts_at)) / 60000);
+
+  function waTemplates(b, items) {
+    const first = (b.customer_name || '').split(' ')[0];
+    const svc = items.map((i) => i.name + (i.qty > 1 ? ` × ${i.qty}` : '')).join('، ');
+    const when = `${rDayLabel(rDay(b.starts_at)).replace(/^(اليوم|بكرة) · /, '')} الساعة ${rTime(b.starts_at)}`;
+    const staff = b.staff_id ? (S.profiles.get(b.staff_id)?.full_name || '') : '';
+    const totalLine = b.total != null ? `الإجمالي: ${money(b.total)}` : '';
+    const link = `${BOOK_SITE}#/b/${b.access_token}`;
+    return [
+      { key: 'confirm', label: 'تأكيد الحجز', text: `أهلًا ${first} 🤍\nتم تأكيد وقتك الخاص مع بيوتفرش\nرقم الحجز: ${b.code}\nالخدمة: ${svc}\nالموعد: ${when}\n${totalLine}${staff ? `\nالأخصائية: ${staff}` : ''}\nنحتاج مكان فيه إضاءة جيدة وكرسي وفيش كهرباء قريب.\nتفاصيل حجزك: ${link}` },
+      { key: 'pay', label: 'رابط الدفع', text: `أهلًا ${first} 🤍\nهذا رابط الدفع لحجزك ${b.code}:\n[رابط الدفع]\n${totalLine}` },
+      { key: 'remind', label: 'تذكير', text: `أهلًا ${first}، نذكّرك بزيارتنا ${when} لخدمة ${svc}.\nإذا احتجتي تعديل، بلغينا ونراجع التوفّر 🤍` },
+      { key: 'onway', label: 'في الطريق', text: `أهلًا ${first}، ${staff ? `أخصائيتك ${staff}` : 'أخصائيتك'} في الطريق إليكِ 🤍\nالوصول المتوقع خلال [المدة].` },
+      { key: 'thanks', label: 'شكر بعد الزيارة', text: `شكرًا لأنك فتحتي لنا بابك يا ${first} 🤍\nنتمنى الزيارة عجبتك، ويسعدنا نسمع رأيك.` },
+    ];
+  }
+
+  async function pageBookings(view, _a, params, alive) {
+    const tab = params.get('t') || 'upcoming';
+    const now = new Date();
+    const startToday = new Date(rDay(now) + 'T00:00:00+03:00');
+    let qy = sb.from('home_bookings').select('id,code,customer_name,phone,district_name,starts_at,ends_at,status,payment_status,total,staff_id,guests,home_booking_items(name,qty)');
+    if (tab === 'today') qy = qy.gte('starts_at', startToday.toISOString()).lt('starts_at', new Date(startToday.getTime() + 86400000).toISOString()).order('starts_at');
+    else if (tab === 'pending') qy = qy.eq('status', 'pending').order('starts_at');
+    else if (tab === 'past') qy = qy.lt('starts_at', startToday.toISOString()).order('starts_at', { ascending: false }).limit(100);
+    else qy = qy.gte('starts_at', startToday.toISOString()).neq('status', 'cancelled').order('starts_at').limit(200);
+    const [rows, pendRes] = await Promise.all([
+      q(qy),
+      sb.from('home_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    ]);
+    if (!alive()) return;
+    const pendingCount = pendRes.count || 0;
+    const groups = new Map();
+    rows.forEach((b) => { const k = rDay(b.starts_at); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(b); });
+    view.innerHTML = `
+      <div class="chips">
+        ${[['upcoming', 'القادمة'], ['today', 'اليوم'], ['pending', `بانتظار التأكيد${pendingCount ? ` (${pendingCount})` : ''}`], ['past', 'السابقة']].map(([k, l]) => `<a class="chip ${k === tab ? 'on' : ''}" href="#/bookings?t=${k}">${l}</a>`).join('')}
+      </div>
+      ${isManager() ? `<div class="actions" style="margin-bottom:14px"><button class="btn primary" id="bk-new">${I.plus} حجز يدوي</button><a class="btn" href="#/homesvc">الخدمات والإعدادات</a><a class="btn" href="${BOOK_SITE}" target="_blank" rel="noopener">موقع الحجز ↗</a></div>` : ''}
+      ${rows.length ? [...groups].map(([d, list]) => `
+        <div class="section-title"><h2>${esc(rDayLabel(d))}</h2><span class="muted small">${list.length} ${list.length === 1 ? 'حجز' : 'حجوزات'}</span></div>
+        <div class="list">${list.map((b) => `
+          <a class="row" href="#/booking/${b.id}">
+            <div style="width:62px;flex:none;text-align:center"><div style="font-weight:700" class="num">${rTime(b.starts_at).split(' ')[0]}</div><div class="meta">${rTime(b.starts_at).split(' ')[1]} · ${durTxt(bkMinutes(b))}</div></div>
+            <div class="grow"><div class="title">${esc(b.customer_name)}${b.guests > 1 ? ` <span class="muted small">+${b.guests - 1}</span>` : ''}</div>
+              <div class="meta">${esc((b.home_booking_items || []).map((i) => i.name + (i.qty > 1 ? `×${i.qty}` : '')).join('، '))} · ${esc(b.district_name || '')}${b.staff_id ? ` · ${esc(personName(b.staff_id))}` : ''}</div></div>
+            <div class="end"><span class="badge ${BK_BADGE[b.status]}">${BK_STATUS[b.status]}</span>${b.payment_status === 'paid' ? '<div class="meta" style="margin-top:4px">مدفوع</div>' : ''}</div>
+          </a>`).join('')}</div>`).join('')
+        : `<div class="list"><div class="empty">${tab === 'pending' ? 'ما فيه حجوزات بانتظار التأكيد' : 'ما فيه حجوزات هنا'}</div></div>`}`;
+    $('#bk-new')?.addEventListener('click', manualBookingForm);
+  }
+
+  async function manualBookingForm() {
+    const cat = await q(sb.rpc('bh_catalog'));
+    if (!cat.districts.length) { toast('أضف حيًا واحدًا على الأقل من الإعدادات', true); location.hash = '#/homesvc?t=districts'; return; }
+    const tomorrow = rDay(Date.now() + 86400000);
+    modal(`
+      <h3>حجز يدوي</h3>
+      <p class="muted small" style="margin-top:-6px">للحجوزات اللي توصل بالواتساب أو الاتصال.</p>
+      <div class="grid2"><div class="field"><label>الاسم</label><input class="input" id="m-name"></div><div class="field"><label>الجوال</label><input class="input" id="m-phone" dir="ltr" inputmode="tel" placeholder="05xxxxxxxx"></div></div>
+      <div class="field"><label>الخدمات</label><div id="m-svcs" style="max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px 10px">${cat.services.map((s) => `<label class="check" style="padding:4px 0"><input type="checkbox" value="${s.id}"> ${esc(s.name)} <span class="muted small">· ${durTxt(s.duration_min)}</span></label>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>اليوم</label><input class="input" type="date" id="m-day" value="${tomorrow}"></div><div class="field"><label>الوقت</label><select class="input" id="m-time"><option value="">اختر الخدمات واليوم</option></select></div></div>
+      <div class="field"><label>الحي</label><select class="input" id="m-dist">${cat.districts.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>العنوان</label><input class="input" id="m-addr"></div>
+      <div class="field"><label>ملاحظات</label><input class="input" id="m-notes"></div>
+      <div class="actions end mt"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="m-save">حفظ الحجز</button></div>`, (el, close) => {
+      const dur = () => $$('#m-svcs input:checked', el).reduce((s, c) => s + (cat.services.find((x) => x.id === Number(c.value))?.duration_min || 0), 0);
+      const loadTimes = async () => {
+        const d = dur(); const day = $('#m-day', el).value; const sel = $('#m-time', el);
+        if (!d || !day) { sel.innerHTML = '<option value="">اختر الخدمات واليوم</option>'; return; }
+        const rows = await q(sb.rpc('bh_slots', { p_day: day, p_duration: d }));
+        sel.innerHTML = rows.length ? rows.map((r) => { const [h, m] = r.slot.split(':').map(Number); return `<option value="${r.slot}">${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'ص' : 'م'}</option>`; }).join('') : '<option value="">ما فيه وقت متاح</option>';
+      };
+      $('#m-svcs', el).addEventListener('change', loadTimes);
+      $('#m-day', el).addEventListener('change', loadTimes);
+      $('#m-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const items = $$('#m-svcs input:checked', el).map((c) => ({ id: Number(c.value), qty: 1 }));
+        if (!items.length) return toast('اختر خدمة', true);
+        if (!$('#m-time', el).value) return toast('اختر الوقت', true);
+        try {
+          const res = await q(sb.rpc('bh_create_booking', { p: { name: $('#m-name', el).value, phone: $('#m-phone', el).value, district_id: Number($('#m-dist', el).value), address: $('#m-addr', el).value, notes: $('#m-notes', el).value, day: $('#m-day', el).value, time: $('#m-time', el).value, items } }));
+          const b = await q(sb.from('home_bookings').update({ source: 'admin' }).eq('access_token', res.token).select('id').single());
+          toast(`تم إنشاء الحجز ${res.code}`); close(); location.hash = `#/booking/${b.id}`;
+        } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  async function pageBooking(view, [id], _p, alive) {
+    const [b, items, events] = await Promise.all([
+      q(sb.from('home_bookings').select('*').eq('id', id).maybeSingle()),
+      q(sb.from('home_booking_items').select('*').eq('booking_id', id).order('id')),
+      q(sb.from('home_booking_events').select('*').eq('booking_id', id).order('created_at', { ascending: false })),
+    ]);
+    if (!alive()) return;
+    if (!b) { view.innerHTML = '<div class="notice danger">الحجز غير موجود أو ليس لديك صلاحية</div>'; return; }
+    setTitle(`حجز ${b.code}`);
+    const mgr = isManager();
+    const mine = b.staff_id === S.profile.id;
+    const staffList = [...S.profiles.values()].filter((p) => p.is_active);
+    const svcSum = items.every((i) => i.price != null) ? items.reduce((s, i) => s + Number(i.price) * i.qty, 0) : null;
+    const next = { pending: ['confirmed'], confirmed: ['on_way', 'done'], on_way: ['done'], done: [], cancelled: [] }[b.status];
+    const nextLabel = { confirmed: 'تأكيد الحجز', on_way: 'في الطريق', done: 'تمت الزيارة' };
+    const tpls = waTemplates(b, items);
+    view.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+          <div><div style="font-size:20px;font-weight:700">${esc(b.customer_name)}</div><div class="muted small num">${esc(b.code)} · ${b.source === 'admin' ? 'حجز يدوي' : 'من الموقع'} · ${fmtDateTime(b.created_at)}</div></div>
+          <span class="badge ${BK_BADGE[b.status]}">${BK_STATUS[b.status]}</span>
+        </div>
+        <div style="font-size:17px;margin-top:12px;font-weight:600">${esc(rDayLabel(rDay(b.starts_at)))} · ${rTime(b.starts_at)} – ${rTime(b.ends_at)}</div>
+        <div class="actions mt">
+          ${next.filter((s) => mgr || (mine && s !== 'confirmed')).map((s) => `<button class="btn primary" data-status="${s}">${nextLabel[s]}</button>`).join('')}
+          <a class="btn" href="tel:${esc(b.phone)}">اتصال</a>
+          ${mgr && !['done', 'cancelled'].includes(b.status) ? '<button class="btn" id="bk-cancel" style="color:var(--danger)">إلغاء الحجز</button>' : ''}
+        </div>
+      </div>
+
+      <div class="section-title"><h2>رسائل واتساب جاهزة</h2></div>
+      <div class="chips" style="flex-wrap:wrap">${tpls.map((t) => `<a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(b.phone)}?text=${encodeURIComponent(t.text)}">${t.label}</a>`).join('')}</div>
+
+      <div class="section-title"><h2>العميلة والعنوان</h2></div>
+      <div class="list">
+        <div class="row"><div class="grow"><div class="meta">الجوال</div><div class="title num" dir="ltr" style="text-align:right">${esc(b.phone)}</div></div></div>
+        <div class="row"><div class="grow"><div class="meta">العنوان</div><div style="white-space:normal">${esc(b.district_name || '')}${b.address ? '، ' + esc(b.address) : ''}</div></div>${b.map_url && /^https?:\/\//.test(b.map_url) ? `<a class="btn" href="${esc(b.map_url)}" target="_blank" rel="noopener">الخريطة</a>` : ''}</div>
+        ${b.notes ? `<div class="row"><div class="grow"><div class="meta">ملاحظات العميلة</div><div style="white-space:normal">${esc(b.notes)}</div></div></div>` : ''}
+      </div>
+
+      <div class="section-title"><h2>الخدمات والمبالغ</h2></div>
+      <div class="list">
+        ${items.map((i) => `<div class="row"><div class="grow"><div class="title">${esc(i.name)}${i.qty > 1 ? ` × ${i.qty}` : ''}</div><div class="meta">${durTxt(i.duration_min * i.qty)}</div></div><div class="end num">${i.price != null ? money(i.price * i.qty) : '<span class="muted">بدون سعر</span>'}</div></div>`).join('')}
+        <div class="row"><div class="grow">رسوم الزيارة</div><div class="end num">${b.visit_fee != null ? money(b.visit_fee) : '—'}</div></div>
+        <div class="row"><div class="grow" style="font-weight:700">الإجمالي</div><div class="end num" style="font-weight:700">${b.total != null ? money(b.total) : '<span class="badge warn">يحتاج تحديد</span>'}</div></div>
+      </div>
+
+      ${mgr ? `
+      <div class="section-title"><h2>الإدارة</h2></div>
+      <div class="card">
+        <div class="grid2">
+          <div class="field"><label>الأخصائية</label><select class="input" id="f-staff"><option value="">بدون تعيين</option>${staffList.map((p) => `<option value="${p.id}" ${p.id === b.staff_id ? 'selected' : ''}>${esc(p.full_name || p.login)}</option>`).join('')}</select></div>
+          <div class="field"><label>الإجمالي النهائي (ر.س)</label><input class="input num" id="f-total" type="number" min="0" step="0.01" value="${b.total ?? (svcSum != null && b.visit_fee != null ? svcSum + Number(b.visit_fee) : '')}"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>الدفع</label><select class="input" id="f-pay">${Object.entries(PAY_STATUS).map(([k, l]) => `<option value="${k}" ${k === b.payment_status ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+          <div class="field"><label>طريقة الدفع</label><select class="input" id="f-method"><option value="">—</option>${PAY_METHODS.map((m) => `<option ${m === b.payment_method ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+          <div class="field"><label>رقم العملية / ركاز</label><input class="input" id="f-ref" value="${esc(b.payment_ref || b.rekaz_reservation_id || '')}"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>نقل الموعد: اليوم</label><input class="input" type="date" id="f-day" value="${rDay(b.starts_at)}"></div>
+          <div class="field"><label>الوقت</label><input class="input" type="time" id="f-time" value="${rHM(b.starts_at)}" step="900"></div>
+        </div>
+        <div class="field"><label>ملاحظة داخلية</label><textarea class="input" id="f-note">${esc(b.internal_note || '')}</textarea></div>
+        <div class="actions end"><button class="btn primary" id="f-save">حفظ التعديلات</button></div>
+      </div>` : ''}
+
+      <div class="section-title"><h2>السجل</h2></div>
+      <div class="list">${events.map((e) => `<div class="row"><div class="grow"><div>${esc({ created: 'إنشاء الحجز', status: 'تغيير الحالة', payment: 'تغيير الدفع', reschedule: 'نقل الموعد', staff: 'تعيين أخصائية', note: 'ملاحظة' }[e.kind] || e.kind)} ${e.note ? `<span class="muted small">${esc(e.note.replace(/pending|confirmed|on_way|done|cancelled|unpaid|paid|refunded/g, (m) => BK_STATUS[m] || PAY_STATUS[m]))}</span>` : ''}</div><div class="meta">${fmtDateTime(e.created_at)}${e.created_by ? ' · ' + esc(personName(e.created_by)) : ''}</div></div></div>`).join('') || '<div class="empty">لا يوجد سجل</div>'}</div>`;
+
+    $$('[data-status]', view).forEach((btn) => btn.onclick = () => busy(btn, async () => {
+      try {
+        if (mgr) await q(sb.from('home_bookings').update({ status: btn.dataset.status }).eq('id', b.id));
+        else await q(sb.rpc('bh_staff_status', { p_id: b.id, p_status: btn.dataset.status }));
+        toast('تم التحديث');
+        if (btn.dataset.status === 'confirmed') toast('تم التأكيد، أرسل رسالة التأكيد للعميلة');
+        route();
+      } catch (err) { toast(errMsg(err), true); }
+    }));
+    $('#bk-cancel')?.addEventListener('click', async () => {
+      if (!(await confirmBox('إلغاء الحجز', `إلغاء حجز ${esc(b.customer_name)}؟ يتحرر الوقت للحجوزات الثانية.`, 'إلغاء الحجز', true))) return;
+      try { await q(sb.from('home_bookings').update({ status: 'cancelled', cancel_reason: 'ألغته الإدارة' }).eq('id', b.id)); toast('تم الإلغاء'); route(); } catch (err) { toast(errMsg(err), true); }
+    });
+    $('#f-save')?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      const patch = {
+        staff_id: $('#f-staff').value || null,
+        total: $('#f-total').value === '' ? null : Number($('#f-total').value),
+        payment_status: $('#f-pay').value,
+        payment_method: $('#f-method').value || null,
+        payment_ref: $('#f-ref').value.trim() || null,
+        internal_note: $('#f-note').value.trim() || null,
+      };
+      const day = $('#f-day').value; const tm = $('#f-time').value;
+      if (day && tm && (day !== rDay(b.starts_at) || tm !== rHM(b.starts_at))) {
+        const mins = bkMinutes(b);
+        const st = new Date(`${day}T${tm}:00+03:00`);
+        patch.starts_at = st.toISOString();
+        patch.ends_at = new Date(st.getTime() + mins * 60000).toISOString();
+      }
+      try { await q(sb.from('home_bookings').update(patch).eq('id', b.id)); toast('تم الحفظ'); route(); } catch (err) { toast(errMsg(err), true); }
+    }));
+  }
+
+  async function pageHomeSvc(view, _a, params, alive) {
+    const tab = params.get('t') || 'services';
+    const [services, districts, settings, blackouts] = await Promise.all([
+      q(sb.from('home_services').select('*').order('sort').order('id')),
+      q(sb.from('home_districts').select('*').order('sort').order('name')),
+      q(sb.from('home_settings').select('*').eq('id', 1).single()),
+      q(sb.from('home_blackouts').select('*').gte('day', rDay(Date.now())).order('day')),
+    ]);
+    if (!alive()) return;
+    const tabs = [['services', 'الخدمات'], ['districts', 'الأحياء'], ['settings', 'المواعيد والإعدادات'], ['off', 'الإجازات']];
+    let body = '';
+    if (tab === 'services') {
+      body = `<div class="actions" style="margin-bottom:12px"><button class="btn primary" id="svc-new">${I.plus} خدمة جديدة</button></div>
+        ${Object.entries(SVC_CAT).filter(([k]) => services.some((s) => s.category === k)).map(([k, l]) => `
+          <div class="section-title"><h2>${l}</h2></div>
+          <div class="list">${services.filter((s) => s.category === k).map((s) => `<button class="row" data-svc="${s.id}"><div class="grow"><div class="title">${esc(s.name)}${s.is_active ? '' : ' <span class="badge">موقوفة</span>'}</div><div class="meta">${durTxt(s.duration_min)}${s.description ? ' · ' + esc(s.description) : ''}</div></div><div class="end num">${s.price != null ? money(s.price) : '<span class="badge warn">بدون سعر</span>'}</div></button>`).join('')}</div>`).join('')}
+        <p class="muted small mt">الخدمة اللي بدون سعر تظهر للعميلة «يُحدد عند التأكيد».</p>`;
+    } else if (tab === 'districts') {
+      body = `<div class="actions" style="margin-bottom:12px"><button class="btn primary" id="dist-new">${I.plus} حي جديد</button></div>
+        <div class="list">${districts.map((d) => `<button class="row" data-dist="${d.id}"><div class="grow"><div class="title">${esc(d.name)}${d.is_active ? '' : ' <span class="badge">موقوف</span>'}</div></div><div class="end num">${d.visit_fee != null ? money(d.visit_fee) : '<span class="muted">رسوم تُحدد</span>'}</div></button>`).join('') || '<div class="empty">أضف الأحياء اللي تغطونها. الحجز ما يفتح بدونها.</div>'}</div>`;
+    } else if (tab === 'settings') {
+      const s = settings;
+      body = `<div class="card">
+        <label class="check" style="margin-bottom:16px;font-weight:600"><input type="checkbox" id="s-acc" ${s.accepting ? 'checked' : ''}> استقبال الحجوزات من الموقع</label>
+        <div class="grid2"><div class="field"><label>بداية الاستقبال</label><input class="input" type="time" id="s-open" value="${s.open_time.slice(0, 5)}"></div><div class="field"><label>آخر وقت للانتهاء</label><input class="input" type="time" id="s-close" value="${s.close_time.slice(0, 5)}"></div></div>
+        <div class="grid3">
+          <div class="field"><label>عدد الفرق في نفس الوقت</label><input class="input num" type="number" min="1" max="20" id="s-cap" value="${s.capacity}"></div>
+          <div class="field"><label>وقت التنقل بين الزيارات (د)</label><input class="input num" type="number" min="0" max="180" id="s-buf" value="${s.buffer_minutes}"></div>
+          <div class="field"><label>الفاصل بين الأوقات (د)</label><input class="input num" type="number" min="10" max="120" id="s-slot" value="${s.slot_minutes}"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>أقل مدة قبل الموعد (ساعات)</label><input class="input num" type="number" min="0" max="72" id="s-lead" value="${s.lead_hours}"></div>
+          <div class="field"><label>يفتح الحجز لكم يوم قدّام</label><input class="input num" type="number" min="1" max="90" id="s-hor" value="${s.horizon_days}"></div>
+        </div>
+        <div class="field"><label>أيام الإجازة الأسبوعية</label><div style="display:flex;flex-wrap:wrap;gap:12px">${WDAYS.map((d, i) => `<label class="check"><input type="checkbox" data-wd="${i}" ${s.closed_weekdays.includes(i) ? 'checked' : ''}> ${d}</label>`).join('')}</div></div>
+        <div class="field"><label>رقم واتساب الخدمة</label><input class="input" id="s-wa" dir="ltr" value="${esc(s.whatsapp || '')}" placeholder="05xxxxxxxx"></div>
+        <div class="field"><label>نص الدفع للعميلة</label><input class="input" id="s-pay" value="${esc(s.payment_note || '')}"></div>
+        <div class="field"><label>نص سياسة الحجز</label><textarea class="input" id="s-pol">${esc(s.policy_note || '')}</textarea></div>
+        <div class="actions end"><button class="btn primary" id="s-save">حفظ</button></div>
+      </div>`;
+    } else {
+      body = `<div class="card"><div class="grid2"><div class="field"><label>اليوم</label><input class="input" type="date" id="o-day" min="${rDay(Date.now())}"></div><div class="field"><label>ملاحظة</label><input class="input" id="o-note" placeholder="مثلًا: إجازة العيد"></div></div><div class="actions end"><button class="btn primary" id="o-add">إضافة</button></div></div>
+        <div class="list mt">${blackouts.map((o) => `<div class="row"><div class="grow"><div class="title">${esc(rDayLabel(o.day))}</div>${o.note ? `<div class="meta">${esc(o.note)}</div>` : ''}</div><button class="btn" data-off="${o.day}">حذف</button></div>`).join('') || '<div class="empty">ما فيه إجازات قادمة</div>'}</div>`;
+    }
+    view.innerHTML = `<div class="chips">${tabs.map(([k, l]) => `<a class="chip ${k === tab ? 'on' : ''}" href="#/homesvc?t=${k}">${l}</a>`).join('')}</div>${body}`;
+
+    const svcForm = (s) => modal(`
+      <h3>${s ? 'تعديل خدمة' : 'خدمة جديدة'}</h3>
+      <div class="field"><label>الاسم</label><input class="input" id="v-name" value="${esc(s?.name || '')}"></div>
+      <div class="grid2"><div class="field"><label>القسم</label><select class="input" id="v-cat">${Object.entries(SVC_CAT).map(([k, l]) => `<option value="${k}" ${s?.category === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>الترتيب</label><input class="input num" type="number" id="v-sort" value="${s?.sort ?? 0}"></div></div>
+      <div class="grid2"><div class="field"><label>المدة (دقيقة)</label><input class="input num" type="number" min="10" max="600" id="v-dur" value="${s?.duration_min ?? 60}"></div>
+      <div class="field"><label>السعر (ر.س)</label><input class="input num" type="number" min="0" step="0.01" id="v-price" value="${s?.price ?? ''}" placeholder="فارغ = يُحدد عند التأكيد"></div></div>
+      <div class="field"><label>الوصف</label><textarea class="input" id="v-desc">${esc(s?.description || '')}</textarea></div>
+      <label class="check"><input type="checkbox" id="v-act" ${s?.is_active !== false ? 'checked' : ''}> تظهر في موقع الحجز</label>
+      <div class="actions end mt"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="v-save">حفظ</button></div>`, (el, close) => {
+      $('#v-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { name: $('#v-name', el).value.trim(), category: $('#v-cat', el).value, sort: Number($('#v-sort', el).value) || 0, duration_min: Number($('#v-dur', el).value), price: $('#v-price', el).value === '' ? null : Number($('#v-price', el).value), description: $('#v-desc', el).value.trim() || null, is_active: $('#v-act', el).checked };
+        try { if (s) await q(sb.from('home_services').update(row).eq('id', s.id)); else await q(sb.from('home_services').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+    const distForm = (d) => modal(`
+      <h3>${d ? 'تعديل حي' : 'حي جديد'}</h3>
+      <div class="field"><label>اسم الحي</label><input class="input" id="d-name" value="${esc(d?.name || '')}"></div>
+      <div class="grid2"><div class="field"><label>رسوم الزيارة (ر.س)</label><input class="input num" type="number" min="0" step="0.01" id="d-fee" value="${d?.visit_fee ?? ''}" placeholder="فارغ = تُحدد عند التأكيد"></div><div class="field"><label>الترتيب</label><input class="input num" type="number" id="d-sort" value="${d?.sort ?? 0}"></div></div>
+      <label class="check"><input type="checkbox" id="d-act" ${d?.is_active !== false ? 'checked' : ''}> متاح للحجز</label>
+      <div class="actions end mt"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="d-save">حفظ</button></div>`, (el, close) => {
+      $('#d-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { name: $('#d-name', el).value.trim(), visit_fee: $('#d-fee', el).value === '' ? null : Number($('#d-fee', el).value), sort: Number($('#d-sort', el).value) || 0, is_active: $('#d-act', el).checked };
+        try { if (d) await q(sb.from('home_districts').update(row).eq('id', d.id)); else await q(sb.from('home_districts').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+    $('#svc-new')?.addEventListener('click', () => svcForm(null));
+    $$('[data-svc]', view).forEach((b) => b.onclick = () => svcForm(services.find((s) => s.id === Number(b.dataset.svc))));
+    $('#dist-new')?.addEventListener('click', () => distForm(null));
+    $$('[data-dist]', view).forEach((b) => b.onclick = () => distForm(districts.find((d) => d.id === Number(b.dataset.dist))));
+    $('#s-save')?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      const row = {
+        accepting: $('#s-acc').checked, open_time: $('#s-open').value, close_time: $('#s-close').value,
+        capacity: Number($('#s-cap').value), buffer_minutes: Number($('#s-buf').value), slot_minutes: Number($('#s-slot').value),
+        lead_hours: Number($('#s-lead').value), horizon_days: Number($('#s-hor').value),
+        closed_weekdays: $$('[data-wd]:checked', view).map((c) => Number(c.dataset.wd)),
+        whatsapp: $('#s-wa').value.trim() || null, payment_note: $('#s-pay').value.trim() || null, policy_note: $('#s-pol').value.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+      try { await q(sb.from('home_settings').update(row).eq('id', 1)); toast('تم الحفظ'); } catch (err) { toast(errMsg(err), true); }
+    }));
+    $('#o-add')?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      const day = $('#o-day').value; if (!day) return toast('اختر اليوم', true);
+      try { await q(sb.from('home_blackouts').upsert({ day, note: $('#o-note').value.trim() || null })); toast('تمت الإضافة'); route(); } catch (err) { toast(errMsg(err), true); }
+    }));
+    $$('[data-off]', view).forEach((b) => b.onclick = () => busy(b, async () => {
+      try { await q(sb.from('home_blackouts').delete().eq('day', b.dataset.off)); route(); } catch (err) { toast(errMsg(err), true); }
+    }));
   }
 
   /* ======================= start ======================= */

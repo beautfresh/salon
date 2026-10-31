@@ -109,40 +109,33 @@
     const cats = Object.keys(CAT).filter((c) => CAT_DATA.services.some((s) => s.category === c));
     const first = cats[0] || 'nails';
     const accepting = CAT_DATA.settings?.accepting !== false && CAT_DATA.districts.length > 0;
+    const marquee = ['أظافر', 'شعر', 'باقات', 'في بيتك', 'وقتك لكِ', 'بأيادي بيوتفرش'];
+    const mq = marquee.map((w) => `<span>${w}</span><img src="assets/rosette-1.svg" alt="">`).join('');
     app.innerHTML = `
       <section class="hero">
+        <div class="hero-pattern" aria-hidden="true"></div>
         <div class="wrap hero-in">
-          <div class="hero-text reveal">
-            <span class="label">The Care Thread</span>
-            <h1>بيوتفرش،<br>في بيتك.</h1>
-            <p class="lead">نجيكِ بالعناية، وتبقى الراحة لكِ. أظافر وشعر بأيادي بيوتفرش، في وقتك ومكانك.</p>
-            <div class="cta">
-              <a class="btn" href="#/book">${accepting ? 'احجزي موعدك' : 'قريبًا'}</a>
-              <a class="btn ghost" href="#/services">قائمة الخدمات</a>
-            </div>
-            <div class="facts">
-              <div><img src="${icon('home')}" alt="">نجيكِ لين البيت</div>
-              <div><img src="${icon('kit')}" alt="">أدوات مجهزة لكل زيارة</div>
-              <div><img src="${icon('clock')}" alt="">تختارين وقتك</div>
-            </div>
-          </div>
-          <div class="arch reveal" aria-hidden="true">
-            <div class="arch-art">
-              <img class="home-lock" src="assets/home-logo.svg" alt="">
-              <div class="row"><img src="assets/rosette-4.svg" alt=""><img src="assets/rosette-1.svg" alt=""><img src="assets/rosette-2.svg" alt=""></div>
-            </div>
-            <div class="arch-band"></div>
+          <div class="hero-mark" aria-hidden="true"><img src="assets/home-mark.svg" alt=""></div>
+          <img class="hero-line" src="assets/home-line.svg" alt="بيوتفرش للخدمات المنزلية">
+          <h1 class="hero-title"><span>بيوتفرش،</span> <span>في بيتك.</span></h1>
+          <p class="lead">نجيكِ بالعناية، وتبقى الراحة لكِ.<br>أظافر وشعر بأيادي بيوتفرش، في وقتك ومكانك.</p>
+          <div class="cta">
+            <a class="btn" href="#/book">${accepting ? 'احجزي موعدك' : 'قريبًا'}<i class="arr" aria-hidden="true">←</i></a>
+            <a class="btn ghost" href="#/services">قائمة الخدمات</a>
           </div>
         </div>
+        <div class="hero-scroll" aria-hidden="true"><span></span></div>
       </section>
 
-      <section class="block">
+      <div class="marquee" aria-hidden="true"><div class="mq-track">${mq}${mq}${mq}</div></div>
+
+      <section class="block dark">
         <div class="wrap">
-          <div class="sec-head reveal"><div><span class="label">How it works</span><h2>ثلاث خطوات، ووقتك لكِ.</h2></div><p>تحجزين من هنا، ونرتّب الباقي معكِ إلى آخر لحظة في الزيارة.</p></div>
-          <div class="steps reveal">
-            <div class="step"><span class="n">01</span><img src="${icon('calendar')}" alt=""><h3>تحجزين</h3><p>تختارين الخدمة والحي والوقت المتاح.</p></div>
-            <div class="step"><span class="n">02</span><img src="${icon('message')}" alt=""><h3>نؤكّد</h3><p>نرسل لكِ التأكيد والإجمالي ورابط الدفع.</p></div>
-            <div class="step"><span class="n">03</span><img src="${icon('home')}" alt=""><h3>نزورك</h3><p>تجيكِ الأخصائية بأدواتها، ونرتّب المكان قبل ما نطلع.</p></div>
+          <div class="sec-head reveal"><div><span class="label">How it works</span><h2>ثلاث خطوات،<br>ووقتك لكِ.</h2></div><p>تحجزين من هنا، ونرتّب الباقي معكِ إلى آخر لحظة في الزيارة.</p></div>
+          <div class="steps">
+            <div class="step reveal"><span class="n">١</span><img src="${icon('calendar')}" alt=""><h3>تحجزين</h3><p>تختارين الخدمة والحي والوقت المتاح.</p></div>
+            <div class="step reveal" style="--d:.12s"><span class="n">٢</span><img src="${icon('message')}" alt=""><h3>نؤكّد</h3><p>نرسل لكِ التأكيد والإجمالي ورابط الدفع.</p></div>
+            <div class="step reveal" style="--d:.24s"><span class="n">٣</span><img src="${icon('home')}" alt=""><h3>نزورك</h3><p>تجيكِ الأخصائية بأدواتها، ونرتّب المكان قبل ما نطلع.</p></div>
           </div>
         </div>
       </section>
@@ -150,27 +143,25 @@
       <section class="block" id="services">
         <div class="wrap">
           <div class="sec-head reveal"><div><span class="label">The Care Menu</span><h2>قائمة العناية.</h2></div><p>اختاري خدمة أو أكثر، وتنضاف لحجزك مباشرة.</p></div>
-          <div class="tabs" role="tablist">${cats.map((c) => `<button role="tab" data-tab="${c}" class="${c === first ? 'on' : ''}">${CAT[c]}</button>`).join('')}</div>
+          <div class="tabs reveal" role="tablist">${cats.map((c) => `<button role="tab" data-tab="${c}" class="${c === first ? 'on' : ''}">${CAT[c]}</button>`).join('')}</div>
           <div class="svc-list" id="svc-list">${serviceRows(first)}</div>
-          <div style="margin-top:36px;display:flex;gap:16px;align-items:center;flex-wrap:wrap"><a class="btn" href="#/book" id="go-book">${cart.size ? `أكملي الحجز (${cart.size})` : 'احجزي موعدك'}</a><span class="muted" style="font-size:15px">الأسعار النهائية ورسوم الزيارة تتأكد معكِ قبل الموعد.</span></div>
+          <div class="svc-foot"><a class="btn" href="#/book" id="go-book">${cart.size ? `أكملي الحجز (${cart.size})` : 'احجزي موعدك'}<i class="arr" aria-hidden="true">←</i></a><span class="muted">الأسعار النهائية ورسوم الزيارة تتأكد معكِ قبل الموعد.</span></div>
         </div>
       </section>
 
-      <section class="block">
+      <section class="block soft">
         <div class="wrap kit">
           <div class="reveal">
             <span class="label">The Arrival Kit</span>
             <h2>عنايتهم،<br>تجي معك.</h2>
-            <p class="muted" style="max-width:40ch">نفس فريق بيوتفرش ونفس العناية، بحقيبة مجهزة لكل زيارة.</p>
+            <p class="muted" style="max-width:38ch">نفس فريق بيوتفرش ونفس العناية، بحقيبة مجهزة لكل زيارة.</p>
           </div>
-          <div class="kit-card reveal">
-            <ul>
-              <li><img src="assets/rosette-1.svg" alt="">أدوات نظيفة ومجهزة، تنفتح قدامك.</li>
-              <li><img src="assets/rosette-1.svg" alt="">مفرش عمل ومنشفة، نحمي فيها مكانك.</li>
-              <li><img src="assets/rosette-1.svg" alt="">نوصل في موعدك، ونبلغك إذا طرأ أي تغيير.</li>
-              <li><img src="assets/rosette-1.svg" alt="">نرتّب المكان قبل ما نطلع.</li>
-            </ul>
-          </div>
+          <ul class="kit-list">
+            <li class="reveal"><img src="assets/rosette-1.svg" alt=""><div><b>أدوات نظيفة ومجهزة</b><span>تنفتح قدامك، ولكِ وحدك.</span></div></li>
+            <li class="reveal" style="--d:.08s"><img src="assets/rosette-2.svg" alt=""><div><b>مفرش عمل ومنشفة</b><span>نحمي فيها مكانك قبل ما نبدأ.</span></div></li>
+            <li class="reveal" style="--d:.16s"><img src="assets/rosette-3.svg" alt=""><div><b>في موعدك</b><span>ونبلغك أول ما نطلع لك.</span></div></li>
+            <li class="reveal" style="--d:.24s"><img src="assets/rosette-4.svg" alt=""><div><b>نرتّب قبل ما نطلع</b><span>ويرجع المكان مثل ما كان.</span></div></li>
+          </ul>
         </div>
       </section>
 
@@ -181,18 +172,18 @@
             <details><summary>متى يكون الموعد مؤكد؟</summary><p>${esc(CAT_DATA.settings?.policy_note || 'بعد رسالة التأكيد من الفريق.')}</p></details>
             <details><summary>كيف أدفع؟</summary><p>${esc(CAT_DATA.settings?.payment_note || '')}</p></details>
             <details><summary>وش أجهّز في البيت؟</summary><p>مكان فيه إضاءة جيدة، وكرسي مريح، وفيش كهرباء قريب. ونرسل لكِ أي متطلبات خاصة بالخدمة.</p></details>
-            <details><summary>أقدر أحجز لأكثر من شخص؟</summary><p>إيه، حددي العدد وقت الحجز ونرتّب الوقت والفريق.</p></details>
+            <details><summary>أقدر أحجز لأكثر من شخص؟</summary><p>إيه، زيدي العدد على الخدمة وقت الحجز ونرتّب الوقت والفريق.</p></details>
             <details><summary>أبي أعدّل أو ألغي موعدي</summary><p>من صفحة حجزك تقدرين تلغين قبل الموعد بست ساعات، أو تواصلي معنا لأي تعديل.</p></details>
             <details><summary>وين تغطّون؟</summary><p>${CAT_DATA.districts.length ? esc(CAT_DATA.districts.map((d) => d.name).join('، ')) + '.' : 'نعلن الأحياء قريبًا.'}</p></details>
           </div>
         </div>
       </section>
 
-      <section class="cta-band">
+      <section class="cta-band dark">
         <div class="wrap reveal">
-          <img src="assets/rosette-3.svg" alt="">
+          <img class="cta-mark" src="assets/home-mark-cream.svg" alt="">
           <h2>وقت جميل،<br>محجوز لكِ.</h2>
-          <a class="btn" href="#/book">احجزي موعدك</a>
+          <a class="btn light" href="#/book">احجزي موعدك<i class="arr" aria-hidden="true">←</i></a>
         </div>
       </section>`;
 
@@ -205,7 +196,7 @@
       const id = Number(b.dataset.add);
       if (cart.has(id)) cart.delete(id); else cart.set(id, 1);
       save();
-      b.classList.toggle('on', cart.has(id)); b.textContent = cart.has(id) ? '✓' : '+';
+      b.classList.toggle('on', cart.has(id)); b.textContent = cart.has(id) ? '✓' : '+'; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
       $('#go-book').textContent = cart.size ? `أكملي الحجز (${cart.size})` : 'احجزي موعدك';
       if (cart.has(id)) toast(`أضفنا ${svcById(id).name}`);
     });
@@ -474,6 +465,7 @@
     const [path, qs] = raw.split('?');
     const parts = path.split('/').filter(Boolean);
     $('#mine-link').hidden = !store.lget('mine', []).length;
+    document.body.classList.toggle('home', !parts[0] || parts[0] === 'services');
     try {
       await loadCatalog();
       if (parts[0] === 'book') await pageBook();

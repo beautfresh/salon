@@ -117,6 +117,7 @@
 
   /* ======================= icons ======================= */
   const I = {
+    mega: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12"/></svg>',
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
     wa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.6-2-1-.9.9a3.6 3.6 0 0 1-1.9-1.9l.9-.9-1-2L9 9.5z"/></svg>',
     phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
@@ -277,6 +278,7 @@
       { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
     ];
     L.push({ href: '#/clients', label: 'العميلات', icon: I.heart, key: 'clients' });
+    L.push({ href: '#/marketing', label: 'التسويق', icon: I.mega, key: 'marketing' });
     if (isManager()) L.push({ href: '#/finance', label: 'المالية', icon: I.coin, key: 'finance' });
     L.push(
       { sep: true },
@@ -350,6 +352,7 @@
     clients: { title: 'العميلات', nav: 'clients', fn: pageClients },
     client: { title: 'ملف العميلة', nav: 'clients', fn: pageClient },
     feedback: { title: 'الآراء والملاحظات', nav: 'clients', fn: pageFeedback },
+    marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
     expenses: { title: 'المصروفات', nav: 'finance', fn: pageExpenses, manager: true },
@@ -2089,6 +2092,203 @@
       <div class="list">${shown.length ? shown.map(fbRow).join('') : '<div class="empty">ما فيه شي هنا. سجّلوا آراء العميلات أول بأول، من الصالون أو الواتساب أو قوقل، عشان تعرفون وش يحبون ووش يزعجهم.</div>'}</div>`;
     $('#fb-new').onclick = () => feedbackForm(null, null, () => route());
     bindFb(view);
+  }
+
+  /* ======================= marketing ======================= */
+  const POST_KIND = { reel: 'ريل', story: 'ستوري', post: 'بوست', tiktok: 'تيك توك', snap: 'سناب' };
+  const PILLAR = { before_after: 'قبل وبعد', color: 'لون الأسبوع', behind: 'خلف الكواليس', review: 'رأي عميلة', trend: 'ترند', service: 'تعريف بخدمة', tip: 'نصيحة عناية', team: 'الفريق', offer: 'عرض' };
+  const POST_ST = [['idea', 'فكرة'], ['shoot', 'للتصوير'], ['ready', 'جاهز'], ['posted', 'منشور']];
+  const CH = { instagram: 'انستقرام', tiktok: 'تيك توك', snap: 'سناب', whatsapp: 'واتساب', google: 'قوقل', influencer: 'مؤثرة', inshop: 'داخل الصالون' };
+  const CMP_ST = { planned: ['مخططة', 'accent'], live: ['شغالة', 'ok'], done: ['خلصت', ''] };
+  const IDEAS = [
+    ['before_after', 'reel', 'قبل وبعد لأظافر عميلة (بإذنها)'], ['color', 'post', 'لون الأسبوع: ثلاث أيادي بنفس اللون في إضاءات مختلفة'],
+    ['behind', 'reel', 'يوم في بيوتفريش: من فتح الباب إلى الإقفال'], ['behind', 'story', 'خلف الكواليس: تعقيم الأدوات خطوة بخطوة'],
+    ['review', 'story', 'رسالة مديح من عميلة (بإذنها)'], ['trend', 'reel', 'إطلالة سريعة على صوت ترند هالأسبوع'],
+    ['service', 'reel', 'وش الفرق بين الجيل والأكريليك؟'], ['tip', 'post', 'كيف تحافظين على الجيل أسبوعين بدون تقشير'],
+    ['team', 'reel', 'تعرفوا على أخصائية الأظافر عندنا'], ['offer', 'story', 'عرض الأسبوع بستوري تصويت'],
+    ['behind', 'tiktok', 'ASMR تنظيف وترتيب الأظافر'], ['service', 'story', 'سؤال وجواب: أكثر سؤال يجينا بالواتساب'],
+    ['tip', 'reel', 'روتين عناية الشعر بعد الصبغة'], ['before_after', 'reel', 'تحوّل لون شعر كامل في ٣٠ ثانية'],
+  ];
+  const daysTxt = (n) => (n === 1 ? 'يوم' : n === 2 ? 'يومين' : n <= 10 ? `${n} أيام` : `${n} يوم`);
+  const xTimes = (v) => `\u2066${v.toFixed(1)}×\u2069`;
+  const until = (d) => Math.round((D(d) - D(todayR())) / 86400000);
+  const dShort = (d) => `${D(d).getDate()} ${MONTHS_AR[D(d).getMonth()]}`;
+
+  async function pageMarketing(view, _a, params, alive) {
+    const tab = params.get('t') || 'seasons';
+    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['campaigns', 'الحملات']] : [])];
+    const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/marketing?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
+    if (tab === 'content') return mktContent(view, params, alive, head);
+    if (tab === 'campaigns' && isManager()) return mktCampaigns(view, alive, head);
+    return mktSeasons(view, alive, head);
+  }
+
+  async function mktSeasons(view, alive, head) {
+    const rows = await q(sb.from('mkt_seasons').select('*').order('starts_on'));
+    if (!alive()) return;
+    const tk = todayR();
+    const up = rows.filter((s) => (s.ends_on || s.starts_on) >= tk);
+    const past = rows.filter((s) => (s.ends_on || s.starts_on) < tk).reverse();
+    const state = (s) => { const u = until(s.starts_on); if (u <= 0) return ['live', 'شغال الحين']; if (u <= s.prep_days) return ['prep', 'وقت التجهيز']; return ['later', '']; };
+    const nx = up[0];
+    const ideas = (s) => (s.ideas || '').split('\n').filter(Boolean);
+    const hero = nx ? (() => { const u = until(nx.starts_on); const [st] = state(nx); return `
+      <div class="season-hero ${st}">
+        <div class="sh-emoji">${esc(nx.emoji || '✦')}</div>
+        <div class="grow"><span class="sh-eyebrow">${st === 'live' ? 'الموسم الحالي' : 'الموسم الجاي'}</span><h2>${esc(nx.name)}</h2>
+          <div class="sh-date">${dShort(nx.starts_on)}${nx.ends_on ? ` – ${dShort(nx.ends_on)}` : ''}${nx.approx ? ' · <span class="approx">تاريخ تقريبي</span>' : ''}</div></div>
+        <div class="sh-count">${u > 0 ? `<b class="num">${u}</b><span>${u === 1 ? 'يوم' : u <= 10 ? 'أيام' : 'يوم'}</span>` : '<b>الحين</b>'}</div>
+        ${st !== 'later' ? `<div class="sh-msg">${st === 'live' ? 'الموسم شغال. تابعوا الحجوزات والمخزون كل يوم.' : `باقي ${daysTxt(u)}، يعني دخلتوا وقت التجهيز. ابدؤوا الحملة والمحتوى من الحين.`}</div>` : `<div class="sh-msg">يبدأ التجهيز له بعد ${daysTxt(u - nx.prep_days)}.</div>`}
+        ${ideas(nx).length ? `<ul class="sh-ideas">${ideas(nx).map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
+        ${isManager() ? `<div class="sh-acts"><button class="btn on-oud" data-cmp="${nx.id}">${I.plus} حملة لهالموسم</button></div>` : ''}
+      </div>`; })() : '';
+    let lastM = '';
+    const tl = up.slice(1).map((s) => {
+      const m = MONTHS_AR[D(s.starts_on).getMonth()] + ' ' + D(s.starts_on).getFullYear();
+      const mh = m !== lastM ? `<div class="tl-month">${m}</div>` : ''; lastM = m;
+      const [st, lab] = state(s); const u = until(s.starts_on);
+      return `${mh}<details class="tl-item ${st}"><summary><span class="tl-dot">${esc(s.emoji || '✦')}</span><div class="grow"><b>${esc(s.name)}</b><span>${dShort(s.starts_on)}${s.ends_on ? ` – ${dShort(s.ends_on)}` : ''}${s.approx ? ' · تقريبي' : ''}</span></div><span class="tl-u">${lab ? `<em>${lab}</em>` : ''}بعد ${daysTxt(u)}</span></summary>
+        <div class="tl-body">${ideas(s).length ? `<ul>${ideas(s).map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '<p class="muted small">ما فيه أفكار مكتوبة</p>'}
+        ${isManager() ? `<div class="actions"><button class="btn sm" data-cmp="${s.id}">${I.plus} حملة</button><button class="btn sm" data-sea="${s.id}">تعديل</button></div>` : ''}</div></details>`;
+    }).join('');
+    view.innerHTML = `${head}${hero}
+      <div class="section-title"><h2>تقويم السنة</h2>${isManager() ? '<button class="btn sm" id="sea-new">' + I.plus + ' موسم</button>' : ''}</div>
+      <div class="timeline">${tl || '<div class="empty">ما فيه مواسم قادمة</div>'}</div>
+      ${past.length ? `<p class="muted small mt">المواعيد الهجرية تقريبية. عدّلوها لما يُعلن رسميًا.</p>` : '<p class="muted small mt">المواعيد الهجرية تقريبية. عدّلوها لما يُعلن رسميًا.</p>'}`;
+    $$('[data-cmp]', view).forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); const s = rows.find((x) => x.id === Number(b.dataset.cmp)); campaignForm(null, rows, () => { location.hash = '#/marketing?t=campaigns'; }, s); }));
+    $$('[data-sea]', view).forEach((b) => b.addEventListener('click', () => seasonForm(rows.find((x) => x.id === Number(b.dataset.sea)))));
+    $('#sea-new')?.addEventListener('click', () => seasonForm(null));
+  }
+
+  function seasonForm(s) {
+    modal(`
+      <h3>${s ? 'تعديل موسم' : 'موسم جديد'}</h3>
+      <div class="grid2"><div class="field"><label>الاسم</label><input class="input" id="s-name" maxlength="60" value="${esc(s?.name || '')}"></div>
+      <div class="field"><label>رمز</label><input class="input" id="s-emo" maxlength="4" value="${esc(s?.emoji || '')}" placeholder="✨"></div></div>
+      <div class="grid2"><div class="field"><label>يبدأ</label><input class="input" type="date" id="s-from" value="${s?.starts_on || ''}"></div>
+      <div class="field"><label>ينتهي <span class="muted small">(اختياري)</span></label><input class="input" type="date" id="s-to" value="${s?.ends_on || ''}"></div></div>
+      <div class="field"><label>نبدأ التجهيز قبله بـ (يوم)</label><input class="input num" type="number" id="s-prep" min="0" max="120" value="${s?.prep_days ?? 21}"></div>
+      <label class="check" style="margin-bottom:12px"><input type="checkbox" id="s-apx" ${s?.approx ? 'checked' : ''}> التاريخ تقريبي (هجري)</label>
+      <div class="field"><label>أفكار <span class="muted small">(كل فكرة في سطر)</span></label><textarea class="input" id="s-ideas" rows="4" maxlength="1500">${esc(s?.ideas || '')}</textarea></div>
+      <div class="actions end">${s ? '<button class="btn danger" id="s-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="s-save">حفظ</button></div>`, (el, close) => {
+      $('#s-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { name: $('#s-name', el).value.trim(), emoji: $('#s-emo', el).value.trim() || null, starts_on: $('#s-from', el).value, ends_on: $('#s-to', el).value || null, prep_days: Number($('#s-prep', el).value) || 0, approx: $('#s-apx', el).checked, ideas: $('#s-ideas', el).value.trim() || null };
+        if (!row.name || !row.starts_on) return toast('اكتبوا الاسم والتاريخ', true);
+        try { if (s) await q(sb.from('mkt_seasons').update(row).eq('id', s.id)); else await q(sb.from('mkt_seasons').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#s-del', el)?.addEventListener('click', async () => { close(); if (await confirmBox('حذف الموسم', 'ينحذف من التقويم.', 'حذف', true)) { try { await q(sb.from('mkt_seasons').delete().eq('id', s.id)); route(); } catch (err) { toast(errMsg(err), true); } } });
+    });
+  }
+
+  async function mktCampaigns(view, alive, head) {
+    const [rows, seasons] = await Promise.all([q(sb.from('mkt_campaigns').select('*').order('starts_on', { ascending: false })), q(sb.from('mkt_seasons').select('id,name,emoji,starts_on').order('starts_on'))]);
+    if (!alive()) return;
+    const sum = (k) => rows.filter((c) => c.status !== 'planned').reduce((a, c) => a + Number(c[k] || 0), 0);
+    const spent = sum('spent'), rev = sum('revenue'), nc = sum('new_clients');
+    view.innerHTML = `${head}
+      <div class="seg-tiles">
+        <div class="seg-tile"><b class="num">${sar(spent)}</b><span>صرفنا على الحملات</span></div>
+        <div class="seg-tile ok"><b class="num">${sar(rev)}</b><span>رجّعت مبيعات</span></div>
+        <div class="seg-tile gold"><b class="num">${spent ? xTimes(rev / spent) : '—'}</b><span>كل ريال رجّع</span></div>
+        <div class="seg-tile"><b class="num">${nc && spent ? sar(spent / nc) : '—'}</b><span>تكلفة العميلة الجديدة</span></div>
+      </div>
+      <div class="actions" style="margin:14px 0"><button class="btn primary" id="cmp-new">${I.plus} حملة جديدة</button></div>
+      <div class="cmp-list">${rows.length ? rows.map((c) => {
+        const se = seasons.find((s) => s.id === c.season_id);
+        const roas = c.spent > 0 && c.revenue != null ? Number(c.revenue) / Number(c.spent) : null;
+        const gp = c.goal_clients ? Math.min(100, ((c.new_clients || 0) / c.goal_clients) * 100) : null;
+        return `<button class="cmp" data-c="${c.id}">
+          <div class="cmp-top"><span class="badge ${CMP_ST[c.status][1]}">${CMP_ST[c.status][0]}</span>${se ? `<span class="muted small">${esc(se.emoji || '')} ${esc(se.name)}</span>` : ''}<span class="muted small" style="margin-inline-start:auto">${dShort(c.starts_on)}${c.ends_on ? ' – ' + dShort(c.ends_on) : ''}</span></div>
+          <h3>${esc(c.name)}</h3>${c.offer ? `<p class="cmp-offer">${esc(c.offer)}</p>` : ''}
+          <div class="cmp-ch">${(c.channels || []).map((k) => `<span>${CH[k] || k}</span>`).join('')}</div>
+          <div class="cmp-nums"><div><span>الصرف</span><b class="num">${c.spent != null ? sar(c.spent) : '—'}${c.budget ? `<small> / ${sar(c.budget)}</small>` : ''}</b></div><div><span>عميلات جدد</span><b class="num">${c.new_clients ?? '—'}${c.goal_clients ? `<small> / ${c.goal_clients}</small>` : ''}</b></div><div><span>المبيعات</span><b class="num">${c.revenue != null ? sar(c.revenue) : '—'}</b></div><div><span>العائد</span><b class="num ${roas != null && roas < 1 ? 'neg' : ''}">${roas != null ? xTimes(roas) : '—'}</b></div></div>
+          ${gp != null ? `<div class="fbar-track" style="margin-top:10px"><i style="width:${gp}%"></i></div>` : ''}
+          ${c.learnings ? `<p class="cmp-learn">💡 ${esc(c.learnings)}</p>` : ''}
+        </button>`; }).join('') : '<div class="list"><div class="empty">ما فيه حملات بعد. ابدؤوا من موسم في التقويم، أو أضيفوا حملة جديدة.</div></div>'}</div>`;
+    $('#cmp-new').onclick = () => campaignForm(null, seasons, () => route());
+    $$('[data-c]', view).forEach((b) => b.onclick = () => campaignForm(rows.find((x) => x.id === Number(b.dataset.c)), seasons, () => route()));
+  }
+
+  function campaignForm(c, seasons, done, fromSeason) {
+    const chs = new Set(c?.channels || ['instagram']); let st = c?.status || 'planned';
+    const sid = c?.season_id || fromSeason?.id || '';
+    const defStart = fromSeason ? dk(new Date(Math.max(D(todayR()), D(fromSeason.starts_on) - fromSeason.prep_days * 86400000))) : todayR();
+    const n = (k) => (c?.[k] != null ? Number(c[k]) : '');
+    modal(`
+      <h3>${c ? 'الحملة' : 'حملة جديدة'}</h3>
+      <div class="field"><label>اسم الحملة</label><input class="input" id="c-name" maxlength="80" value="${esc(c?.name || (fromSeason ? 'حملة ' + fromSeason.name : ''))}"></div>
+      <div class="field"><label>الموسم</label><select class="input" id="c-sea"><option value="">—</option>${seasons.map((s) => `<option value="${s.id}" ${String(s.id) === String(sid) ? 'selected' : ''}>${esc((s.emoji || '') + ' ' + s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>العرض</label><input class="input" id="c-offer" maxlength="300" value="${esc(c?.offer || '')}" placeholder="مثلًا: باقة العيد ٢٩٩ بدل ٣٨٠"></div>
+      <div class="field"><label>القنوات</label><div class="chips wrap" id="c-ch">${Object.entries(CH).map(([k, l]) => `<button type="button" class="chip ${chs.has(k) ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>من</label><input class="input" type="date" id="c-from" value="${c?.starts_on || defStart}"></div><div class="field"><label>إلى</label><input class="input" type="date" id="c-to" value="${c?.ends_on || fromSeason?.ends_on || fromSeason?.starts_on || ''}"></div></div>
+      <div class="grid2"><div class="field"><label>الميزانية</label><input class="input num" type="number" min="0" id="c-bud" value="${n('budget')}"></div><div class="field"><label>هدف العميلات الجدد</label><input class="input num" type="number" min="0" id="c-goal" value="${n('goal_clients')}"></div></div>
+      <div class="field"><label>الحالة</label><div class="chips" id="c-st">${Object.entries(CMP_ST).map(([k, [l]]) => `<button type="button" class="chip ${k === st ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="cmp-results ${st === 'planned' ? 'dim' : ''}"><div class="close-h">النتائج</div>
+        <div class="grid2"><div class="field"><label>المصروف فعليًا</label><input class="input num" type="number" min="0" id="c-spent" value="${n('spent')}"></div><div class="field"><label>عميلات جدد</label><input class="input num" type="number" min="0" id="c-nc" value="${n('new_clients')}"></div></div>
+        <div class="grid2"><div class="field"><label>حجوزات</label><input class="input num" type="number" min="0" id="c-bk" value="${n('bookings')}"></div><div class="field"><label>مبيعات منها</label><input class="input num" type="number" min="0" id="c-rev" value="${n('revenue')}"></div></div>
+        <div class="field"><label>وش تعلّمنا</label><textarea class="input" id="c-learn" rows="2" maxlength="1000" placeholder="مثلًا: الريلز جابت أكثر من الإعلان المدفوع">${esc(c?.learnings || '')}</textarea></div></div>
+      <div class="actions end">${c ? '<button class="btn danger" id="c-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="c-save">حفظ</button></div>`, (el, close) => {
+      $$('#c-ch .chip', el).forEach((b) => b.onclick = () => { const k = b.dataset.k; chs.has(k) ? chs.delete(k) : chs.add(k); b.classList.toggle('on'); });
+      $$('#c-st .chip', el).forEach((b) => b.onclick = () => { st = b.dataset.k; $$('#c-st .chip', el).forEach((x) => x.classList.toggle('on', x === b)); $('.cmp-results', el).classList.toggle('dim', st === 'planned'); });
+      const num = (id) => { const v = $(id, el).value; return v === '' ? null : Number(v); };
+      $('#c-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { name: $('#c-name', el).value.trim(), season_id: $('#c-sea', el).value ? Number($('#c-sea', el).value) : null, offer: $('#c-offer', el).value.trim() || null, channels: [...chs], starts_on: $('#c-from', el).value || todayR(), ends_on: $('#c-to', el).value || null, budget: num('#c-bud'), goal_clients: num('#c-goal'), status: st, spent: num('#c-spent'), new_clients: num('#c-nc'), bookings: num('#c-bk'), revenue: num('#c-rev'), learnings: $('#c-learn', el).value.trim() || null };
+        if (row.name.length < 2) return toast('اكتبوا اسم الحملة', true);
+        try { if (c) await q(sb.from('mkt_campaigns').update(row).eq('id', c.id)); else await q(sb.from('mkt_campaigns').insert(row)); toast('تم الحفظ'); close(); done && done(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#c-del', el)?.addEventListener('click', async () => { close(); if (await confirmBox('حذف الحملة', 'تنحذف الحملة ونتائجها.', 'حذف', true)) { try { await q(sb.from('mkt_campaigns').delete().eq('id', c.id)); route(); } catch (err) { toast(errMsg(err), true); } } });
+    });
+  }
+
+  async function mktContent(view, params, alive, head) {
+    const off = Number(params.get('w') || 0);
+    const [ws, we] = lensRange('w', lensShift('w', D(todayR()), off));
+    const posts = await q(sb.from('mkt_posts').select('*').order('publish_on', { nullsFirst: false }).order('id', { ascending: false }).limit(400));
+    if (!alive()) return;
+    const tk = todayR();
+    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(ws); d.setDate(ws.getDate() + i); return dk(d); });
+    const weekPosts = posts.filter((p) => p.publish_on >= dk(ws) && p.publish_on <= dk(we));
+    const card = (p) => `<button class="pcard ${p.publish_on && p.publish_on < tk && p.status !== 'posted' ? 'late' : ''}" data-p="${p.id}">
+        <div class="pc-tags"><span class="ptag k-${p.kind}">${POST_KIND[p.kind]}</span>${p.pillar ? `<span class="ptag">${PILLAR[p.pillar]}</span>` : ''}</div>
+        <b>${esc(p.title)}</b>${p.publish_on ? `<span class="pc-date">${dShort(p.publish_on)}</span>` : ''}
+        ${p.status !== 'posted' ? `<span class="pc-next" data-next="${p.id}" title="المرحلة الجاية">←</span>` : ''}</button>`;
+    view.innerHTML = `${head}
+      <div class="week-head"><a class="icon-btn" href="#/marketing?t=content&w=${off - 1}">›</a><b>${lensTitle('w', ws, we)}</b><a class="icon-btn" href="#/marketing?t=content&w=${off + 1}">‹</a></div>
+      <div class="week-strip">${days.map((d) => { const ps = weekPosts.filter((p) => p.publish_on === d); return `<div class="wd ${d === tk ? 'today' : ''}"><span>${['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'][D(d).getDay()]}</span><b class="num">${D(d).getDate()}</b><div class="wd-dots">${ps.map((p) => `<i class="k-${p.kind} ${p.status}" title="${esc(p.title)}"></i>`).join('')}</div></div>`; }).join('')}</div>
+      <p class="muted small" style="margin:8px 2px 14px">${weekPosts.length ? `${weekPosts.length} منشور مجدول هالأسبوع، المنشور منها ${weekPosts.filter((p) => p.status === 'posted').length}` : 'ما فيه شي مجدول هالأسبوع'}. القاعدة الذهبية: ٣ ريلز وستوري يومي.</p>
+      <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="p-new">${I.plus} فكرة</button><button class="btn" id="p-spark">✦ ما عندي فكرة</button></div>
+      <div class="kanban">${POST_ST.map(([k, l]) => { const ps = posts.filter((p) => p.status === k && (k !== 'posted' || (p.publish_on || p.created_at.slice(0, 10)) >= dk(lensShift('d', D(tk), -30)))); return `<div class="kcol"><div class="kcol-h"><b>${l}</b><span class="num">${ps.length}</span></div>${ps.map(card).join('') || '<div class="kempty">—</div>'}</div>`; }).join('')}</div>`;
+    $('#p-new').onclick = () => postForm(null);
+    $('#p-spark').onclick = () => { const [pl, kd, t] = IDEAS[Math.floor(Math.random() * IDEAS.length)]; postForm({ title: t, kind: kd, pillar: pl, status: 'idea', _new: true }); };
+    $$('[data-p]', view).forEach((b) => b.addEventListener('click', (e) => {
+      const nx = e.target.closest('[data-next]');
+      const p = posts.find((x) => x.id === Number(b.dataset.p));
+      if (nx) { const i = POST_ST.findIndex((s) => s[0] === p.status); busy(null, async () => { try { await q(sb.from('mkt_posts').update({ status: POST_ST[i + 1][0], updated_at: new Date().toISOString() }).eq('id', p.id)); toast(`انتقل إلى «${POST_ST[i + 1][1]}»`); route(); } catch (err) { toast(errMsg(err), true); } }); return; }
+      postForm(p);
+    }));
+  }
+
+  function postForm(p) {
+    const isNew = !p || p._new; let kind = p?.kind || 'reel', pillar = p?.pillar || '', st = p?.status || 'idea';
+    modal(`
+      <h3>${isNew ? 'فكرة محتوى' : 'المحتوى'}</h3>
+      <div class="field"><label>الفكرة</label><input class="input" id="p-title" maxlength="120" value="${esc(p?.title || '')}"></div>
+      <div class="field"><label>النوع</label><div class="chips wrap" id="p-k">${Object.entries(POST_KIND).map(([k, l]) => `<button type="button" class="chip ${k === kind ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="field"><label>المحور</label><div class="chips wrap" id="p-pl">${Object.entries(PILLAR).map(([k, l]) => `<button type="button" class="chip ${k === pillar ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>موعد النشر</label><input class="input" type="date" id="p-day" value="${p?.publish_on || ''}"></div>
+      <div class="field"><label>المرحلة</label><select class="input" id="p-st">${POST_ST.map(([k, l]) => `<option value="${k}" ${k === st ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
+      <div class="field"><label>ملاحظات التصوير</label><textarea class="input" id="p-notes" rows="2" maxlength="1000" placeholder="الإضاءة، العميلة، الصوت…">${esc(p?.notes || '')}</textarea></div>
+      <div class="field"><label>الرابط بعد النشر</label><input class="input" id="p-link" dir="ltr" maxlength="500" value="${esc(p?.link || '')}" placeholder="https://instagram.com/…"></div>
+      <div class="actions end">${!isNew && isManager() ? '<button class="btn danger" id="p-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="p-save">حفظ</button></div>`, (el, close) => {
+      const pick = (sel, set, toggle) => $$(sel + ' .chip', el).forEach((b) => b.onclick = () => { const was = b.classList.contains('on'); $$(sel + ' .chip', el).forEach((x) => x.classList.remove('on')); if (!(toggle && was)) b.classList.add('on'); set(toggle && was ? '' : b.dataset.k); });
+      pick('#p-k', (v) => { kind = v; }); pick('#p-pl', (v) => { pillar = v; }, true);
+      $('#p-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { title: $('#p-title', el).value.trim(), kind, pillar: pillar || null, publish_on: $('#p-day', el).value || null, status: $('#p-st', el).value, notes: $('#p-notes', el).value.trim() || null, link: $('#p-link', el).value.trim() || null, updated_at: new Date().toISOString() };
+        if (row.title.length < 2) return toast('اكتبوا الفكرة', true);
+        try { if (!isNew) await q(sb.from('mkt_posts').update(row).eq('id', p.id)); else await q(sb.from('mkt_posts').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#p-del', el)?.addEventListener('click', async () => { try { await q(sb.from('mkt_posts').delete().eq('id', p.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+    });
   }
 
   /* ======================= finance ======================= */

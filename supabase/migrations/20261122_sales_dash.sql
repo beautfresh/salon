@@ -140,9 +140,9 @@ begin
   svc as (
     select rr.product_id, max(rr.product_name) name, max(pc.cat) cat, max(pc.grp) grp, count(*) n, sum(rr.total) v,
            count(distinct rr.customer_id) cl,
-           (select coalesce(sum(rp.total), 0) from rp where rp.product_id = rr.product_id) pv,
-           (select count(*) from rp where rp.product_id = rr.product_id) pn
-    from rr left join pc on pc.product_id = rr.product_id where rr.status = 'confirmed' group by rr.product_id),
+           coalesce(max(ra.v), 0) pv, coalesce(max(ra.n), 0) pn
+    from rr left join pc on pc.product_id = rr.product_id left join (select product_id, sum(total) v, count(*) n from rp group by 1) ra on ra.product_id = rr.product_id
+    where rr.status = 'confirmed' group by rr.product_id),
   pr as (
     select pid, rr.* from rr, unnest(coalesce(rr.provider_ids, '{}')) pid),
   prov as (
@@ -159,11 +159,13 @@ begin
     select pid, coalesce(sum(r.total / greatest(cardinality(r.provider_ids), 1)), 0) v
     from public.rekaz_reservations r, unnest(coalesce(r.provider_ids, '{}')) pid
     where r.status = 'confirmed' and r.start_at >= private.rd(pf) and r.start_at < least(private.rd(p_from), private.rd(pf) + el) group by pid),
+  pfirst as (  -- أول زيارة لكل عميلة عند كل أخصائية
+    select pid, x.customer_id, min(x.start_at) f from public.rekaz_reservations x, unnest(coalesce(x.provider_ids, '{}')) pid
+    where x.status = 'confirmed' group by 1, 2),
   prov_ret as (  -- عميلات رجعوا لنفس الأخصائية
-    select pr.pid, count(distinct pr.customer_id) filter (where exists (
-      select 1 from public.rekaz_reservations x where x.customer_id = pr.customer_id and x.status = 'confirmed'
-        and x.start_at < pr.start_at - interval '1 day' and x.provider_ids @> array[pr.pid])) ret
-    from pr where pr.status = 'confirmed' group by pr.pid),
+    select pr.pid, count(distinct pr.customer_id) ret
+    from pr join pfirst on pfirst.pid = pr.pid and pfirst.customer_id = pr.customer_id
+    where pr.status = 'confirmed' and pfirst.f < pr.start_at - interval '1 day' group by pr.pid),
   prov_top as (
     select pid, jsonb_agg(jsonb_build_object('name', name, 'n', n) order by n desc) filter (where rk <= 3) top from (
       select pid, product_name name, count(*) n, row_number() over (partition by pid order by count(*) desc) rk

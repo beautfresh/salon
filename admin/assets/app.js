@@ -4325,6 +4325,7 @@
     sdTips(view);
     const lensEl = $('#sd-lens', view);
     requestAnimationFrame(() => sdSlide(lensEl));
+    document.fonts?.ready.then(() => { if (alive()) { sdSlide(lensEl); const tb = $('.sd-tabs', view); tb && sdSlide(tb); } });
     addEventListener('resize', () => { if (alive()) { sdSlide(lensEl); const tb = $('.sd-tabs', view); tb && sdSlide(tb); } });
 
     const drawNav = () => {
@@ -4336,11 +4337,11 @@
       }
       const [ps, pe] = lensRange(st.lens, lensShift(st.lens, st.at, -1)), [ns, ne] = lensRange(st.lens, lensShift(st.lens, st.at, 1));
       const isCur = dk(s) <= tk && tk <= dk(e), canNext = dk(ns) <= tk;
-      const sub = st.lens === 'd' ? `${WDAYS[s.getDay()]} ${s.getDate()} ${MONTHS_AR[s.getMonth()]} ${s.getFullYear()}` : st.lens === 'm' ? `${s.getFullYear()}` : lensTitle(st.lens, s, e);
+      const sub = st.lens === 'd' ? `${WDAYS[s.getDay()]} ${s.getDate()} ${MONTHS_AR[s.getMonth()]} ${s.getFullYear()}` : st.lens === 'm' ? `${s.getFullYear()}` : st.lens === 'q' ? `${MONTHS_AR[s.getMonth()]} – ${MONTHS_AR[e.getMonth()]} ${s.getFullYear()}` : st.lens === 'y' ? '' : lensTitle(st.lens, s, e);
       box.innerHTML = `<div class="sd-nav">
-        <button class="sd-step" data-step="-1"><span class="ar">›</span><span><small>السابق</small><b>${sdPeriodName(st.lens, ps, pe, tk)}</b></span></button>
+        <button class="sd-step" data-step="-1"><span class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></span><span><small>السابق</small><b>${sdPeriodName(st.lens, ps, pe, tk)}</b></span></button>
         <div class="sd-now"><h2>${sdPeriodName(st.lens, s, e, tk)}</h2><small>${sub !== sdPeriodName(st.lens, s, e, tk) ? sub : ''}</small>${!isCur ? `<button class="sd-back" id="sd-today">ارجع لـ${{ d: 'اليوم', w: 'هالأسبوع', m: 'هالشهر', q: 'هالربع', y: 'هالسنة' }[st.lens]}</button>` : '<span class="sd-badge">الحالي</span>'}</div>
-        <button class="sd-step" data-step="1" ${canNext ? '' : 'disabled'}><span><small>التالي</small><b>${sdPeriodName(st.lens, ns, ne, tk)}</b></span><span class="ar">‹</span></button>
+        <button class="sd-step" data-step="1" ${canNext ? '' : 'disabled'}><span><small>التالي</small><b>${sdPeriodName(st.lens, ns, ne, tk)}</b></span><span class="ar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></span></button>
       </div>`;
       $$('.sd-step', box).forEach((b) => b.addEventListener('click', () => { st.at = lensShift(st.lens, st.at, Number(b.dataset.step)); go(Number(b.dataset.step)); }));
       $('#sd-today', box)?.addEventListener('click', () => { st.at = D(tk); go(); });

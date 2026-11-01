@@ -49,10 +49,11 @@ const dayStartUTC = (day: string) => new Date(`${day}T00:00:00+03:00`);
 type Item = { service_id: number; option_id?: number | null };
 type Line = { priceId: string; name: string };
 
+let FORCE = false;
 async function resolve(items: Item[]): Promise<{ lines: Line[]; branchId: string; maxOpen: number }> {
   if (!Array.isArray(items) || !items.length || items.length > 6) throw new Error('bad_items');
   const { data: set } = await db.from('salon_settings').select('rekaz_booking,rekaz_branch_id,max_open_per_phone').eq('id', 1).single();
-  if (!set?.rekaz_booking || !set.rekaz_branch_id) throw new Error('rekaz_booking_off');
+  if (!(set?.rekaz_booking || FORCE) || !set?.rekaz_branch_id) throw new Error('rekaz_booking_off');
   const lines: Line[] = [];
   for (const it of items) {
     if (it.option_id) {
@@ -126,6 +127,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return out({ error: 'method_not_allowed' }, 405);
   let b: any; try { b = await req.json(); } catch (_) { return out({ error: 'bad_request' }, 400); }
+  FORCE = false;
+  if (b.preview_key) { const { data } = await db.rpc('rekaz_sync_config'); FORCE = !!data?.sync_secret && data.sync_secret === b.preview_key; }
   try {
     const member = b.member ? String(b.member) : null;
     if (b.action === 'slots') {
@@ -169,7 +172,6 @@ Deno.serve(async (req) => {
       }, key);
       let number: number | null = null;
       try { const rv = await call('GET', `/reservations/${r.reservationIds[0]}`); number = rv?.number ?? null; } catch (_) { /* optional */ }
-      try { await db.rpc('rekaz_sync_now_internal'); } catch (_) { /* optional */ }
       return out({ ok: true, number, orderId: r.orderId, paymentLink: r.paymentLink, lines: lines.map((l) => l.name) });
     }
     return out({ error: 'unknown_action' }, 400);

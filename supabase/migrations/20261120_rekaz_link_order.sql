@@ -23,7 +23,7 @@ begin
           + (case when private.rk_norm(private.rk_text(e->'name')) like '%' || private.rk_norm(split_part(o.name, ' ', array_length(string_to_array(o.name, ' '), 1))) then 2 else 0 end)
           + (case when position(private.rk_norm(split_part(o.name, ' ', 1)) in private.rk_norm(private.rk_text(e->'name'))) > 0 then 1 else 0 end)
           + (case when private.rk_num(e->'amount') = o.price or private.rk_num(e->'discountedAmount') = o.price then 3 else 0 end) as score
-          , ix from jsonb_array_elements(pr) with ordinality t(e, ix)) x
+          from jsonb_array_elements(pr) with ordinality t(e, ix)) x
         where score >= 3 order by score desc, abs(ix - 1 - o.sort) limit 1;
         update public.salon_service_options set rekaz_price_id = best where id = o.id;
         if best is not null then linked := linked + 1; else missing := missing + 1; end if;

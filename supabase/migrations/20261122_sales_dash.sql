@@ -96,7 +96,7 @@ declare
   cf date; ct date;
   res jsonb;
 begin
-  if coalesce(private.my_role(), '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
+  if coalesce(private.my_role()::text, '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
   if p_to < p_from or span > 400 then raise exception 'فترة غير صالحة'; end if;
   select (min(created_at) at time zone 'Asia/Riyadh')::date into first_day from public.rekaz_orders;
   has_ly := first_day is not null and first_day <= yf;
@@ -220,7 +220,7 @@ declare
   me date := (date_trunc('month', today) + interval '1 month')::date;
   res jsonb;
 begin
-  if coalesce(private.my_role(), '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
+  if coalesce(private.my_role()::text, '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
   select jsonb_build_object(
     'now', now(), 'today', today,
     'synced_at', (select max(finished_at) from public.rekaz_sync_log where ok),
@@ -290,7 +290,7 @@ grant execute on function public.sales_pulse() to authenticated;
 create or replace function public.sales_export(p_from date, p_to date) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if coalesce(private.my_role(), '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
+  if coalesce(private.my_role()::text, '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
   if p_to - p_from > 400 then raise exception 'فترة غير صالحة'; end if;
   return coalesce((select jsonb_agg(jsonb_build_object(
       'day', (r.start_at at time zone 'Asia/Riyadh')::date, 'time', to_char(r.start_at at time zone 'Asia/Riyadh', 'HH24:MI'),

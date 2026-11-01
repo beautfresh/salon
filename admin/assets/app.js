@@ -4470,7 +4470,7 @@
       const show = (t, animate) => {
         st.tab = t; history.replaceState(null, '', url());
         $$('button', tabsEl).forEach((x) => x.classList.toggle('on', x.dataset.tab === t));
-        sdSlide(tabsEl); $('.on', tabsEl)?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: animate ? 'smooth' : 'auto' });
+        sdSlide(tabsEl); { const o = $('.on', tabsEl); if (o) { const c = tabsEl.getBoundingClientRect(), b = o.getBoundingClientRect(); if (b.left < c.left) tabsEl.scrollBy({ left: b.left - c.left - 16, behavior: animate ? 'smooth' : 'auto' }); else if (b.right > c.right) tabsEl.scrollBy({ left: b.right - c.right + 16, behavior: animate ? 'smooth' : 'auto' }); } }
         const paint = () => {
           body.innerHTML = ({ sales: sdTabSales, svc: sdTabSvc, team: sdTabTeam, clients: sdTabClients, time: sdTabTime, profit: sdTabProfit })[t](r, P, { lens, cmpName, monthly, s, e });
           sdBind(body, r, P, t); sdCount(body);

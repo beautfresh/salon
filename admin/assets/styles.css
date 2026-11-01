@@ -1271,7 +1271,7 @@ a.sd-in:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .sidebar .foot button { color: var(--accent); }
 
 .fin-hero, .pulse, .bk-card, .season-hero, .svc-hero, .tour-banner.nq { background: var(--hero-bg); color: var(--ink); border: 1px solid var(--hero-line); box-shadow: var(--hero-shadow); }
-.fin-hero::after, .pulse::after, .bk-card::after, .season-hero::after, .svc-hero::after { filter: none; opacity: .045; }
+.fin-hero::after, .pulse::after, .bk-card::after, .season-hero::after, .svc-hero::after { filter: none; opacity: .028; }
 .bk-card:hover { box-shadow: 0 1px 2px rgba(95, 62, 48, .05), 0 26px 44px -30px rgba(95, 62, 48, .55); }
 .fin-hero-top, .fin-net small, .fin-split span, .bk-top, .bk-nums span, .pulse-body span, .tgt-top, .sh-eyebrow, .sh-count span, .svc-nums span, .svc-leg, .sd-fc { color: var(--muted); }
 .fin-split em, .tgt-msg, .bk-next, .sh-date, .sh-ideas, .tgt-edit, .tour-banner.nq small { color: var(--ink-2); }

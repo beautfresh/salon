@@ -92,6 +92,19 @@
     .way p { color: var(--ink-2); margin-top: 10px; max-width: 36ch; }
     .way.home p { color: var(--on-2); }
     .way .btn { align-self: flex-start; margin-top: 28px; position: relative; z-index: 1; }
+    .way.gift { grid-column: 1 / -1; min-height: 0; display: grid; grid-template-columns: 1.1fr .9fr; gap: 30px; align-items: center; background: linear-gradient(120deg, #F3EDE4 0%, #EADCC6 100%); }
+    .way.gift::before { content: ""; position: absolute; inset-inline-end: -60px; top: -60px; width: 260px; height: 260px; background: url("home/assets/rosette-3.svg") center / contain no-repeat; opacity: .08; pointer-events: none; }
+    .way.gift .tag { color: #8E6A3A; }
+    .way.gift .new { display: inline-block; margin-inline-start: 10px; padding: 2px 10px; border-radius: 999px; background: var(--oud); color: var(--on); font-size: 11px; letter-spacing: 0; vertical-align: middle; }
+    .gv { position: relative; justify-self: center; width: min(100%, 380px); aspect-ratio: 1.6; border-radius: 22px; padding: 22px 24px; color: var(--on); background: linear-gradient(150deg, #6A3229, #3F1D17); box-shadow: 0 34px 50px -30px rgba(63, 29, 23, .85); transform: rotate(-4deg); transition: transform .6s var(--ease); display: flex; flex-direction: column; overflow: hidden; }
+    .gv::after { content: ""; position: absolute; inset: 0; background: url("home/assets/rosette-2.svg") 0 0 / 28px 28px; opacity: .07; filter: brightness(0) invert(1); }
+    .gv.b { position: absolute; transform: rotate(5deg) translate(-22px, 14px); background: linear-gradient(150deg, #E3C890, #A8834C); z-index: -1; opacity: .9; }
+    .way.gift:hover .gv:not(.b) { transform: rotate(-1deg) translateY(-6px); }
+    .gv img { height: 30px; align-self: flex-start; filter: brightness(0) invert(94%) sepia(9%) saturate(380%) hue-rotate(335deg); position: relative; z-index: 1; }
+    .gv small { margin-top: auto; font-size: 11px; letter-spacing: .14em; color: #C9A46A; position: relative; z-index: 1; }
+    .gv b { font-size: 26px; font-weight: 500; position: relative; z-index: 1; }
+    .gv span { font-size: 13px; color: var(--on-2); position: relative; z-index: 1; direction: ltr; text-align: end; }
+    .gvw { position: relative; display: grid; place-items: center; padding: 20px 0; isolation: isolate; }
 
     .info { background: var(--soft); padding: 80px 0; }
     .info .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
@@ -123,6 +136,7 @@
       .hero .cta { width: 100%; }
       .hero .cta .btn { flex: 1; padding: 0 16px; }
       .ways .grid, .info .grid { grid-template-columns: 1fr; }
+      .way.gift { grid-template-columns: 1fr; gap: 6px; } .gvw { order: -1; padding: 6px 0 18px; }
       .way { min-height: 0; padding: 32px 26px 28px; }
       .info { padding: 56px 0; }
     }
@@ -174,6 +188,15 @@
             <p>الصالون اللي تحبينه.. يجيك لين بابك. أظافر وشعر بأيادي بيوتفريش، في وقتك ومكانك.</p>
           </div>
           <span class="btn light">الخدمات المنزلية <i>←</i></span>
+        </a>
+        <a class="way gift reveal" style="--d:.2s" href="gift/">
+          <div>
+            <div class="head"><span class="tag">Gift it<span class="new">جديد</span></span></div>
+            <h2>أهديها بيوتفريش</h2>
+            <p>هدية تفرّحها فعلًا. اختاري القيمة، واكتبي كلمتك، ونوصّلها لها على جوالها بقسيمة باسمها.</p>
+            <span class="btn">صمّمي هديتك <i>←</i></span>
+          </div>
+          <div class="gvw"><div class="gv b"></div><div class="gv"><img src="home/assets/Beautfresh-brown.svg" alt=""><small>GIFT CARD · قسيمة هدية</small><b>٥٠٠ ريال</b><span>BF-•••••</span></div></div>
         </a>
       </div>
     </section>

@@ -3,6 +3,7 @@
 'use strict';
 const CFG = window.APP_CONFIG;
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+const RK = async (body) => { const r = await fetch(CFG.supabaseUrl + '/functions/v1/rekaz-book', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseKey }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!r.ok || j.error) throw new Error(j.message || 'صار خطأ، جرّبي مرة ثانية'); return j; };
 const rpc = async (name, args) => { const { data, error } = await sb.rpc(name, args); if (error) throw new Error(error.message || 'صار خطأ'); return data; };
 const ICONS={
  hair:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#000" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 12V50Q16 55 22 55H27V12ZM27 16H51M27 23H49M27 30H51M27 37H49M27 44H51M27 51H49"/></svg>',
@@ -132,7 +133,7 @@ function s1() {
 }
 async function loadFirst() {
   const key = JSON.stringify([itemsArg(), S.staff]);
-  try { const f = await rpc('sb_first', { p_items: itemsArg(), p_member: S.staff || null }); if (key !== JSON.stringify([itemsArg(), S.staff]) || S.step !== 1) return; S.first = f; if (!S.dayPicked && f) S.day = f.day; }
+  try { const f = C.settings.rekaz ? (await RK({ action: 'first', items: itemsArg() })).first : await rpc('sb_first', { p_items: itemsArg(), p_member: S.staff || null }); if (key !== JSON.stringify([itemsArg(), S.staff]) || S.step !== 1) return; S.first = f; if (!S.dayPicked && f) S.day = f.day; }
   catch { S.first = null; }
   if (S.step === 1) { render(); }
 }
@@ -140,7 +141,7 @@ async function loadSlots() {
   const box = $('#slotBox'); if (!box) return;
   const day = S.day, key = JSON.stringify([itemsArg(), S.staff, day]);
   let rows = [];
-  try { rows = await rpc('sb_slots', { p_day: day, p_items: itemsArg(), p_member: S.staff || null }) || []; } catch (e) { box.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+  try { rows = C.settings.rekaz ? (await RK({ action: 'slots', day, items: itemsArg() })).slots.slice().sort().map((slot) => ({ slot })) : await rpc('sb_slots', { p_day: day, p_items: itemsArg(), p_member: S.staff || null }) || []; } catch (e) { box.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
   if (key !== JSON.stringify([itemsArg(), S.staff, S.day]) || S.step !== 1) return;
   const parts = { 'الصباح': [], 'العصر': [], 'المساء': [] };
   rows.forEach((r) => { const h = +r.slot.slice(0, 2); parts[h < 13 ? 'الصباح' : h < 17 ? 'العصر' : 'المساء'].push(r.slot); });
@@ -160,14 +161,17 @@ function s2() {
     `<div class="fld"><label for="ph">الجوال</label><div class="tel"><span>+966</span><input id="ph" inputmode="tel" autocomplete="tel-national" placeholder="5X XXX XXXX" value="${esc(fmtPhone(S.phone))}"></div></div>` +
     `<div class="fld"><label for="nt">ملاحظة <small style="color:var(--mute)">(اختياري)</small></label><input id="nt" maxlength="300" placeholder="مثلًا: أول مرة أصبغ" value="${esc(S.notes)}"></div>` +
     `<div class="lbl">الدفع</div><div class="pay"><button class="pm on" type="button"><span class="rd"></span><span><b>الدفع في الصالون</b><small>كاش أو مدى أو Apple Pay بعد الخدمة</small></span></button>` +
-    `<button class="pm" type="button" disabled><span class="rd"></span><span><b>ادفعي أونلاين</b><small>عربون يثبّت موعدك</small><span class="brands"><span>Apple Pay</span><span>mada</span><span>VISA</span></span></span><span class="soonb">قريبًا</span></button></div>` +
+    (C.settings.rekaz ? `<p class="note" style="text-align:right;margin:4px 0 0">بعد الحجز يطلع لك رابط «تفاصيل الحجز والدفع»، وتقدرين تدفعين منه أونلاين إذا كان متاح.</p></div>` : `<button class="pm" type="button" disabled><span class="rd"></span><span><b>ادفعي أونلاين</b><small>عربون يثبّت موعدك</small><span class="brands"><span>Apple Pay</span><span>mada</span><span>VISA</span></span></span><span class="soonb">قريبًا</span></button></div>`) +
     `<div id="err"></div><p class="note">تقدرين تعدلين موعدك أو تلغينه من رابط الواتساب.</p></div>`;
 }
 const fmtPhone = (d) => d.replace(/^(\d{2})(\d{0,3})(\d{0,4}).*/, (m, a, b, c) => [a, b, c].filter(Boolean).join(' '));
 async function submit() {
   if (S.busy) return; S.busy = true; bar();
   try {
-    const r = await rpc('sb_create', { p: { name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, member_id: S.staff || null, notes: S.notes.trim() } });
+    const r = C.settings.rekaz
+      ? await RK({ action: 'book', name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time })
+      : await rpc('sb_create', { p: { name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, member_id: S.staff || null, notes: S.notes.trim() } });
+    if (C.settings.rekaz) { r.code = r.number ? String(r.number) : ''; r.pay = r.paymentLink; }
     S.res = r;
     store.set({ name: S.name.trim(), phone: S.phone, items: itemsArg(), label: S.sel.map((x) => x.name).join('، '), at: Date.now() });
     S.busy = false; go(3);
@@ -185,10 +189,12 @@ function s3() {
   const c = ['#C9A46A', '#5A2A22', '#E8DFD1', '#9B6B5E'];
   const conf = Array.from({ length: 18 }, (_, i) => { const a = i / 18 * 6.28, r = 70 + ((i * 37) % 50); return `<i class="conf" style="background:${c[i % 4]};--x:${Math.round(Math.cos(a) * r)}px;--y:${Math.round(Math.sin(a) * r)}px;animation-delay:${0.5 + i % 5 * 0.03}s"></i>`; }).join('');
   const nm = S.name.trim();
-  const msg = `السلام عليكم 🤍\nحجزت موعد في بيوتفريش\n• رقم الحجز: ${S.res.code}\n• ${dayLabel(S.slot.day)} الساعة ${tLabel(S.slot.time)}\n• ${S.sel.map((x) => x.name).join('، ')}\n• الاسم: ${nm}\n\nرابط الحجز: ${manageUrl(S.res.token)}`;
+  const link = S.res.pay || (S.res.token ? manageUrl(S.res.token) : '');
+  const msg = `السلام عليكم 🤍\nحجزت موعد في بيوتفريش\n${S.res.code ? `• رقم الحجز: ${S.res.code}\n` : ''}• ${dayLabel(S.slot.day)} الساعة ${tLabel(S.slot.time)}\n• ${S.sel.map((x) => x.name).join('، ')}\n• الاسم: ${nm}${link ? `\n\nرابط الحجز: ${link}` : ''}`;
   return `<div class="screen"><div class="done"><div class="seal"><span class="rs"></span>${conf}<span class="ck"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F3EBDF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span></div>` +
-    `<h1>انحجز، يا ${esc(nm)}</h1><div class="when">${dayLabel(S.slot.day)} · ${tLabel(S.slot.time)}</div><span class="status">رقم الحجز ${esc(S.res.code)}</span>` +
+    `<h1>انحجز، يا ${esc(nm)}</h1><div class="when">${dayLabel(S.slot.day)} · ${tLabel(S.slot.time)}</div>${S.res.code ? `<span class="status">رقم الحجز ${esc(S.res.code)}</span>` : ''}` +
     `<div class="card ticket">${S.sel.map((x) => `<div class="sumrow"><span>${esc(x.name)}</span><span class="num">${sar(x.price)}</span></div>`).join('')}<div class="sumrow sumtot"><span>الإجمالي</span><span class="num">${sar(total())}</span></div><div class="sumrow"><span>المكان</span><span>بيوتفريش · الأحساء</span></div></div>` +
+    (S.res.pay ? `<a class="primary" href="${esc(S.res.pay)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:12px">تفاصيل الحجز والدفع</a>` : '') +
     `<a class="waBtn" href="${waLink(msg)}" target="_blank" rel="noopener">أرسلي الحجز على واتساب الصالون</a>` +
     `<p class="note">نأكد لك الموعد على الواتساب، ومن نفس الرابط تقدرين تعدلين أو تلغين.</p>` +
     `<button class="primary" id="again2" style="margin-top:10px">احجزي موعد ثاني</button></div></div>`;

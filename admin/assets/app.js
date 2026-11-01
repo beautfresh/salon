@@ -4153,7 +4153,9 @@
           ${!L.ok && L.error ? `<div class="notice small" dir="ltr" style="text-align:left">${esc(L.error.slice(0, 300))}</div>` : ''}
           <div class="actions"><button class="btn" id="rk-now">حدّث الحين</button></div>`
         : '<p class="muted small" style="margin:0">ما بدأ الربط للحين. يحتاج «تكامل» من إعدادات Platform API في ركاز بصلاحيات قراءة فقط، وتنحط بياناته في خزنة قاعدة البيانات. بعدها تتحدّث الحجوزات والعميلات والمبيعات كل ١٠ دقايق، بدون ما يتغيّر شي في ركاز.</p>'}
-        <p class="muted small" style="margin:8px 0 0">قراءة فقط: النظام ما يكتب ولا يعدّل أي شي في ركاز.</p></div>
+        <p class="muted small" style="margin:8px 0 0">المزامنة قراءة فقط: ما تعدّل ولا تحذف أي شي في ركاز.</p>
+        ${L ? `<div style="border-top:1px dashed var(--line);margin-top:12px;padding-top:12px"><label class="check"><input type="checkbox" id="rk-book" ${s.rekaz_booking ? 'checked' : ''}> صفحة الحجز في موقعنا تحجز داخل تقويم ركاز</label>
+          <p class="muted small" style="margin:4px 0 0">الأوقات من ركاز، والحجز ينزل في تقويمه، والدفع من رابط ركاز. رابط ركاز يبقى شغّال جنبه عادي.</p></div>` : ''}</div>
       <div class="card"><h3 style="margin-top:0">الحجز من الموقع</h3>
         <label class="check"><input type="checkbox" id="s-acc" ${s.accepting ? 'checked' : ''}> الحجز من الموقع مفتوح</label>
         <div class="grid2"><div class="field"><label>يفتح</label><input class="input" type="time" id="s-o" value="${(s.open_time || '10:00').slice(0, 5)}"></div><div class="field"><label>يقفل</label><input class="input" type="time" id="s-c" value="${(s.close_time || '22:00').slice(0, 5)}"></div></div>
@@ -4168,6 +4170,7 @@
       <div class="card"><h3 style="margin-top:0">أيام مقفلة</h3><p class="muted small">إجازة أو مناسبة، ما ينحجز فيها من الموقع.</p>
         <div class="grid2"><input class="input" type="date" id="b-d"><input class="input" id="b-n" placeholder="السبب (اختياري)"></div><div class="actions"><button class="btn" id="b-add">${I.plus} أضف</button></div>
         ${blk.length ? `<div class="list" style="margin-top:8px">${blk.map((b) => `<div class="row"><div class="grow title">${esc(rDayLabel(b.day))}${b.note ? ` · <span class="muted">${esc(b.note)}</span>` : ''}</div><button class="btn sm" data-del="${b.day}">حذف</button></div>`).join('')}</div>` : ''}</div>`;
+    $('#rk-book', view)?.addEventListener('change', async (e) => { try { if (e.target.checked) await q(sb.rpc('sb_link_rekaz')); await q(sb.from('salon_settings').update({ rekaz_booking: e.target.checked }).eq('id', 1)); toast(e.target.checked ? 'صار الحجز من موقعنا ينزل في ركاز' : 'رجع الحجز لنظامنا الداخلي'); } catch (err) { e.target.checked = !e.target.checked; toast(errMsg(err), true); } });
     $('#rk-now', view)?.addEventListener('click', (e) => busy(e.target, async () => { await q(sb.rpc('rekaz_sync_now')); toast('بدأ التحديث، خلال دقيقة يكتمل'); setTimeout(() => route(), 45000); }));
     $$('#s-wd .chip', view).forEach((c) => c.onclick = () => c.classList.toggle('on'));
     const n = (id) => Number(String($(id, view).value).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));

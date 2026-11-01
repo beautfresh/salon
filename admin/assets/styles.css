@@ -1247,3 +1247,56 @@ a.sd-in:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .sd-partners > div { background: var(--surface-2); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; }
 .sd-partners span { font-size: 12px; color: var(--muted); }
 @media print { .sd-tabs, .sd-live .link, .lens, .fin-head .icon-btn { display: none !important; } }
+
+/* ======================= v3: إدارة فاتحة وناعمة ======================= */
+:root { --hero-bg: linear-gradient(150deg, #FFFCF8 0%, #F7F0E6 55%, #F1E6D8 100%); --hero-line: #E5D7C5; --hero-shadow: 0 1px 2px rgba(95, 62, 48, .05), 0 20px 40px -30px rgba(95, 62, 48, .45); }
+@media (min-width: 900px) {
+  .sidebar { background: #F8F3EB; color: var(--ink); border-inline-end: 1px solid var(--line); scrollbar-color: rgba(90, 42, 34, .18) transparent; }
+}
+.sidebar::after { filter: none; opacity: .28; }
+.sidebar .brand { color: var(--ink); }
+.sidebar .brand .logo { filter: none; }
+.sidebar .brand span { color: var(--muted); }
+.sidebar nav a { color: var(--ink-2); }
+.sidebar nav a .ic { color: #A0806C; transition: color .25s; }
+.sidebar nav a:hover { background: rgba(90, 42, 34, .06); color: var(--ink); }
+.sidebar nav a:hover .ic { color: var(--accent); }
+.sidebar nav a.active { background: #FFFCF8; color: var(--accent); font-weight: 600; box-shadow: 0 1px 2px rgba(95, 62, 48, .06), inset 0 0 0 1px var(--line); }
+.sidebar nav a.active .ic { color: var(--accent); }
+.sidebar nav a.active::before { content: ""; width: 3px; align-self: stretch; margin-inline-start: -12px; margin-inline-end: 6px; border-radius: 3px; background: var(--accent); }
+.sidebar .nav-g { color: var(--muted) !important; }
+.sidebar nav .sep { background: var(--line); }
+.sidebar .foot { color: var(--muted); border-top: 1px solid var(--line); }
+.sidebar .foot > div:first-child { color: var(--ink) !important; }
+.sidebar .foot button { color: var(--accent); }
+
+.fin-hero, .pulse, .bk-card, .season-hero, .svc-hero, .tour-banner.nq { background: var(--hero-bg); color: var(--ink); border: 1px solid var(--hero-line); box-shadow: var(--hero-shadow); }
+.fin-hero::after, .pulse::after, .bk-card::after, .season-hero::after, .svc-hero::after { filter: none; opacity: .045; }
+.bk-card:hover { box-shadow: 0 1px 2px rgba(95, 62, 48, .05), 0 26px 44px -30px rgba(95, 62, 48, .55); }
+.fin-hero-top, .fin-net small, .fin-split span, .bk-top, .bk-nums span, .pulse-body span, .tgt-top, .sh-eyebrow, .sh-count span, .svc-nums span, .svc-leg, .sd-fc { color: var(--muted); }
+.fin-split em, .tgt-msg, .bk-next, .sh-date, .sh-ideas, .tgt-edit, .tour-banner.nq small { color: var(--ink-2); }
+.fin-net { color: var(--accent); }
+.fin-net.neg { color: var(--danger); }
+.bk-nums b, .bk-next b, .tgt-top > b, .tgt-top span b, .season-hero h2, .sh-count b, .svc-hero h2, .svc-nums b, .sd-fc b { color: var(--ink); }
+.fin-split, .bk-next { border-top-color: var(--hero-line); }
+.chip-d { background: rgba(90, 42, 34, .07); }
+.chip-d.up { color: var(--ok); background: var(--ok-soft); } .chip-d.down { color: var(--danger); background: var(--danger-soft); }
+.pulse-body em.up { color: var(--ok); } .pulse-body em.down { color: var(--danger); }
+.tgt-track { background: rgba(90, 42, 34, .1); }
+.tgt-track i { background: linear-gradient(90deg, #B88A68, #5A2A22); }
+.tgt-track s { background: rgba(90, 42, 34, .55); }
+.tgt-empty { border-color: #C4A88F; color: var(--ink-2); }
+.lens.sm { background: rgba(90, 42, 34, .06); }
+.lens.sm a { color: var(--ink-2); }
+.lens.sm a.on { background: var(--accent); color: #FFFCF8; }
+.pulse-ring { background: radial-gradient(closest-side, #FBF6EF 78%, transparent 80%), conic-gradient(var(--accent) calc(var(--p) * 1%), rgba(90, 42, 34, .12) 0); }
+.pulse-ring.empty { background: none; border-color: #C4A88F; }
+.pulse-cta { background: rgba(90, 42, 34, .06); color: var(--accent); }
+.sh-emoji, .sh-msg { background: rgba(90, 42, 34, .06); }
+.season-hero.prep .sh-msg { background: var(--accent); color: #FFFCF8; }
+.approx { color: #9A5B2B; }
+.svc-split { background: rgba(90, 42, 34, .12); }
+.tour-banner.nq span:first-child { color: #9A6B32; }
+.tour-banner.nq .tb-play { background: var(--accent); color: #FFFCF8; }
+.sd-hero .sd-d, .sd-hero .sd-d.up, .sd-hero .sd-d.down { background: rgba(90, 42, 34, .07); color: var(--ink-2); }
+.sd-hero .sd-d.up { background: var(--ok-soft); color: var(--ok); } .sd-hero .sd-d.down { background: var(--danger-soft); color: var(--danger); }

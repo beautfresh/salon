@@ -3288,7 +3288,7 @@
     view.innerHTML = `
       <div class="svc-hero"><span class="sh-eyebrow">${ACAT[a.category][1]} ${ACAT[a.category][0]}${a.location ? ' · ' + esc(a.location) : ''}</span><h2>${esc(a.name)}${a.qty > 1 ? ` ×${a.qty}` : ''}</h2>
         <div class="svc-nums"><div><b class="num">${a.cost ? sar(bookValue(a)) : '—'}</b><span>قيمته اليوم</span></div><div><b class="num">${a.cost ? sar(Number(a.cost) * a.qty) : '—'}</b><span>تكلفة الشراء</span></div><div><b>${age != null ? (age < 1 ? `${Math.round(age * 12)} شهر` : `${age.toFixed(1)} سنة`) : '—'}</b><span>عمره</span></div><div><b class="num">${sar(fixCost)}</b><span>كلفة الإصلاحات</span></div></div>
-        ${a.cost && fixCost > Number(a.cost) * 0.5 ? '<div class="sh-msg" style="background:#F3EBDF;color:#5A2A22">الإصلاحات تعدّت نص سعره. فكروا بالاستبدال.</div>' : ''}
+        ${a.cost && fixCost > Number(a.cost) * 0.5 ? '<div class="sh-msg" style="background:var(--warn-soft);color:var(--warn)">الإصلاحات تعدّت نص سعره. فكروا بالاستبدال.</div>' : ''}
         ${a.warranty_until ? `<div class="sh-msg">الضمان ${until(a.warranty_until) < 0 ? 'انتهى' : `ساري لين ${dShort(a.warranty_until)} ${D(a.warranty_until).getFullYear()}`}</div>` : ''}
         <div class="actions" style="margin-top:12px">${isManager() ? `<button class="btn on-oud sm" id="a-ed">${I.edit} تعديل</button>` : ''}<button class="btn on-oud ghost sm" id="a-is">بلّغ عن عطل</button></div></div>
       ${a.model || a.notes ? `<div class="card note-card mt">${esc([a.model, a.notes].filter(Boolean).join('\n'))}</div>` : ''}
@@ -4291,7 +4291,7 @@
       const mx = Math.max(1, ...S.map((x) => Number(x.c)));
       const pts = S.map((x, i) => [(i / (S.length - 1)) * 100, 96 - (Number(x.c) / mx) * 86]);
       const line = pts.map((p) => p.join(',')).join(' ');
-      return `<svg class="sd-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3EBDF" stop-opacity=".28"/><stop offset="1" stop-color="#F3EBDF" stop-opacity="0"/></linearGradient></defs><polygon points="0,100 ${line} 100,100" fill="url(#sdg)"/><polyline points="${line}" fill="none" stroke="#F3EBDF" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+      return `<svg class="sd-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A5A45" stop-opacity=".22"/><stop offset="1" stop-color="#8A5A45" stop-opacity="0"/></linearGradient></defs><polygon points="0,100 ${line} 100,100" fill="url(#sdg)"/><polyline points="${line}" fill="none" stroke="#5A2A22" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
     })();
     const tgtHtml = (() => {
       if (!(lens === 'm' && isCurrent)) return '';
@@ -4384,7 +4384,7 @@
     sdTips(view);
     const body = $('#sd-body', view);
     const show = (t) => {
-      tab = t; $$('.sd-tabs button', view).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+      tab = t; $$('.sd-tabs button', view).forEach((b) => { b.classList.toggle('on', b.dataset.tab === t); if (b.dataset.tab === t) b.scrollIntoView({ inline: 'nearest', block: 'nearest' }); });
       history.replaceState(null, '', link({ tab: t }));
       body.innerHTML = ({ sales: sdTabSales, svc: sdTabSvc, team: sdTabTeam, clients: sdTabClients, time: sdTabTime, profit: sdTabProfit })[t](r, P, { lens, cmpName, monthly, spanDays, s, e });
       sdBind(body, r, P, t);
@@ -4422,7 +4422,7 @@
         <div class="card sd-pulse">
           <div class="sd-pulse-h"><h3><i class="sd-dot"></i>اليوم لحظة بلحظة</h3><span class="muted small">يتحدث كل دقيقة</span></div>
           <div class="sd-pulse-g">
-            <div><span>المحصّل اليوم</span><b class="num">${sar(k.collected)}</b><em>${sdChip(k.collected, kw.collected, { tip: `نفس اليوم الأسبوع الماضي: ${sar(kw.collected)} ر.س` })} عن ${WDAYS[new Date().getDay()]} الماضي</em></div>
+            <div><span>المحصّل اليوم</span><b class="num">${sar(k.collected)}</b><em>${sdChip(k.collected, kw.collected, { tip: `نفس اليوم الأسبوع الماضي: ${sar(kw.collected)} ر.س` })} عن نفس الوقت ${WDAYS[new Date().getDay()]} الماضي</em></div>
             <div><span>حجوزات اليوم</span><b class="num">${sdN(k.bookings)}</b><em>${sdN(k.clients)} عميلة${k.cancelled ? ` · ${k.cancelled} إلغاء` : ''}</em></div>
             <div><span>باقي اليوم</span><b class="num">${sdN(pulse.left_today.n)}</b><em>موعد بقيمة ${sar(pulse.left_today.v)} ر.س</em></div>
             <div data-tip="الحجوزات المؤكدة والمعلقة للسبعة أيام الجاية (يزيد كل ما حجزوا أكثر)"><span>محجوز للأسبوع الجاي</span><b class="num">${sar(pulse.next7.v)}</b><em>${sdN(pulse.next7.n)} حجز</em></div>

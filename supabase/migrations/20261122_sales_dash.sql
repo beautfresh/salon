@@ -273,11 +273,11 @@ begin
         from (select distinct on (customer_id, (start_at at time zone 'Asia/Riyadh')::date) customer_id, start_at
               from public.rekaz_reservations where status = 'confirmed' and start_at < now()) x group by 1)
       select coalesce(jsonb_agg(jsonb_build_object('m', m, 'n', n, 'r60', r60, 'r', r, 'ready', ready) order by m), '[]'::jsonb) from (
-        select date_trunc('month', first)::date m, count(*) n,
+        select m, count(*) n,
                count(*) filter (where second_v is not null and second_v - first <= 60) r60,
                count(*) filter (where second_v is not null) r,
-               (date_trunc('month', first) + interval '1 month' + interval '60 days')::date <= today ready
-        from f where first >= (ms - interval '11 months') group by 1) z),
+               (m + interval '1 month' + interval '60 days')::date <= today ready
+        from (select date_trunc('month', first)::date m, first, second_v from f where first >= (ms - interval '11 months')) y group by m) z),
     'clients_total', (select count(*) from public.rekaz_customers),
     'active_clients', (select count(distinct customer_id) from public.rekaz_reservations where status = 'confirmed' and start_at >= now() - interval '90 days' and start_at < now())
   ) into res;

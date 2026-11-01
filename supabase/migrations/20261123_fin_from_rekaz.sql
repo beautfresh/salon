@@ -45,7 +45,9 @@ begin
       where r.status = 'confirmed' and r.start_at >= private.rd(d0) and r.start_at < private.rd(d1)),
     'exp_cats', coalesce((select jsonb_object_agg(category, s) from (select category, sum(amount) s from public.fin_expenses where day >= d0 and day < d1 group by category) x), '{}'::jsonb),
     'partners', coalesce((select jsonb_agg(jsonb_build_object('name', name, 'pct', share_pct, 'amount', round((salon + home - purch - exp) * share_pct / 100, 2)) order by sort) from public.fin_partners), '[]'::jsonb),
-    'prev_revenue', private.rk_day_collected(pd0, d0)
+    'prev_revenue', (select coalesce(sum(case when type = 'refund' then -amount else amount end), 0) from public.rekaz_transactions
+        where status = 'confirmed' and processed_at >= private.rd(pd0)
+          and processed_at < least(private.rd(d0), private.rd(pd0) + (greatest(least(now(), private.rd(d1)), private.rd(d0)) - private.rd(d0))))
        + (select coalesce(sum(total),0) from public.home_bookings where payment_status = 'paid' and status <> 'cancelled'
           and (starts_at at time zone 'Asia/Riyadh')::date >= pd0 and (starts_at at time zone 'Asia/Riyadh')::date < d0)
   );

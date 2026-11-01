@@ -280,7 +280,7 @@
     const M = isManager(), A = isAdmin();
     const G = [
       ['اليوم', [['home', 'الرئيسية', I.home], ['appts', 'مواعيد الصالون', I.cal], ['bookings', 'الحجوزات المنزلية', I.home]]],
-      ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['finance', 'المالية', I.coin]]],
+      ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['sales', 'لوحة المبيعات', I.chart], M && ['finance', 'المالية', I.coin]]],
       ['الفريق والتشغيل', [['team', 'الفريق', I.users], ['ops', 'التشغيل', I.check], ['assets', 'الأصول والصيانة', I.wrench], ['rules', 'قواعد بيوتفريش', I.shield]]],
       ['المخزون', [['items', 'الأصناف', I.box], ['issue', 'صرف من المخزون', I.out], ['invoices', 'فواتير الشراء', I.invoice], ['shopping', 'قائمة المشتريات', I.cart], ['movements', 'سجل الحركات', I.list], M && ['reports', 'التقارير', I.chart]]],
       ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
@@ -352,6 +352,7 @@
     team: { title: 'الفريق', nav: 'team', fn: pageTeam },
     member: { title: 'ملف الموظفة', nav: 'team', fn: pageMember },
     marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
+    sales: { title: 'لوحة المبيعات', nav: 'sales', fn: pageSales, manager: true },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
     expenses: { title: 'المصروفات', nav: 'finance', fn: pageExpenses, manager: true },
@@ -4233,6 +4234,450 @@
   }
   const LENS_PREV = { d: 'أمس', w: 'الأسبوع الماضي', m: 'الشهر الماضي', q: 'الربع الماضي', y: 'السنة الماضية' };
   const LENS_THIS = { d: 'هذا اليوم', w: 'هذا الأسبوع', m: 'هذا الشهر', q: 'هذا الربع', y: 'هذي السنة' };
+
+  /* ======================= لوحة المبيعات ======================= */
+  const SD_LENSES = [['d', 'اليوم'], ['w', 'الأسبوع'], ['m', 'الشهر'], ['q', 'الربع'], ['y', 'السنة'], ['c', 'فترة مخصصة']];
+  const SD_TABS = [['sales', 'المبيعات'], ['svc', 'الخدمات'], ['team', 'الأخصائيات'], ['clients', 'العميلات'], ['time', 'أوقات الذروة'], ['profit', 'الربح الصافي']];
+  const SD_GRP = { hair: 'الشعر', nails: 'الأظافر', face: 'خدمات الوجه', lashes: 'الرموش والحواجب', makeup: 'المكياج', other: 'أخرى' };
+  const SD_METH = { point_of_sales: 'شبكة (مدى وفيزا)', cash: 'كاش', bank_transfer: 'تحويل بنكي', buy_now_pay_later: 'تابي وتمارا', online: 'دفع إلكتروني', other: 'أخرى' };
+  const SD_SRC = { internal: 'من الاستقبال', website: 'من الموقع (العميلة حجزت بنفسها)' };
+  const SD_PREV = { d: 'أمس', w: 'الأسبوع الماضي', m: 'الشهر الماضي', q: 'الربع الماضي', y: 'السنة الماضية', c: 'الفترة اللي قبلها' };
+  const sdPct = (a, b) => (Number(b) > 0 ? ((Number(a) - Number(b)) / Number(b)) * 100 : null);
+  const sdShare = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : 0);
+  const sdN = (v) => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  function sdChip(cur, prev, { inv = false, tip = '' } = {}) {
+    const p = sdPct(cur, prev); if (p == null || !isFinite(p)) return '';
+    const flat = Math.abs(p) < 0.5, good = inv ? p < 0 : p > 0;
+    return `<span class="sd-d ${flat ? '' : good ? 'up' : 'down'}"${tip ? ` data-tip="${esc(tip)}"` : ''}>${flat ? '=' : p > 0 ? '▲' : '▼'} ${flat ? 'نفسه' : `${Math.abs(Math.round(p))}٪`}</span>`;
+  }
+  function sdTips(root) {
+    let tip = document.getElementById('sd-tip');
+    if (!tip) { tip = document.createElement('div'); tip.id = 'sd-tip'; tip.hidden = true; document.body.appendChild(tip); addEventListener('scroll', () => { tip.hidden = true; }, { passive: true }); addEventListener('hashchange', () => { tip.hidden = true; }); }
+    const place = (e) => { const w = tip.offsetWidth, h = tip.offsetHeight; tip.style.left = `${Math.min(innerWidth - w - 8, Math.max(8, e.clientX - w / 2))}px`; tip.style.top = `${Math.max(8, e.clientY - h - 14)}px`; };
+    root.addEventListener('pointerover', (e) => { const t = e.target.closest('[data-tip]'); if (!t || !root.contains(t)) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; place(e); });
+    root.addEventListener('pointermove', (e) => { if (!tip.hidden) place(e); });
+    root.addEventListener('pointerleave', () => { tip.hidden = true; });
+  }
+  const sdAgo = (ts) => { if (!ts) return '—'; const m = Math.max(0, Math.round((Date.now() - new Date(ts)) / 60000)); return m < 1 ? 'الحين' : m === 1 ? 'قبل دقيقة' : m === 2 ? 'قبل دقيقتين' : m < 11 ? `قبل ${m} دقائق` : m < 60 ? `قبل ${m} دقيقة` : `قبل ${Math.round(m / 60)} ساعة`; };
+  const sdTime = (ts) => new Date(ts).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' }).replace('AM', 'ص').replace('PM', 'م');
+  const sdHour = (h) => { const x = h % 12 || 12; return `${x}${h < 12 ? 'ص' : 'م'}`; };
+
+  async function pageSales(view, _a, params, alive) {
+    let lens = params.get('l') || (() => { try { return localStorage.getItem('bf-sd-lens'); } catch { return null; } })() || 'm';
+    if (!SD_LENSES.some((x) => x[0] === lens)) lens = 'm';
+    try { localStorage.setItem('bf-sd-lens', lens); } catch {}
+    const tk = todayR();
+    let s, e, at = params.get('at') ? D(params.get('at')) : D(tk);
+    if (lens === 'c') {
+      s = D(params.get('f') || dk(lensShift('d', D(tk), -29))); e = D(params.get('t') || tk);
+      if (e < s) [s, e] = [e, s];
+      if ((e - s) / 86400000 > 399) s = lensShift('d', e, -399);
+    } else [s, e] = lensRange(lens, at);
+    let tab = SD_TABS.some((x) => x[0] === params.get('tab')) ? params.get('tab') : 'sales';
+    const link = (o = {}) => { const p = new URLSearchParams({ l: o.l ?? lens }); const L = p.get('l'); if (L === 'c') { p.set('f', o.f ?? dk(s)); p.set('t', o.t ?? dk(e)); } else p.set('at', o.at ?? dk(at)); p.set('tab', o.tab ?? tab); return `#/sales?${p}`; };
+    const isCurrent = dk(s) <= tk && tk <= dk(e);
+
+    view.innerHTML = `<div class="sd-loading"><div class="spinner"></div><p>نجمع لك الأرقام من ركاز…</p></div>`;
+    const [r, P] = await Promise.all([q(sb.rpc('sales_dash', { p_from: dk(s), p_to: dk(e) })), q(sb.rpc('sales_pulse'))]);
+    if (!alive()) return;
+    const K = r.k, KP = r.kp, KY = r.ky, monthly = r.unit === 'month';
+    const cmpName = r.cmp_kind === 'ly' ? 'نفس الفترة السنة الماضية' : SD_PREV[lens];
+    const title = lens === 'c' ? `${s.getDate()} ${MONTHS_AR[s.getMonth()]}${s.getFullYear() !== e.getFullYear() ? ' ' + s.getFullYear() : ''} – ${e.getDate()} ${MONTHS_AR[e.getMonth()]} ${e.getFullYear()}` : lensTitle(lens, s, e);
+    const spanDays = Math.round((e - s) / 86400000) + 1;
+
+    /* ---------- البطل ---------- */
+    const spark = (() => {
+      const S = r.series; if (S.length < 2) return '';
+      const mx = Math.max(1, ...S.map((x) => Number(x.c)));
+      const pts = S.map((x, i) => [(i / (S.length - 1)) * 100, 96 - (Number(x.c) / mx) * 86]);
+      const line = pts.map((p) => p.join(',')).join(' ');
+      return `<svg class="sd-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3EBDF" stop-opacity=".28"/><stop offset="1" stop-color="#F3EBDF" stop-opacity="0"/></linearGradient></defs><polygon points="0,100 ${line} 100,100" fill="url(#sdg)"/><polyline points="${line}" fill="none" stroke="#F3EBDF" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+    })();
+    const tgtHtml = (() => {
+      if (!(lens === 'm' && isCurrent)) return '';
+      const T = Number(P.target || 0), mtd = Number(P.mtd.collected);
+      const days = P.month_days, now = new Date(); const hr = Number(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', hour12: false })) % 24;
+      const elapsed = Math.max(0.5, P.day_of_month - 1 + Math.min(1, Math.max(0, (hr - 9) / 14)));
+      const lmRate = Number(P.last_month.collected) / (new Date(s.getFullYear(), s.getMonth(), 0).getDate() || 30);
+      const rate = elapsed >= 7 ? mtd / elapsed : (mtd / elapsed + lmRate) / 2;
+      const fc = Math.round(mtd + rate * Math.max(0, days - elapsed));
+      const vsLm = sdChip(mtd, P.lm_same.collected, { tip: `الشهر الماضي لنفس اليوم: ${sar(P.lm_same.collected)} ر.س` });
+      if (!T) return `<div class="sd-fc"><span>المتوقع لنهاية الشهر</span><b class="num">${sar(fc)} ر.س</b>${vsLm ? `<em>${vsLm} عن نفس الوقت الشهر الماضي</em>` : ''}<button class="tgt-empty sm" id="tgt-set">${I.plus} حطّوا هدف للشهر</button></div>`;
+      const pc = Math.min(100, (mtd / T) * 100), left = Math.max(0, T - mtd), dl = Math.max(1, days - P.day_of_month + 1);
+      const msg = mtd >= T ? 'وصلتوا للهدف 🤍' : fc >= T ? `على هالمعدل بتوصلون الهدف وزيادة ${sar(fc - T)} ر.س` : `باقي ${sar(left)} ر.س، يعني ${sar(left / dl)} باليوم`;
+      return `<div class="tgt"><div class="tgt-top"><span>هدف الشهر <b class="num">${sar(T)}</b></span><button class="tgt-edit" id="tgt-set" aria-label="تعديل الهدف">${I.edit}</button><b class="num">${Math.round(pc)}٪</b></div>
+        <div class="tgt-track"><i style="width:${pc}%"></i><s style="inset-inline-start:${Math.min(100, (fc / T) * 100)}%" data-tip="المتوقع لنهاية الشهر ${sar(fc)} ر.س"></s></div>
+        <div class="tgt-msg">${msg} · المتوقع ${sar(fc)} ر.س ${vsLm ? `· ${vsLm} عن نفس الوقت الشهر الماضي` : ''}</div></div>`;
+    })();
+
+    /* ---------- لمحات ذكية ---------- */
+    const insights = (() => {
+      const L = [];
+      const pc = sdPct(K.collected, KP.collected);
+      if (pc != null && Math.abs(pc) >= 3) L.push(['📈', `المحصّل ${pc > 0 ? 'زاد' : 'نقص'} <b>${Math.abs(Math.round(pc))}٪</b> عن ${SD_PREV[lens]} (${sar(KP.collected)} ← ${sar(K.collected)} ر.س)`, pc > 0 ? 'good' : 'bad']);
+      const sv = r.services.filter((x) => x.pv > 300 && x.v > 0).map((x) => ({ ...x, g: x.v - x.pv }));
+      const up = [...sv].sort((a, b) => b.g - a.g)[0], dn = [...sv].sort((a, b) => a.g - b.g)[0];
+      if (up && up.g > 0) L.push(['🚀', `<b>${esc(up.name)}</b> أكثر خدمة نمت: +${sar(up.g)} ر.س عن ${SD_PREV[lens]}`, 'good', 'svc']);
+      if (dn && dn.g < -200) L.push(['🔻', `<b>${esc(dn.name)}</b> نزلت ${sar(-dn.g)} ر.س عن ${SD_PREV[lens]}، تستاهل عرض أو تذكير`, 'bad', 'svc']);
+      const wd = Array(7).fill(0); r.heat.forEach((h) => { wd[h.d] += Number(h.v); });
+      const wdN = Array(7).fill(0); if (!monthly) r.series.forEach((x) => { wdN[D(x.k).getDay()]++; });
+      const avg = wd.map((v, i) => [i, wdN[i] ? v / wdN[i] : v]).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]);
+      if (avg.length >= 4) L.push(['🗓', `أقوى يوم <b>${WDAYS[avg[0][0]]}</b> وأضعفه <b>${WDAYS[avg[avg.length - 1][0]]}</b> (${sdShare(avg[avg.length - 1][1], avg[0][1])}٪ منه). عرض خاص لـ${WDAYS[avg[avg.length - 1][0]]} يرفع الأسبوع كله`, '', 'time']);
+      const lost = Number(K.cancelled_value) + Number(K.noshow_value);
+      if (lost > 0) L.push(['⏳', `ضاع <b>${sar(lost)} ر.س</b> بين إلغاء (${K.cancelled}) وما حضرت (${K.noshow}). عربون بسيط عند الحجز يقلّلها كثير`, 'bad', 'time']);
+      if (P.at_risk.n) L.push(['💌', `<b>${sdN(P.at_risk.n)} عميلة</b> كانت تجي بانتظام وانقطعت، صرفوا عندكم قبل ${sar(P.at_risk.spend)} ر.س. رسالة وحشتينا ترجّع جزء منهم`, 'bad', 'clients']);
+      const top = r.providers[0]; const tot = r.providers.reduce((a, x) => a + Number(x.v), 0);
+      if (top && tot) L.push(['👑', `<b>${esc(top.name)}</b> الأعلى دخل: ${sar(top.v)} ر.س (${sdShare(top.v, tot)}٪ من دخل الأخصائيات)`, 'good', 'team']);
+      const web = r.sources.find((x) => x.s === 'website'), allO = r.sources.reduce((a, x) => a + x.n, 0);
+      if (allO) L.push(['🌐', `${web ? `<b>${sdShare(web.n, allO)}٪</b> من الطلبات جات من الموقع` : 'ولا طلب جا من الموقع'}. لما ننقل الحجز لموقعنا تزيد هالنسبة ويخف الضغط على الاستقبال`, '']);
+      const ret = K.clients - K.new_clients; if (K.clients) L.push(['🤍', `<b>${sdShare(ret, K.clients)}٪</b> من العميلات رجعوا لكم من قبل، و<b>${sdN(K.new_clients)}</b> أول مرة يجون`, 'good', 'clients']);
+      return L.slice(0, 6);
+    })();
+
+    view.innerHTML = `
+      <div class="sd">
+        <div class="lens">${SD_LENSES.map(([k, l]) => `<a href="${k === 'c' ? link({ l: 'c', f: dk(s), t: dk(e) }) : link({ l: k, at: dk(lens === 'c' ? e : at) })}" class="${k === lens ? 'on' : ''}">${l}</a>`).join('')}</div>
+        ${lens === 'c' ? `<form class="sd-custom" id="sd-cf"><label>من <input class="input" type="date" id="sd-f" value="${dk(s)}" max="${tk}"></label><label>إلى <input class="input" type="date" id="sd-t" value="${dk(e)}"></label><button class="btn primary">عرض</button></form>` : `
+        <div class="fin-head">
+          <a class="icon-btn" href="${link({ at: dk(lensShift(lens, at, -1)) })}" aria-label="السابق">›</a>
+          <div class="fin-title"><h2>${title}</h2>${!isCurrent ? `<a class="small" href="${link({ at: tk })}">ارجع للحالي</a>` : ''}</div>
+          <a class="icon-btn ${dk(e) >= tk ? 'off' : ''}" href="${link({ at: dk(lensShift(lens, at, 1)) })}" aria-label="التالي">‹</a>
+        </div>`}
+        <div class="sd-live"><i></i>مربوطة بركاز مباشرة · آخر تحديث ${sdAgo(r.synced_at)}<button class="link" id="sd-csv">${I.list} تصدير Excel</button></div>
+
+        <div class="fin-hero sd-hero">
+          <div class="fin-hero-top"><span data-tip="المدفوعات اللي دخلت فعلًا في الفترة ناقص المسترجع، نفس رقم «صافي المبالغ المدفوعة» في ركاز">صافي المحصّل ⓘ</span>
+            <span class="sd-chips">${sdChip(K.collected, KP.collected, { tip: `${SD_PREV[lens]}: ${sar(KP.collected)} ر.س` }).replace('</span>', ` عن ${SD_PREV[lens]}</span>`)}${KY ? sdChip(K.collected, KY.collected, { tip: `السنة الماضية: ${sar(KY.collected)} ر.س` }).replace('</span>', ' عن السنة الماضية</span>') : ''}</span></div>
+          <div class="fin-net num">${sar(K.collected)} <small>ر.س</small></div>
+          ${spark}
+          ${tgtHtml}
+          <div class="fin-split sd-split">
+            <div data-tip="قيمة الطلبات المؤكدة شامل الضريبة، نفس «إجمالي المبيعات» في ركاز"><span>إجمالي المبيعات</span><b class="num">${sar(K.sales)}</b><em>${sdN(K.orders)} طلب</em></div>
+            <div data-tip="المبيعات بدون ضريبة القيمة المضافة"><span>صافي المبيعات</span><b class="num">${sar(K.net_sales)}</b><em>الضريبة ${sar(K.tax)}</em></div>
+            <div><span>الخصومات</span><b class="num">${sar(K.discount)}</b><em>المسترجع ${sar(K.refunds)}</em></div>
+            ${Number(K.home) ? `<div><span>الخدمات المنزلية</span><b class="num">${sar(K.home)}</b><em>من موقعنا</em></div>` : ''}
+          </div>
+        </div>
+
+        <div id="sd-pulse"></div>
+
+        <div class="sd-kpis">
+          ${[
+            ['الحجوزات المؤكدة', sdN(K.bookings), sdChip(K.bookings, KP.bookings), `${sdN(K.visits)} زيارة`, 'كل خدمة محجوزة ومؤكدة في الفترة'],
+            ['العميلات', sdN(K.clients), sdChip(K.clients, KP.clients), `منهم ${sdN(K.new_clients)} جدد`, 'عدد العميلات المختلفات اللي جوكم'],
+            ['متوسط الزيارة', `${sar(K.avg_ticket)} <small>ر.س</small>`, sdChip(K.avg_ticket, KP.avg_ticket), 'قيمة الخدمات ÷ الزيارات', 'كم تصرف العميلة بالمتوسط في الزيارة الوحدة'],
+            ['قيمة الخدمات', `${sar(K.svc)} <small>ر.س</small>`, sdChip(K.svc, KP.svc), 'حسب يوم الموعد', 'قيمة كل الخدمات اللي انقدمت في الفترة (حسب تاريخ الموعد مو تاريخ الدفع)'],
+            ['نسبة الإلغاء', `${sdShare(K.cancelled, K.all)}٪`, sdChip(K.all ? K.cancelled / K.all : 0, KP.all ? KP.cancelled / KP.all : 0, { inv: true }), `${sdN(K.cancelled)} حجز · ${sar(K.cancelled_value)} ر.س`, 'الحجوزات الملغية من كل الحجوزات'],
+            ['ما حضرت', `${sdShare(K.noshow, K.all)}٪`, sdChip(K.all ? K.noshow / K.all : 0, KP.all ? KP.noshow / KP.all : 0, { inv: true }), `${sdN(K.noshow)} حجز · ${sar(K.noshow_value)} ر.س`, 'حجز موعده فات وما انقفل ولا انلغى في ركاز'],
+            ['ساعات الخدمة', sdN(K.hours), sdChip(K.hours, KP.hours), `دخل الساعة ${sar(K.hours ? K.svc / K.hours : 0)} ر.س`, 'مجموع مدة الخدمات المحجوزة'],
+            ['عميلات جدد', sdN(K.new_clients), sdChip(K.new_clients, KP.new_clients), `${sdShare(K.new_clients, K.clients)}٪ من العميلات`, 'أول زيارة لهم عندكم كانت في هالفترة'],
+          ].map(([l, v, c, sub, tip]) => `<div class="sd-kpi" data-tip="${esc(tip)}"><span>${l}</span><b class="num">${v}</b><em>${c}${sub}</em></div>`).join('')}
+        </div>
+
+        ${insights.length ? `<div class="section-title"><h2>لمحات ذكية</h2><span class="muted small">تطلع لحالها من أرقامكم</span></div>
+        <div class="sd-ins">${insights.map(([ic, t, k, go]) => `<${go ? `a href="${link({ tab: go })}" data-tab="${go}"` : 'div'} class="sd-in ${k || ''}"><i>${ic}</i><p>${t}</p></${go ? 'a' : 'div'}>`).join('')}</div>` : ''}
+
+        <div class="sd-tabs" role="tablist">${SD_TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div id="sd-body"></div>
+      </div>`;
+
+    sdTips(view);
+    const body = $('#sd-body', view);
+    const show = (t) => {
+      tab = t; $$('.sd-tabs button', view).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+      history.replaceState(null, '', link({ tab: t }));
+      body.innerHTML = ({ sales: sdTabSales, svc: sdTabSvc, team: sdTabTeam, clients: sdTabClients, time: sdTabTime, profit: sdTabProfit })[t](r, P, { lens, cmpName, monthly, spanDays, s, e });
+      sdBind(body, r, P, t);
+    };
+    $$('[data-tab]', view).forEach((b) => b.addEventListener('click', (ev) => { ev.preventDefault(); show(b.dataset.tab); if (b.classList.contains('sd-in')) $('.sd-tabs', view).scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+    show(tab);
+
+    $('#sd-cf')?.addEventListener('submit', (ev) => { ev.preventDefault(); location.hash = link({ l: 'c', f: $('#sd-f').value, t: $('#sd-t').value }); });
+    $('#tgt-set')?.addEventListener('click', () => targetForm(monthKey(s), P.target, P.last_month.collected));
+    $('#sd-csv').onclick = (ev) => busy(ev.currentTarget, async () => {
+      try {
+        const rows = await q(sb.rpc('sales_export', { p_from: dk(s), p_to: dk(e) }));
+        const ST = { confirmed: 'مؤكد', cancelled: 'ملغي', pending: 'معلّق' }, PS = { paid: 'مدفوع', pending: 'غير مدفوع', partially_paid: 'مدفوع جزئي' };
+        const head = ['التاريخ', 'الوقت', 'رقم الحجز', 'العميلة', 'الجوال', 'الخدمة', 'الخيار', 'الأخصائية', 'الحالة', 'المبلغ', 'المتبقي', 'رقم الطلب', 'رقم الفاتورة', 'الدفع', 'المصدر'];
+        const cell = (v) => { const t = String(v ?? ''); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+        const csv = [head, ...rows.map((x) => [x.day, x.time, x.number, x.client, x.phone, x.service, x.option, x.provider, ST[x.status] || x.status, x.total, x.remaining, x.order, x.invoice, PS[x.pay] || x.pay, x.source === 'website' ? 'الموقع' : 'الاستقبال'])].map((r2) => r2.map(cell).join(',')).join('\r\n');
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+        a.download = `مبيعات-بيوتفريش-${dk(s)}-${dk(e)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        toast(`تم تصدير ${rows.length} حجز`);
+      } catch (err) { toast(errMsg(err), true); }
+    });
+
+    /* ---------- النبض المباشر ---------- */
+    let pulse = P;
+    const drawPulse = () => {
+      const box = $('#sd-pulse', view); if (!box) return;
+      if (!isCurrent) { box.innerHTML = ''; return; }
+      const k = pulse.k, kw = pulse.kw, H = pulse.hours;
+      const nowH = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', hour12: false })) % 24;
+      const h0 = 9, h1 = 24, mx = Math.max(1, ...H.map((x) => Math.max(Number(x.t), Number(x.w))));
+      const X = (h) => ((h + 1 - h0) / (h1 - h0)) * 100, Y = (v) => 96 - (Number(v) / mx) * 88;
+      const lineT = H.filter((x) => x.h >= h0 - 1 && x.h <= nowH).map((x) => `${X(x.h)},${Y(x.t)}`).join(' ');
+      const lineW = H.filter((x) => x.h >= h0 - 1).map((x) => `${X(x.h)},${Y(x.w)}`).join(' ');
+      box.innerHTML = `
+        <div class="card sd-pulse">
+          <div class="sd-pulse-h"><h3><i class="sd-dot"></i>اليوم لحظة بلحظة</h3><span class="muted small">يتحدث كل دقيقة</span></div>
+          <div class="sd-pulse-g">
+            <div><span>المحصّل اليوم</span><b class="num">${sar(k.collected)}</b><em>${sdChip(k.collected, kw.collected, { tip: `نفس اليوم الأسبوع الماضي: ${sar(kw.collected)} ر.س` })} عن ${WDAYS[new Date().getDay()]} الماضي</em></div>
+            <div><span>حجوزات اليوم</span><b class="num">${sdN(k.bookings)}</b><em>${sdN(k.clients)} عميلة${k.cancelled ? ` · ${k.cancelled} إلغاء` : ''}</em></div>
+            <div><span>باقي اليوم</span><b class="num">${sdN(pulse.left_today.n)}</b><em>موعد بقيمة ${sar(pulse.left_today.v)} ر.س</em></div>
+            <div><span>الأسبوع الجاي</span><b class="num">${sar(pulse.next7.v)}</b><em>${sdN(pulse.next7.n)} حجز ${sdChip(pulse.next7.v, pulse.next7_ly.v, { tip: `آخر ٧ أيام انقدم: ${sar(pulse.next7_ly.v)} ر.س` })}</em></div>
+          </div>
+          <div class="sd-cum">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polyline class="w" points="${lineW}" vector-effect="non-scaling-stroke"/>
+              <polyline class="t" points="${lineT}" vector-effect="non-scaling-stroke"/>
+            </svg>
+            <div class="sd-cum-x">${[10, 13, 16, 19, 22].map((h) => `<span style="inset-inline-start:${X(h - 1)}%">${sdHour(h)}</span>`).join('')}</div>
+            <div class="sd-cum-hit">${H.filter((x) => x.h >= h0).map((x) => `<i data-tip="${sdHour(x.h + 1 > 23 ? 0 : x.h + 1)}\nاليوم: ${x.h <= nowH ? sar(x.t) + ' ر.س' : '—'}\nالأسبوع الماضي: ${sar(x.w)} ر.س"></i>`).join('')}</div>
+          </div>
+          <div class="sd-legend"><span><i class="t"></i>المحصّل اليوم (تراكمي)</span><span><i class="w"></i>نفس اليوم الأسبوع الماضي</span></div>
+          ${pulse.recent.length ? `<div class="sd-feed"><b>آخر المدفوعات</b>${pulse.recent.slice(0, 6).map((x) => `<div><span class="num">${sdTime(x.at)}</span><span>${esc(firstName(x.name) || 'عميلة')}</span><span class="muted">${SD_METH[x.m] || esc(x.m || '')}</span><b class="num ${x.type === 'refund' ? 'neg' : ''}">${x.type === 'refund' ? '−' : '+'}${sar(x.v)}</b></div>`).join('')}</div>` : ''}
+        </div>`;
+    };
+    drawPulse();
+    if (isCurrent) {
+      const tick = async () => {
+        if (!alive()) return;
+        if (document.visibilityState === 'visible') { try { pulse = await q(sb.rpc('sales_pulse')); if (alive()) drawPulse(); } catch {} }
+        if (alive()) setTimeout(tick, 60000);
+      };
+      setTimeout(tick, 60000);
+    }
+  }
+
+  /* ---------- مخطط الأعمدة مع خط المقارنة ---------- */
+  function sdChart(r, key, cmpName, monthly) {
+    const S = r.series, C = (r.cmp || []).slice(0, S.length), tk = todayR();
+    const v = (x) => Number(x?.[key] || 0), money = key !== 'n';
+    const mx = Math.max(1, ...S.map(v), ...C.map(v)), n = S.length;
+    const step = Math.ceil(n / (innerWidth < 600 ? 8 : 16));
+    const lab = (x) => { const d = D(x.k); return monthly ? MONTHS_AR[d.getMonth()].slice(0, 3) : n <= 7 ? WDAYS[d.getDay()].replace(/^ال/, '') : d.getDate(); };
+    const full = (x) => { const d = D(x.k); return monthly ? `${MONTHS_AR[d.getMonth()]} ${d.getFullYear()}` : `${WDAYS[d.getDay()]} ${d.getDate()} ${MONTHS_AR[d.getMonth()]}`; };
+    const fmt = (x) => (money ? `${sar(x)} ر.س` : `${sdN(x)} حجز`);
+    const pts = C.map((x, i) => `${((n - i - 0.5) / n) * 100},${100 - (v(x) / mx) * 100}`).join(' ');
+    return `<div class="sd-chart">
+      <div class="sd-bars">${S.map((x, i) => `<div class="sd-col ${x.k > tk ? 'fut' : ''} ${x.k === tk ? 'today' : ''}" data-tip="${esc(`${full(x)}\n${fmt(v(x))}${C[i] ? `\n${cmpName}: ${fmt(v(C[i]))}` : ''}${x.cl ? `\n${sdN(x.cl)} عميلة` : ''}`)}"><i style="height:${(v(x) / mx) * 100}%"></i></div>`).join('')}
+        ${C.length > 1 ? `<svg class="sd-cmp" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" vector-effect="non-scaling-stroke"/></svg>` : ''}</div>
+      <div class="sd-xl">${S.map((x, i) => `<span>${i % step === 0 ? lab(x) : ''}</span>`).join('')}</div>
+    </div>`;
+  }
+  const sdBars = (rows, opt = {}) => {
+    const mx = Math.max(1, ...rows.map((x) => Number(x.v))), tot = rows.reduce((a, x) => a + Number(x.v), 0);
+    return rows.map((x) => `<div class="fbar" ${x.tip ? `data-tip="${esc(x.tip)}"` : ''}><div class="fbar-top"><span>${x.l}</span><b class="num">${opt.count ? sdN(x.v) : sar(x.v)}${opt.share !== false && tot ? ` <small class="muted">${sdShare(x.v, tot)}٪</small>` : ''}${x.chip || ''}</b></div><div class="fbar-track"><i style="width:${Math.max(2, (Number(x.v) / mx) * 100)}%"></i></div>${x.sub ? `<div class="fbar-sub">${x.sub}</div>` : ''}</div>`).join('');
+  };
+
+  function sdTabSales(r, P, o) {
+    const K = r.k, methods = r.methods.map((x) => ({ l: SD_METH[x.m] || esc(x.m), v: x.v, sub: `${sdN(x.n)} عملية` }));
+    const src = r.sources.map((x) => ({ l: SD_SRC[x.s] || esc(x.s), v: x.v, sub: `${sdN(x.n)} طلب` }));
+    const L = r.lead || {}, lead = [['نفس اليوم', L.same], ['قبلها بيوم أو يومين', L.d1_2], ['من ٣ لـ٧ أيام', L.d3_7], ['قبل أكثر من أسبوع', L.d8]].map(([l, v]) => ({ l, v: Number(v || 0) }));
+    const days = r.series.filter((x) => x.k <= todayR());
+    const best = [...days].sort((a, b) => b.c - a.c)[0];
+    const avgDay = days.length ? days.reduce((a, x) => a + Number(x.c), 0) / days.length : 0;
+    return `
+      <div class="section-title"><h2>${o.monthly ? 'شهر بشهر' : 'يوم بيوم'}</h2><div class="chips" id="sd-metric">${[['c', 'المحصّل'], ['s', 'المبيعات'], ['v', 'قيمة الخدمات'], ['n', 'الحجوزات']].map(([k, l], i) => `<button class="chip ${i ? '' : 'on'}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="card"><div id="sd-chart">${sdChart(r, 'c', o.cmpName, o.monthly)}</div>
+        <div class="sd-legend"><span><i class="b"></i>${o.lens === 'c' ? 'الفترة المختارة' : 'هذي الفترة'}</span>${r.cmp?.length > 1 ? `<span><i class="w"></i>${o.cmpName}</span>` : ''}</div>
+        <div class="dinsights">
+          ${best && Number(best.c) > 0 ? `<div><span>${o.monthly ? 'أفضل شهر' : 'أفضل يوم'}</span><b>${o.monthly ? MONTHS_AR[D(best.k).getMonth()] : `${WDAYS[D(best.k).getDay()]} ${D(best.k).getDate()} ${MONTHS_AR[D(best.k).getMonth()]}`} · ${sar(best.c)} ر.س</b></div>` : ''}
+          ${avgDay ? `<div><span>${o.monthly ? 'متوسط الشهر' : 'متوسط اليوم'}</span><b class="num">${sar(avgDay)} ر.س</b></div>` : ''}
+          <div><span>متوسط الطلب</span><b class="num">${sar(K.orders ? K.sales / K.orders : 0)} ر.س</b></div>
+        </div>
+      </div>
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>طرق الدفع</h2></div><div class="card">${methods.length ? sdBars(methods) : '<div class="empty">ما فيه مدفوعات في هالفترة</div>'}</div></div>
+        <div><div class="section-title"><h2>من وين جات الطلبات</h2></div><div class="card">${src.length ? sdBars(src) : '<div class="empty">ما فيه طلبات</div>'}</div></div>
+        <div><div class="section-title"><h2>متى يحجزون قبل موعدهم</h2></div><div class="card">${sdBars(lead, { count: true })}${L.avg != null ? `<p class="muted small" style="margin:10px 0 0">بالمتوسط تحجز العميلة قبل موعدها بـ ${Number(L.avg).toLocaleString('en-US', { maximumFractionDigits: 1 })} يوم</p>` : ''}</div></div>
+        <div><div class="section-title"><h2>تفصيل الفلوس</h2></div><div class="card sd-money">
+          ${[['إجمالي المبيعات (شامل الضريبة)', K.sales], ['− الخصومات', K.discount, 1], ['− ضريبة القيمة المضافة', K.tax, 1], ['صافي المبيعات', K.net_sales, 0, 1], ['المدفوعات المستلمة', K.paid], ['− المسترجع', K.refunds, 1], ['صافي المحصّل', K.collected, 0, 1]].map(([l, v, m, b]) => `<div class="${b ? 'b' : ''} ${m ? 'm' : ''}"><span>${l}</span><b class="num">${sar(v)}</b></div>`).join('')}
+          <p class="muted small">المبيعات تنحسب بتاريخ الطلب، والمحصّل بتاريخ الدفع، فطبيعي يختلفون شوي (نفس طريقة ركاز بالضبط).</p>
+        </div></div>
+      </div>`;
+  }
+
+  function sdTabSvc(r, P, o) {
+    const G = r.groups.filter((x) => Number(x.v) > 0).map((x) => ({ l: SD_GRP[x.grp] || 'أخرى', v: x.v, sub: `${sdN(x.n)} حجز`, chip: sdChip(x.v, x.pv) }));
+    const sv = r.services.filter((x) => x.pv > 300).map((x) => ({ ...x, g: Number(x.v) - Number(x.pv) }));
+    const up = [...sv].sort((a, b) => b.g - a.g).slice(0, 3).filter((x) => x.g > 0), dn = [...sv].sort((a, b) => a.g - b.g).slice(0, 3).filter((x) => x.g < 0);
+    return `
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>الأقسام</h2></div><div class="card">${G.length ? sdBars(G) : '<div class="empty">ما فيه حجوزات</div>'}</div></div>
+        <div><div class="section-title"><h2>صاعدة ونازلة</h2><span class="muted small">عن ${SD_PREV[o.lens]}</span></div><div class="card sd-movers">
+          ${up.map((x) => `<div class="up"><span>${esc(x.name)}</span><b class="num">+${sar(x.g)}</b></div>`).join('') || ''}
+          ${dn.map((x) => `<div class="down"><span>${esc(x.name)}</span><b class="num">−${sar(-x.g)}</b></div>`).join('') || ''}
+          ${!up.length && !dn.length ? '<div class="empty">نحتاج فترة سابقة فيها بيانات للمقارنة</div>' : ''}
+        </div></div>
+      </div>
+      <div class="section-title"><h2>كل الخدمات</h2><div class="sd-tools"><input class="input" type="search" id="sd-q" placeholder="ابحث عن خدمة…"><select class="input" id="sd-sort"><option value="v">الأعلى دخل</option><option value="n">الأكثر طلب</option><option value="g">الأكثر نمو</option><option value="avg">الأعلى سعر</option></select></div></div>
+      <div class="card sd-table-wrap"><div id="sd-svc"></div></div>`;
+  }
+  function sdSvcRows(r, qtext, sort, all) {
+    const tot = r.services.reduce((a, x) => a + Number(x.v), 0);
+    let L = r.services.map((x) => ({ ...x, g: sdPct(x.v, x.pv) ?? -1e9, avg: x.n ? x.v / x.n : 0 }));
+    if (qtext) L = L.filter((x) => (x.name || '').includes(qtext) || (x.cat || '').includes(qtext));
+    L.sort((a, b) => Number(b[sort]) - Number(a[sort]));
+    const mx = Math.max(1, ...L.map((x) => Number(x.v)));
+    const shown = all ? L : L.slice(0, 15);
+    return `<table class="sd-table"><thead><tr><th>#</th><th>الخدمة</th><th>الحجوزات</th><th>الدخل</th><th>متوسط السعر</th><th>عن قبل</th></tr></thead><tbody>
+      ${shown.map((x, i) => `<tr><td class="muted num">${i + 1}</td><td><b>${esc(x.name)}</b><small>${esc(x.cat || '')} · ${sdN(x.cl)} عميلة</small><div class="sd-mini"><i style="width:${(Number(x.v) / mx) * 100}%"></i></div></td><td class="num">${sdN(x.n)}</td><td class="num"><b>${sar(x.v)}</b><small>${sdShare(x.v, tot)}٪</small></td><td class="num">${sar(x.avg)}</td><td>${sdChip(x.v, x.pv) || '<span class="muted small">جديدة</span>'}</td></tr>`).join('')}
+    </tbody></table>${!all && L.length > 15 ? `<button class="btn block" id="sd-all" style="margin-top:10px">عرض كل الخدمات (${L.length})</button>` : ''}${!L.length ? '<div class="empty">ما فيه نتائج</div>' : ''}`;
+  }
+
+  function sdTabTeam(r, P, o) {
+    const L = r.providers.filter((x) => x.all > 0), tot = L.reduce((a, x) => a + Number(x.v), 0);
+    if (!L.length) return '<div class="card"><div class="empty">ما فيه حجوزات للأخصائيات في هالفترة</div></div>';
+    const mx = Math.max(1, ...L.map((x) => Number(x.v)));
+    return `
+      <div class="sd-provs">${L.map((x, i) => {
+        const lost = x.all ? Math.round(((x.cx + x.ns) / x.all) * 100) : 0;
+        return `<div class="card sd-prov">
+          <div class="sd-prov-h"><span class="avatar">${esc(initial(x.name))}</span><div><b>${esc(x.name)}</b><small>${i === 0 ? '👑 الأعلى دخل' : `المركز ${i + 1}`}</small></div><div class="sd-prov-v"><b class="num">${sar(x.v)}</b><small>ر.س ${sdChip(x.v, x.pv, { tip: `${SD_PREV[o.lens]}: ${sar(x.pv)} ر.س` })}</small></div></div>
+          <div class="sd-mini lg" data-tip="${sdShare(x.v, tot)}٪ من دخل الأخصائيات"><i style="width:${(Number(x.v) / mx) * 100}%"></i></div>
+          <div class="sd-prov-g">
+            <div data-tip="الحجوزات المؤكدة"><span>حجوزات</span><b class="num">${sdN(x.n)}</b></div>
+            <div data-tip="عميلات مختلفات"><span>عميلات</span><b class="num">${sdN(x.cl)}</b></div>
+            <div data-tip="مجموع مدة خدماتها"><span>ساعات</span><b class="num">${sdN(x.hrs)}</b></div>
+            <div data-tip="دخلها ÷ ساعات خدماتها"><span>دخل الساعة</span><b class="num">${sar(x.hrs ? x.v / x.hrs : 0)}</b></div>
+            <div data-tip="من عميلاتها في الفترة، كم وحدة جات لها قبل كذا (ولاء للأخصائية)"><span>رجعوا لها</span><b class="num">${sdShare(x.ret, x.cl)}٪</b></div>
+            <div data-tip="إلغاء + ما حضرت من كل حجوزاتها" class="${lost >= 20 ? 'bad' : ''}"><span>إلغاء وغياب</span><b class="num">${lost}٪</b></div>
+          </div>
+          <div class="sd-prov-f">${x.rating ? `<span class="sd-stars" data-tip="${sdN(x.reviews)} تقييم">★ ${Number(x.rating).toFixed(1)}</span>` : ''}${(x.top || []).map((t) => `<span class="chip sm">${esc(t.name)} · ${sdN(t.n)}</span>`).join('')}</div>
+        </div>`;
+      }).join('')}</div>
+      ${!r.team ? `<a class="sd-cta" href="#/team"><b>تبين تعرفين صافي ربح كل أخصائية؟</b><span>سجّلي الفريق ورواتبهم وعمولاتهم في «الفريق»، ونطلع لك كم تكلّف كل وحدة وكم تدخّل بالضبط، وحتى العمولة تنحسب لحالها ←</span></a>` : ''}`;
+  }
+
+  function sdTabClients(r, P, o) {
+    const K = r.k, AR = P.at_risk, ret = K.clients - K.new_clients;
+    const co = (P.cohorts || []).slice(-9);
+    const rv = r.reviews || {};
+    const waMsg = (x) => `هلا ${firstName(x.name)} 🤍 وحشتينا في بيوتفريش! صار لنا فترة ما شفناك، وحبينا نذكرك إن ${x.fav ? `«${x.fav}»` : 'موعدك'} ينتظرك. احجزي من هنا: https://beautfresh.com/book`;
+    return `
+      <div class="sd-kpis sm">
+        <div class="sd-kpi" data-tip="جوكم مرة وحدة على الأقل آخر ٩٠ يوم"><span>عميلات نشطات</span><b class="num">${sdN(P.active_clients)}</b><em>آخر ٣ أشهر</em></div>
+        <div class="sd-kpi"><span>كل العميلات في ركاز</span><b class="num">${sdN(P.clients_total)}</b><em>من أول ما بديتوا</em></div>
+        <div class="sd-kpi"><span>جدد في الفترة</span><b class="num">${sdN(K.new_clients)}</b><em>${sdChip(K.new_clients, r.kp.new_clients)}</em></div>
+        <div class="sd-kpi"><span>رجعوا في الفترة</span><b class="num">${sdN(ret)}</b><em>${sdShare(ret, K.clients)}٪ من العميلات</em></div>
+      </div>
+
+      <div class="section-title"><h2>عميلات غابوا عن عادتهن</h2><span class="muted small">${sdN(AR.n)} عميلة · صرفوا ${sar(AR.spend)} ر.س</span></div>
+      <div class="card sd-risk">
+        <p class="muted small" style="margin:0 0 10px">كانوا يجون ٣ مرات وأكثر، وتأخروا عن موعدهم المعتاد بكثير، وما عندهم حجز جاي. رسالة وحدة ممكن ترجّعهم.</p>
+        ${AR.list.length ? AR.list.map((x, i) => `<div class="sd-risk-r ${i >= 8 ? 'more' : ''}" ${i >= 8 ? 'hidden' : ''}>
+          <span class="avatar">${esc(initial(x.name || '؟'))}</span>
+          <div class="grow"><b>${esc(x.name || 'عميلة')}</b><small>${esc(x.fav || '')} · ${sdN(x.visits)} زيارات · ${sar(x.spend)} ر.س</small><small class="warn">كانت تجي كل ${sdN(x.gap)} يوم تقريبًا، وصار لها ${sdN(x.since)} يوم</small></div>
+          ${x.phone ? `<a class="btn sm wa" target="_blank" rel="noopener" href="https://wa.me/${waNum(x.phone)}?text=${encodeURIComponent(waMsg(x))}">واتساب</a>` : ''}
+        </div>`).join('') : '<div class="empty">ما فيه أحد غايب، ممتاز 🤍</div>'}
+        ${AR.list.length > 8 ? `<button class="btn block" id="sd-risk-more" style="margin-top:8px">عرض الباقي (${AR.list.length - 8})</button>` : ''}
+      </div>
+
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>هل ترجع العميلة الجديدة؟</h2></div><div class="card">
+          <p class="muted small" style="margin:0 0 10px">من العميلات الجدد كل شهر، كم وحدة رجعت خلال ٦٠ يوم من أول زيارة</p>
+          ${co.map((c) => { const p60 = sdShare(c.r60, c.n); return `<div class="fbar" data-tip="${MONTHS_AR[D(c.m).getMonth()]}: ${sdN(c.n)} جديدة\nرجعت خلال ٦٠ يوم: ${sdN(c.r60)}\nرجعت أي وقت: ${sdN(c.r)}${c.ready ? '' : '\n(الشهر لسا ما اكتمل حسابه)'}"><div class="fbar-top"><span>${MONTHS_AR[D(c.m).getMonth()]} <small class="muted">${sdN(c.n)} جديدة</small></span><b class="num">${p60}٪${c.ready ? '' : ' <small class="muted">لسا</small>'}</b></div><div class="fbar-track"><i style="width:${Math.max(2, p60)}%;${c.ready ? '' : 'opacity:.45'}"></i></div></div>`; }).join('')}
+        </div></div>
+        <div><div class="section-title"><h2>التقييمات</h2>${rv.n ? `<span class="muted small">${sdN(rv.n)} تقييم</span>` : ''}</div><div class="card">
+          ${rv.n ? `<div class="sd-rate"><b class="num">${Number(rv.avg).toFixed(1)}</b><span class="sd-stars">${'★'.repeat(Math.round(rv.avg))}${'☆'.repeat(5 - Math.round(rv.avg))}</span></div>
+          ${[5, 4, 3, 2, 1].map((n) => `<div class="sd-rbar"><span>${n}★</span><div class="fbar-track"><i style="width:${sdShare(rv.dist[n], rv.n)}%"></i></div><b class="num">${sdN(rv.dist[n])}</b></div>`).join('')}
+          ${(rv.low || []).length ? `<div class="sd-low"><b>تقييمات تحتاج متابعة</b>${rv.low.map((x) => `<div><span class="sd-stars">${'★'.repeat(x.rating)}</span> ${esc(x.svc || '')}${x.prov ? ` · ${esc(x.prov)}` : ''}<p>${esc(x.text || 'بدون تعليق')}</p></div>`).join('')}</div>` : ''}` : '<div class="empty">ما فيه تقييمات في هالفترة</div>'}
+        </div></div>
+      </div>
+
+      <div class="section-title"><h2>أعلى العميلات صرفًا</h2></div>
+      <div class="card sd-table-wrap"><table class="sd-table"><thead><tr><th>#</th><th>العميلة</th><th>زيارات</th><th>صرفت</th><th>آخر زيارة</th></tr></thead><tbody>
+        ${r.top_clients.map((x, i) => `<tr><td class="muted num">${i + 1}</td><td><b>${esc(x.name || 'عميلة')}</b><small>${esc(x.fav || '')}</small></td><td class="num">${sdN(x.visits)}</td><td class="num"><b>${sar(x.v)}</b></td><td class="small">${ago(x.last)}</td></tr>`).join('')}
+      </tbody></table>${!r.top_clients.length ? '<div class="empty">ما فيه زيارات</div>' : ''}</div>`;
+  }
+
+  function sdTabTime(r, P, o) {
+    return `
+      <div class="section-title"><h2>متى الزحمة؟</h2><div class="chips" id="sd-hm">${[['n', 'عدد الحجوزات'], ['v', 'الدخل'], ['x', 'الإلغاء والغياب']].map(([k, l], i) => `<button class="chip ${i ? '' : 'on'}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="card"><div id="sd-heat">${sdHeat(r, 'n')}</div></div>
+      <div id="sd-heat-ins"></div>`;
+  }
+  function sdHeat(r, mode) {
+    const src = mode === 'x' ? r.heat_cx : r.heat, key = mode === 'v' ? 'v' : 'n';
+    const all = [...r.heat, ...r.heat_cx];
+    if (!all.length) return '<div class="empty">ما فيه حجوزات في هالفترة</div>';
+    let h0 = Math.max(7, Math.min(...all.map((x) => x.h))), h1 = Math.min(23, Math.max(...all.map((x) => x.h)));
+    const M = {}; src.forEach((x) => { M[`${x.d}-${x.h}`] = Number(x[key]); });
+    const mx = Math.max(1, ...Object.values(M));
+    const order = [6, 0, 1, 2, 3, 4, 5];
+    const hours = []; for (let h = h0; h <= h1; h++) hours.push(h);
+    const fmt = (v) => (key === 'v' ? `${sar(v)} ر.س` : `${sdN(v)} ${mode === 'x' ? 'إلغاء/غياب' : 'حجز'}`);
+    return `<div class="sd-heat" style="--cols:${hours.length}">
+      <span></span>${hours.map((h) => `<span class="hx">${h % 2 === h0 % 2 ? sdHour(h) : ''}</span>`).join('')}
+      ${order.map((d) => `<span class="hy">${WDAYS[d].replace(/^ال/, '')}</span>${hours.map((h) => { const v = M[`${d}-${h}`] || 0; const a = v ? 0.08 + 0.92 * Math.pow(v / mx, 0.8) : 0; return `<i class="${mode === 'x' ? 'x' : ''}" style="--a:${a.toFixed(3)}" data-tip="${WDAYS[d]} ${sdHour(h)}\n${fmt(v)}"></i>`; }).join('')}`).join('')}
+    </div><div class="sd-heat-l"><span>أقل</span><i></i><span>أكثر</span></div>`;
+  }
+  function sdHeatIns(r) {
+    const top = [...r.heat].sort((a, b) => b.n - a.n).slice(0, 3);
+    const cx = [...r.heat_cx].sort((a, b) => b.n - a.n)[0];
+    const wd = Array(7).fill(0); r.heat.forEach((h) => { wd[h.d] += h.n; });
+    const hr = {}; r.heat.forEach((h) => { hr[h.h] = (hr[h.h] || 0) + h.n; });
+    const hrs = Object.entries(hr).sort((a, b) => b[1] - a[1]);
+    const quiet = Object.entries(hr).filter(([h]) => h >= 11 && h <= 21).sort((a, b) => a[1] - b[1])[0];
+    if (!top.length) return '';
+    return `<div class="sd-ins" style="margin-top:12px">
+      <div class="sd-in"><i>🔥</i><p>أزحم الأوقات: ${top.map((x) => `<b>${WDAYS[x.d]} ${sdHour(x.h)}</b>`).join('، ')}. تأكدي إن الأخصائيات كلهم موجودين فيها</p></div>
+      ${hrs.length ? `<div class="sd-in"><i>⏰</i><p>ساعة الذروة <b>${sdHour(Number(hrs[0][0]))}</b>${quiet ? `، وأهدأ ساعة <b>${sdHour(Number(quiet[0]))}</b>: مكان ممتاز لعرض «ساعة هادية» بخصم بسيط` : ''}</p></div>` : ''}
+      ${cx ? `<div class="sd-in bad"><i>⚠️</i><p>أكثر وقت فيه إلغاء وغياب: <b>${WDAYS[cx.d]} ${sdHour(cx.h)}</b>. تذكير قبلها بساعتين يفرق</p></div>` : ''}
+    </div>`;
+  }
+
+  function sdTabProfit(r, P, o) {
+    const K = r.k, exp = Number(r.expenses?.total || 0), pur = Number(r.purchases || 0);
+    const rev = Number(K.net_sales) + Number(K.home), net = rev - exp - pur, margin = rev ? Math.round((net / rev) * 100) : 0;
+    const cats = Object.entries(r.expenses?.cats || {}).map(([k, v]) => ({ l: EXP_CAT[k] || k, v })).sort((a, b) => b.v - a.v);
+    const lost = Number(K.cancelled_value) + Number(K.noshow_value);
+    const camps = r.campaigns || [];
+    return `
+      ${!exp && !pur ? `<div class="sd-cta static"><b>هنا تطلع لك الصورة الكاملة: كم دخل، كم صرفتوا، وكم صافي الربح الحقيقي</b><span>المبيعات جاهزة من ركاز. باقي بس تسجلين المصروفات (إيجار، رواتب، فواتير…) وفواتير المواد من المخزون، وكل شي ينحسب لحاله.</span><div class="actions"><button class="btn primary" id="sd-exp">${I.plus} سجّلي مصروف</button><a class="btn" href="#/invoices">فواتير المواد</a></div></div>` : ''}
+      <div class="card sd-pl">
+        <div><span>صافي المبيعات (بدون ضريبة)</span><b class="num">${sar(rev)}</b></div>
+        <div class="m"><span>− مشتريات المواد</span><b class="num">${sar(pur)}</b></div>
+        <div class="m"><span>− المصروفات</span><b class="num">${sar(exp)}</b></div>
+        <div class="b ${net < 0 ? 'neg' : ''}"><span>صافي الربح</span><b class="num">${sar(net)} <small>ر.س</small></b></div>
+        ${exp || pur ? `<div class="sd-margin"><span>هامش الربح</span><div class="fbar-track"><i style="width:${Math.max(0, Math.min(100, margin))}%"></i></div><b class="num">${margin}٪</b></div>` : ''}
+        ${(exp || pur) && r.partners.length ? `<div class="sd-partners">${r.partners.map((p) => `<div><span>${esc(p.name)} (${Number(p.pct)}٪)</span><b class="num">${sar((net * Number(p.pct)) / 100)}</b></div>`).join('')}</div>` : ''}
+      </div>
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>وين تروح الفلوس</h2>${exp ? '<a class="small" href="#/expenses">كل المصروفات</a>' : ''}</div><div class="card">${cats.length ? sdBars(cats) : '<div class="empty">ما فيه مصروفات مسجلة في هالفترة</div>'}</div></div>
+        <div><div class="section-title"><h2>فلوس ضاعت</h2></div><div class="card sd-money">
+          <div><span>حجوزات ملغية (${sdN(K.cancelled)})</span><b class="num">${sar(K.cancelled_value)}</b></div>
+          <div><span>ما حضرت (${sdN(K.noshow)})</span><b class="num">${sar(K.noshow_value)}</b></div>
+          <div class="m"><span>الخصومات</span><b class="num">${sar(K.discount)}</b></div>
+          <div class="b"><span>المجموع</span><b class="num">${sar(lost + Number(K.discount))}</b></div>
+          <p class="muted small">لو رجع ربع الحجوزات الضايعة بس، يعني ${sar(lost / 4)} ر.س زيادة في هالفترة.</p>
+        </div></div>
+      </div>
+      <div class="section-title"><h2>عائد الحملات التسويقية</h2><a class="small" href="#/marketing?t=campaigns">التسويق</a></div>
+      ${camps.length ? `<div class="card sd-table-wrap"><table class="sd-table"><thead><tr><th>الحملة</th><th>الصرف</th><th>عميلات جدد</th><th>تكلفة العميلة</th><th>دخّلوا</th><th>العائد</th></tr></thead><tbody>
+        ${camps.map((c) => { const roi = c.spent ? Math.round(((c.new_rev - c.spent) / c.spent) * 100) : null; return `<tr><td><b>${esc(c.name)}</b><small>${esc(c.from)}${c.to ? ` ← ${esc(c.to)}` : ''}</small></td><td class="num">${sar(c.spent)}</td><td class="num">${sdN(c.new_clients)}</td><td class="num">${c.new_clients ? sar(c.spent / c.new_clients) : '—'}</td><td class="num">${sar(c.new_rev)}</td><td>${roi == null ? '—' : `<span class="sd-d ${roi >= 0 ? 'up' : 'down'}">${roi >= 0 ? '▲' : '▼'} ${Math.abs(roi)}٪</span>`}</td></tr>`; }).join('')}
+      </tbody></table><p class="muted small">العميلات الجدد = اللي أول زيارة لهم كانت خلال أيام الحملة، و«دخّلوا» = كل اللي صرفوه عندكم من وقتها.</p></div>`
+      : `<a class="sd-cta" href="#/marketing?t=campaigns"><b>كل حملة تسويقية بتعرفين عائدها بالريال</b><span>سجّلي الحملة وكم صرفتي عليها في «التسويق»، ونربطها بالعميلات الجدد اللي جوا خلالها من ركاز ونطلع لك تكلفة العميلة والعائد ←</span></a>`}`;
+  }
+
+  function sdBind(body, r, P, t) {
+    if (t === 'sales') $$('#sd-metric .chip', body).forEach((b) => b.addEventListener('click', () => {
+      $$('#sd-metric .chip', body).forEach((x) => x.classList.toggle('on', x === b));
+      $('#sd-chart', body).innerHTML = sdChart(r, b.dataset.k, r.cmp_kind === 'ly' ? 'نفس الفترة السنة الماضية' : 'الفترة اللي قبلها', r.unit === 'month');
+    }));
+    if (t === 'svc') {
+      let all = false; const draw = () => { $('#sd-svc', body).innerHTML = sdSvcRows(r, $('#sd-q', body).value.trim(), $('#sd-sort', body).value, all); $('#sd-all', body)?.addEventListener('click', () => { all = true; draw(); }); };
+      $('#sd-q', body).addEventListener('input', draw); $('#sd-sort', body).addEventListener('change', draw); draw();
+    }
+    if (t === 'clients') $('#sd-risk-more', body)?.addEventListener('click', (ev) => { $$('.sd-risk-r.more', body).forEach((x) => { x.hidden = false; }); ev.currentTarget.remove(); });
+    if (t === 'time') {
+      $('#sd-heat-ins', body).innerHTML = sdHeatIns(r);
+      $$('#sd-hm .chip', body).forEach((b) => b.addEventListener('click', () => { $$('#sd-hm .chip', body).forEach((x) => x.classList.toggle('on', x === b)); $('#sd-heat', body).innerHTML = sdHeat(r, b.dataset.k); }));
+    }
+    if (t === 'profit') $('#sd-exp', body)?.addEventListener('click', () => expenseForm(null, () => route()));
+  }
 
   async function pageFinance(view, _a, params, alive) {
     let lens = params.get('l') || (() => { try { return localStorage.getItem('bf-lens'); } catch { return null; } })() || 'm';

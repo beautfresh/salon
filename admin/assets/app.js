@@ -179,7 +179,7 @@
         <form class="auth-card" id="auth-form" autocomplete="on">
           <img class="auth-logo-sm" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش">
           <h1>${signup ? 'إنشاء حساب' : esc(CFG.appName)}</h1>
-          <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'الحجوزات والمخزون، في مكان واحد.'}</p>
+          <p class="sub">${signup ? 'بعد التسجيل يراجع مدير النظام طلبك ويحدد صلاحياتك.' : 'إدارة بيوتفريش كاملة، في مكان واحد.'}</p>
           ${msg ? `<div class="notice ${msg.ok ? 'info' : 'danger'}">${esc(msg.text || msg)}</div>` : ''}
           ${signup ? `<div class="field">
             <label for="full_name">الاسم</label>

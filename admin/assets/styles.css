@@ -1300,3 +1300,79 @@ a.sd-in:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 .tour-banner.nq .tb-play { background: var(--accent); color: #FFFCF8; }
 .sd-hero .sd-d, .sd-hero .sd-d.up, .sd-hero .sd-d.down { background: rgba(90, 42, 34, .07); color: var(--ink-2); }
 .sd-hero .sd-d.up { background: var(--ok-soft); color: var(--ok); } .sd-hero .sd-d.down { background: var(--danger-soft); color: var(--danger); }
+
+/* ======================= لوحة المبيعات: الحركة والتفاعل ======================= */
+.sd-lens, .sd-tabs { position: relative; }
+.sd-ind { position: absolute; top: 0; left: 0; width: 0; height: 0; border-radius: 999px; background: var(--accent); box-shadow: 0 8px 18px -10px rgba(90, 42, 34, .8); transition: transform .45s cubic-bezier(.2, .8, .2, 1), width .45s cubic-bezier(.2, .8, .2, 1); pointer-events: none; z-index: 0; }
+.sd-lens a, .sd-tabs button { position: relative; z-index: 1; }
+.sd-lens.has-ind a.on { background: transparent; box-shadow: none; color: #FFFCF8; transition: color .3s .1s; }
+.sd-tabs.has-ind button.on { background: transparent; border-color: transparent; color: #FFFCF8; transition: color .3s .1s; }
+.sd-tabs button { transition: color .3s, border-color .3s, background .3s; }
+.sd-tabs button:not(.on):hover { border-color: #C4A88F; color: var(--ink); }
+
+.sd-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sd-step { display: flex; align-items: center; gap: 10px; justify-self: start; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 16px; padding: 8px 14px; font: inherit; cursor: pointer; text-align: start; transition: transform .25s, box-shadow .25s, border-color .25s; max-width: 100%; }
+.sd-step[data-step="1"] { justify-self: end; text-align: end; }
+.sd-step:hover:not([disabled]) { transform: translateY(-2px); border-color: #C4A88F; box-shadow: var(--shadow); }
+.sd-step:active:not([disabled]) { transform: scale(.97); }
+.sd-step[disabled] { opacity: .35; cursor: default; }
+.sd-step small { display: block; font-size: 11px; color: var(--muted); line-height: 1.2; }
+.sd-step b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.sd-step .ar { font-size: 22px; line-height: 1; color: var(--accent); transition: transform .25s; }
+.sd-step[data-step="-1"]:hover .ar { transform: translateX(3px); }
+.sd-step[data-step="1"]:hover .ar { transform: translateX(-3px); }
+.sd-now { text-align: center; }
+.sd-now h2 { font-size: 24px; font-weight: 600; line-height: 1.2; animation: sdPop .45s cubic-bezier(.2, .8, .2, 1) both; }
+.sd-now small { display: block; font-size: 12px; color: var(--muted); min-height: 2px; }
+.sd-badge { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-size: 11.5px; font-weight: 600; }
+.sd-back { margin-top: 4px; border: 0; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 999px; cursor: pointer; }
+@media (max-width: 560px) { .sd-step { padding: 7px 10px; gap: 6px; } .sd-step b { font-size: 12.5px; } .sd-now h2 { font-size: 19px; } }
+@keyframes sdPop { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+
+.sd-progress { position: relative; height: 3px; margin: -8px 0 10px; border-radius: 3px; overflow: hidden; opacity: 0; transition: opacity .3s; }
+.sd-progress.on { opacity: 1; }
+.sd-progress::after { content: ""; position: absolute; inset-block: 0; width: 40%; border-radius: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: sdProg 1.1s ease-in-out infinite; }
+@keyframes sdProg { from { left: -40%; } to { left: 100%; } }
+.sd-busy { opacity: .45; filter: saturate(.6); pointer-events: none; transition: opacity .25s, filter .25s; }
+#sd-a, #sd-b { transition: opacity .3s, filter .3s; }
+
+.sd-skel .sk { border-radius: 18px; background: linear-gradient(90deg, var(--surface-2) 0%, #F7F1E8 50%, var(--surface-2) 100%); background-size: 200% 100%; animation: sdShim 1.3s linear infinite; }
+.sd-skel .hero { height: 240px; border-radius: 24px; }
+.sd-skel .sk-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+.sd-skel .kpi { height: 92px; }
+@media (max-width: 760px) { .sd-skel .sk-row { grid-template-columns: repeat(2, 1fr); } }
+@keyframes sdShim { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.sd-up { animation: sdUp .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes sdUp { from { opacity: 0; transform: translateY(10px); } }
+.sd-hero { animation: sdUp .5s cubic-bezier(.2, .8, .2, 1) both; }
+.sd-hero.from-l { animation-name: sdFromL; } .sd-hero.from-r { animation-name: sdFromR; }
+@keyframes sdFromL { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes sdFromR { from { opacity: 0; transform: translateX(24px); } }
+.sd-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sdDraw 1.2s cubic-bezier(.4, 0, .2, 1) .1s forwards; }
+.sd-area { opacity: 0; animation: sdFade .8s .5s forwards; }
+@keyframes sdDraw { to { stroke-dashoffset: 0; } }
+@keyframes sdFade { to { opacity: 1; } }
+.sd-cum polyline.t.draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sdDraw 1.4s cubic-bezier(.4, 0, .2, 1) .2s forwards; }
+.sd-now-dot { position: absolute; width: 10px; height: 10px; margin: -5px -5px 0 0; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 rgba(90, 42, 34, .45); animation: sdPingB 1.8s infinite; transform: translateX(50%); }
+@keyframes sdPingB { 70% { box-shadow: 0 0 0 9px rgba(90, 42, 34, 0); } 100% { box-shadow: 0 0 0 0 rgba(90, 42, 34, 0); } }
+
+.sd-kpi { transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s, border-color .25s; }
+.sd-kpi:hover { transform: translateY(-3px); border-color: #D7C2AC; box-shadow: 0 1px 2px rgba(95, 62, 48, .05), 0 14px 26px -18px rgba(95, 62, 48, .5); }
+.sd-in { position: relative; }
+.sd-in .go { margin-inline-start: auto; align-self: center; font-size: 20px; color: #C4A88F; transition: transform .25s, color .25s; }
+a.sd-in:hover .go { transform: translateX(-4px); color: var(--accent); }
+#sd-body { transition: opacity .16s, transform .16s; }
+#sd-body.out { opacity: 0; transform: translateY(6px); }
+#sd-body.in { animation: sdUp .4s cubic-bezier(.2, .8, .2, 1) both; }
+.sd-col i { transition: height .6s cubic-bezier(.2, .8, .2, 1), background .3s; }
+.sd-col:hover i { background: linear-gradient(#B07A5E, #6E3529); }
+.fbar-track i, .sd-mini i { transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.sd-prov { transition: transform .25s, box-shadow .25s; }
+.sd-prov:hover { transform: translateY(-3px); box-shadow: 0 1px 2px rgba(95, 62, 48, .05), 0 18px 30px -22px rgba(95, 62, 48, .55); }
+.sd-table tbody tr { transition: background .2s; }
+.sd-table tbody tr:hover { background: rgba(90, 42, 34, .035); }
+.sd-heat i { animation: sdFade .5s both; animation-delay: calc(var(--d, 0) * 6ms); opacity: 0; }
+.chip { transition: background .25s, color .25s, border-color .25s, transform .2s; }
+.chip:active { transform: scale(.95); }
+@media (prefers-reduced-motion: reduce) { .sd *, .sd-ind { animation: none !important; transition: none !important; } .sd-line, .sd-cum polyline.t.draw { stroke-dashoffset: 0; } .sd-area, .sd-heat i { opacity: 1; } }

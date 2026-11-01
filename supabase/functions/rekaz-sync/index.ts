@@ -62,32 +62,34 @@ const days = (n: number) => new Date(Date.now() + n * 86_400_000);
 
 async function run(cfg: Cfg, mode: string) {
   const counts: Record<string, number> = {};
+  const t0 = Date.now();
   const step = async (k: string, f: () => Promise<number>) => {
     try { counts[k] = await f(); } catch (e) { counts[k] = -1; throw new Error(`${k}: ${(e as Error).message}`); }
   };
+  const resv = async (from: number, to: number) => { let n = 0; for (let s = from; s < to; s += 30) n += await pull(cfg, 'reservations', '/reservations', { startAtFrom: iso(days(s)), startAtTo: iso(days(Math.min(s + 30, to))) }); return n; };
   try {
-    const full = mode === 'full';
-    if (full) {
+    if (mode === 'quick') {
+      await step('customers', () => pull(cfg, 'customers', '/customers', { createdAtFrom: iso(days(-3)) }));
+      await step('reservations', () => resv(-21, 90));
+      await step('orders', () => pull(cfg, 'orders', '/orders', { createdAtFrom: iso(days(-3)) }));
+      await step('orders_paid', () => pull(cfg, 'orders', '/orders', { paidAtFrom: iso(days(-3)) }));
+      await step('transactions', () => pull(cfg, 'transactions', '/transactions', { processedFrom: iso(days(-3)) }));
+      await step('reviews', () => pull(cfg, 'reviews', '/customer-reviews', { createdAtFrom: iso(days(-30)) }));
+    } else if (mode === 'full_base') {
       await step('providers', () => pull(cfg, 'providers', '/providers', {}));
       await step('products', () => pull(cfg, 'products', '/products', {}));
       await step('customers', () => pull(cfg, 'customers', '/customers', {}));
-    } else {
-      await step('customers', () => pull(cfg, 'customers', '/customers', { createdAtFrom: iso(days(-3)) }));
+      await step('reviews', () => pull(cfg, 'reviews', '/customer-reviews', {}));
+    } else if (mode === 'full_resv') {
+      await step('reservations', () => resv(-400, 120));
+    } else if (mode === 'full_orders') {
+      await step('orders', () => pull(cfg, 'orders', '/orders', { createdAtFrom: iso(days(-400)) }));
+    } else if (mode === 'full_tx') {
+      await step('transactions', () => pull(cfg, 'transactions', '/transactions', { processedFrom: iso(days(-400)) }));
     }
-    // الحجوزات: نسحبها شهر شهر عشان ما تطول الصفحات
-    const from = full ? -400 : -21, to = full ? 120 : 90;
-    let total = 0;
-    for (let s = from; s < to; s += 30) {
-      total += await pull(cfg, 'reservations', '/reservations', { startAtFrom: iso(days(s)), startAtTo: iso(days(Math.min(s + 30, to))) });
-    }
-    counts.reservations = total;
-    await step('orders', () => pull(cfg, 'orders', '/orders', { createdAtFrom: iso(days(full ? -400 : -3)) }));
-    if (!full) await step('orders_paid', () => pull(cfg, 'orders', '/orders', { paidAtFrom: iso(days(-3)) }));
-    await step('transactions', () => pull(cfg, 'transactions', '/transactions', { processedFrom: iso(days(full ? -400 : -3)) }));
-    await step('reviews', () => pull(cfg, 'reviews', '/customer-reviews', full ? {} : { createdAtFrom: iso(days(-30)) }));
-    await db.rpc('rekaz_log', { p_mode: mode, p_ok: true, p_counts: counts, p_error: null });
+    await db.rpc('rekaz_log', { p_mode: mode, p_ok: true, p_counts: { ...counts, seconds: Math.round((Date.now() - t0) / 1000) }, p_error: null });
   } catch (e) {
-    await db.rpc('rekaz_log', { p_mode: mode, p_ok: false, p_counts: counts, p_error: (e as Error).message });
+    await db.rpc('rekaz_log', { p_mode: mode, p_ok: false, p_counts: { ...counts, seconds: Math.round((Date.now() - t0) / 1000) }, p_error: (e as Error).message });
   }
 }
 
@@ -100,7 +102,7 @@ Deno.serve(async (req) => {
   cfg.client_secret = Deno.env.get('REKAZ_CLIENT_SECRET') || cfg.client_secret;
   if (!cfg.client_id || !cfg.client_secret) return json({ error: 'rekaz_credentials_missing' }, 400);
   let mode = 'quick';
-  try { mode = (await req.json())?.mode === 'full' ? 'full' : 'quick'; } catch (_) { /* default */ }
+  try { const m = (await req.json())?.mode; if (['quick', 'full_base', 'full_resv', 'full_orders', 'full_tx'].includes(m)) mode = m; } catch (_) { /* default */ }
   // نرد فورًا ونكمل بالخلفية
   // @ts-ignore EdgeRuntime is provided by Supabase
   EdgeRuntime.waitUntil(run(cfg as Cfg, mode));

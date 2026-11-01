@@ -306,7 +306,7 @@
         <div class="main">
           <header class="topbar">
             <div class="tb-title"><img class="tb-logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><h1 id="page-title"></h1></div>
-            <div class="who"><span class="hide-sm">${esc(p.full_name || p.login)}</span><span class="avatar">${esc(initial(p.full_name || p.login))}</span></div>
+            <a class="tb-tour" href="#/tour"><span>✦</span><b>جولة المميزات</b></a><div class="who"><span class="hide-sm">${esc(p.full_name || p.login)}</span><span class="avatar">${esc(initial(p.full_name || p.login))}</span></div>
           </header>
           <div class="content" id="view"></div>
         </div>
@@ -364,6 +364,7 @@
     reports: { title: 'التقارير', nav: 'reports', fn: pageReports, manager: true },
     users: { title: 'المستخدمين', nav: 'users', fn: pageUsers, admin: true },
     catalog: { title: 'الفئات والموردين', nav: 'catalog', fn: pageCatalog, admin: true },
+    tour: { title: 'جولة في بيوتفريش', nav: 'home', fn: pageTour },
     kit: { title: 'عُدّة بيوتفريش', nav: 'kit', fn: pageKit },
     more: { title: 'الإعدادات', nav: 'more', fn: pageMore },
   };
@@ -545,6 +546,7 @@
     const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
+      <a class="tour-banner" href="#/tour"><div class="tb-txt"><span>جديد في بيوتفريش ✦</span><b>جولة في كل المميزات</b><small>٢١ ميزة، وحدة وحدة، في خمس دقايق</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-3.svg" alt=""></a>
       ${myShift}
       ${pulse}
       ${alertsHtml}
@@ -3694,6 +3696,86 @@
     </div></div>`;
     paper(`تقرير ${mName}`, html, { mount: (ov) => { const n = $('.rp-notes', ov); n.addEventListener('focus', () => { if (n.textContent.startsWith('اكتبوا هنا')) n.textContent = ''; }, { once: true }); } });
   }
+  /* ======================= جولة المميزات ======================= */
+  const TOUR = [
+    { ch: 'البداية', cover: true },
+    { ch: 'اليوم', img: 'home', go: '#/home', eb: 'الرئيسية', t: 'لوحة الصباح', d: 'أول شاشة تفتحونها كل يوم. تختصر لكم وضع الصالون في نظرة وحدة، وتقول وش يحتاج انتباهكم.', b: ['عدسة اليوم والأسبوع والشهر: المبيعات وصافي الربح ودائرة هدف الشهر', '«يحتاج انتباهك»: يوم ما انقفل، شكوى مفتوحة، عيد ميلاد، عطل، وثيقة تقرب تنتهي', '«ورديتي» لكل موظفة: دوامها اليوم وقوائمها وحجوزاتها والأدلة اللي تنتظر توقيعها'] },
+    { ch: 'اليوم', img: 'booking', go: '#/bookings', eb: 'الحجوزات المنزلية', t: 'الصالون يوصل لين بابها', d: 'موقع حجز خاص بالخدمات المنزلية بهوية بيوتفريش، والحجوزات توصل للوحة مباشرة.', b: ['العميلة تحجز بأربع خطوات: الخدمة، الحي، الوقت، بياناتها', 'الأوقات المتاحة تنحسب لحالها حسب عدد الفرق ووقت التنقل والإجازات', 'تأكيد الحجز وتعيين الأخصائية وتسجيل الدفع ورسائل واتساب جاهزة', 'إشعار فوري على جوالاتكم مع كل حجز جديد'] },
+    { ch: 'المال', img: 'finance', go: '#/finance', eb: 'المالية', t: 'أرقام الصالون بوضوح', d: 'تعرفون كم دخل، وكم صرفتوا، وكم صافي الربح، بأي فترة تبونها.', b: ['إقفال يومي حسب طريقة الدفع والأقسام، ويطابق التفصيل مع الإجمالي', 'المصروفات بـ ١٣ تصنيف تناسب الصالون', 'عدسة يوم وأسبوع وشهر وربع وسنة، ومقارنة بالفترة اللي قبلها', 'هدف شهري يقول لكم كم باقي باليوم عشان توصلون'] },
+    { ch: 'المال', img: 'report', go: '#/finance?l=m', eb: 'تقرير الشهر', t: 'تقرير جاهز للطباعة', d: 'آخر كل شهر بضغطة وحدة: تقرير بهوية الصالون، يطبع أو ينحفظ PDF.', b: ['صافي الربح والهامش والهدف ومقارنة بالشهر الماضي', 'رسم المبيعات يوم بيوم، وطرق الدفع والمصروفات', 'أعلى العميلات صرفًا، والآراء والحملات', 'خانة لقرارات الشهر الجاي واعتماد الإدارة'] },
+    { ch: 'العميلات', img: 'clients', go: '#/clients', eb: 'دفتر العميلات', t: 'كل عميلة، بملفها', d: 'ملف لكل عميلة، وتنقسم لحالها حسب زياراتها عشان تعرفون مين تحتاج اهتمام.', b: ['دائمة، VIP، جديدة، و«غابوا عنّا» اللي ما جوا من ٤٥ يوم', 'أعياد الميلاد هالشهر، واللي وصلوا لمكافأة الولاء', 'كل حجز منزلي يكتمل ينضاف لملفها تلقائيًا'] },
+    { ch: 'العميلات', img: 'client', go: '#/clients', eb: 'ملف العميلة', t: 'تعرفونها قبل ما تتكلم', d: 'زياراتها وصرفها وتفضيلاتها وإيقاع زيارتها، وبطاقة ولاء بأختام بنقشة بيوتفريش.', b: ['تفضيلاتها: لونها، شكل الأظافر، أي حساسية', 'النظام يحسب كل كم يوم تزوركم، ويقول متى زيارتها الجاية أو كم تأخرت', 'بطاقة ولاء: كل زيارة ختم، ومكافأتها لما تكتمل', 'خمس رسائل واتساب جاهزة باسمها'] },
+    { ch: 'العميلات', img: 'card', go: '#/clients', eb: 'بطاقتها الرقمية', t: 'بطاقة الولاء في جوالها', d: 'لكل عميلة رابط خاص تشوف فيه أختامها وكم باقي لمكافأتها وآخر زياراتها، وتحجز منه.', b: ['ترسلونه من ملفها بضغطة «رابط بطاقتها»', 'الرابط خاص فيها، ما ينخمّن، ويعرض اسمها الأول بس'] },
+    { ch: 'العميلات', img: 'feedback', go: '#/feedback', eb: 'الآراء والملاحظات', t: 'نسمعها، ونحلّها', d: 'كل مديح وشكوى واقتراح، من الصالون أو الواتساب أو قوقل، في مكان واحد.', b: ['تقييم بالنجوم، ومتوسط تقييم الصالون', 'الشكوى تبقى مفتوحة لين تسجّلون كيف انحلت', 'الشكاوى المفتوحة تطلع في الرئيسية لين تنحل'] },
+    { ch: 'النمو', img: 'marketing', go: '#/marketing', eb: 'التسويق', t: 'تقويم مواسم الصالون', d: 'عشرة مواسم جاهزة بأفكارها، والنظام ينبهكم لما تدخلون وقت التجهيز.', b: ['الجمعة البيضاء، رمضان، ليالي العيد، التخرج، الأعراس، اليوم الوطني…', 'عدّاد للموسم الجاي، وتنبيه «دخلتوا وقت التجهيز»', 'زر يفتح حملة مربوطة بالموسم مباشرة'] },
+    { ch: 'النمو', img: 'content', go: '#/marketing?t=content', eb: 'المحتوى والحملات', t: 'خطة نشر، وحملات بأرقامها', d: 'لوحة محتوى بمراحل، وحملات تعرفون منها وش يرجع لكم فعلًا.', b: ['أسبوع النشر، ولوحة: فكرة ← تصوير ← جاهز ← منشور', 'زر «ما عندي فكرة» بأفكار مخصصة للصالون', 'كل حملة: الميزانية والصرف والعميلات الجدد والمبيعات والعائد على كل ريال'] },
+    { ch: 'الفريق', img: 'team', go: '#/team', eb: 'الفريق', t: 'مين موجود اليوم؟', d: 'مخطط زمني ملوّن لدوام اليوم، وخط يوضح الساعة الحين، وملف لكل موظفة.', b: ['ملف الموظفة: تخصصها ومهاراتها ودوامها وإجازاتها', 'تنبيه قبل انتهاء الإقامة والشهادة الصحية والعقد', 'الأرقام الحساسة للإدارة بس، وتواريخ الانتهاء بدون أرقام الهويات'] },
+    { ch: 'الفريق', img: 'shifts', go: '#/team?t=shifts', eb: 'المناوبات والإجازات والرواتب', t: 'جدول الأسبوع بضغطة', d: 'مناوبات تتكرر كل أسبوع، وإجازات بطلب واعتماد، ورواتب وعمولات تنحسب لحالها.', b: ['صباحي، مسائي، كامل، أو وقت تحددونه، وعدد الفريق بكل يوم', 'الموظفة تطلب إجازة، والإدارة يوصلها إشعار وتعتمد', 'العمولة من مبيعات كل موظفة، وتنسجل في المصروفات بضغطة'] },
+    { ch: 'التشغيل', img: 'ops', go: '#/ops', eb: 'التشغيل', t: 'قوائم الفتح والإقفال', d: 'الصالون يفتح ويقفل بنفس المستوى مهما تغيّرت الموظفة.', b: ['كل بند ينحفظ باسم اللي سوّته ووقتها', 'البنود الأساسية مميزة: التعقيم، الكاش، الأجهزة', '«هل يُطبَّق؟»: النظام يختار ٣ بنود عشوائية تتأكدون منها بعينكم، ويحسب «صدق التأشير»'] },
+    { ch: 'التشغيل', img: 'svc', go: '#/ops?t=services', eb: 'بطاقات الخدمات', t: 'كل خدمة، بخطواتها وربحها', d: 'مرجع للأخصائيات، وحساب دقيق لتكلفة كل خدمة من المخزون.', b: ['خطوات مرقمة ونصيحة لكل خدمة', 'المنتجات المستخدمة وكمياتها، وتكلفتها من أسعار الشراء', 'ترتيب «كم تربح كل خدمة بالساعة»، وتنبيه للخدمة اللي سعرها يحتاج مراجعة'] },
+    { ch: 'التشغيل', img: 'guide', go: '#/ops?t=manual', eb: 'أدلة بيوتفريش', t: 'كتيّبات الصالون', d: 'أربعة أدلة مكتوبة بهوية الصالون: التعقيم، السلامة، تجربة العميلة، يوم العروس.', b: ['غلاف وفهرس وفصول وجداول وتنبيهات، تطبع أو تنحفظ PDF', 'كل موظفة توقّع إنها قرأت الدليل', 'أي تعديل يرفع الإصدار ويطلب توقيع جديد'] },
+    { ch: 'الجودة', img: 'rules', go: '#/rules', eb: 'قواعد بيوتفريش', t: 'صحة الصالون بنسبة', d: '٤٦ قاعدة مكتوبة لصالون نسائي في السعودية، تنفحص لحالها على بيانات الصالون.', b: ['كل قاعدة: خطر، أو تحتاجكم، أو سليم، ومعها «لماذا؟» وأساسها', 'زر «صلّحها» يوديكم للمكان اللي تصلحونها منه', '«لي رأي آخر» للقاعدة اللي ما تناسبكم، ومكتبة تختارون منها'] },
+    { ch: 'الجودة', img: 'assets', go: '#/assets', eb: 'الأصول والصيانة', t: 'كل جهاز، بقيمته وصيانته', d: 'سجل لأجهزة الصالون وكراسيه ومكيفاته، وجدول صيانة يتكوّن لحاله.', b: ['قيمة الأصول اليوم بعد الاستهلاك، وتنبيه انتهاء الضمان', 'صيانة وقائية بمواعيد، وزر «تمّت اليوم»', 'أي موظفة تبلّغ عن عطل، وتكلفة الإصلاح تروح للمصروفات', 'الاشتراكات: كم تدفعون بالشهر، واللي يحتاج مراجعة'] },
+    { ch: 'الجودة', img: 'items', go: '#/items', eb: 'المخزون', t: 'ما ينقص شي على العميلة', d: 'الأصناف والصرف وفواتير الشراء، والنظام يقول لكم وش تشترون.', b: ['صرف من المخزون من الجوال بثواني', 'فواتير شراء باعتماد، وتكلفة كل صنف', 'قائمة مشتريات تلقائية للناقص، وتنبيه قبل انتهاء الصلاحية', 'تقارير الاستهلاك والمشتريات'] },
+    { ch: 'العُدّة', img: 'kit', go: '#/kit', eb: 'عُدّة بيوتفريش', t: 'كل ما تحتاجونه، في مكان واحد', d: 'بيانات المنشأة ورسائل ونماذج، تتعبّى لحالها ببيانات الصالون.', b: ['بطاقة المنشأة بأزرار نسخ، وباركود للحجز والتقييم والموقع', '١٦ رسالة جاهزة تتعبّى باسم العميلة وتنرسل بواتساب', 'نماذج للطباعة: استمارة العميلة، سجل التعقيم، بطاقة الاستقبال، العهدة، الخصوصية'] },
+    { ch: 'العُدّة', img: 'voucher', go: '#/kit?t=gifts', eb: 'قسائم الهدايا', t: 'هدية باسمها', d: 'قسيمة فاخرة برقم خاص وباركود، تنطبع أو تنرسل، والاستقبال يسجّل استخدامها.', b: ['القيمة أو الخدمة، ومن مين لمين، وكلمة، وتاريخ انتهاء', 'كم قسيمة سارية وقيمتها، واللي استُخدمت', 'ومن الموقع: صفحة «أهديها بيوتفريش» للعميلات'] },
+    { ch: 'العُدّة', img: 'gift', go: null, href: '../gift/', eb: 'الموقع العام', t: 'أهديها بيوتفريش', d: 'الخدمة الثالثة في الموقع: العميلة تصمم القسيمة وتشوفها تتغير قدامها وهي تكتب.', b: ['القيمة والمناسبة وتصميم القسيمة: عودي أو ذهبي أو رملي', 'اسمها وجوالها وكلمة الإهداء ووقت التوصيل', 'الدفع الإلكتروني «قريبًا»، ولين يتفعّل الطلب يوصلكم على واتساب'] },
+    { ch: 'الختام', silent: true },
+    { ch: 'الختام', end: true },
+  ];
+  const SILENT = [['🔔', 'إشعارات فورية', 'حجز جديد، عطل، طلب إجازة، توصل لجوالاتكم'], ['☀️', 'صباح بيوتفريش', '٩:١٥ الصبح: الميلاد والشكاوى والأعطال والوثائق وحجوزات اليوم'], ['🌙', 'تذكير الإقفال', '٩:٤٥ الليل إذا اليوم ما انقفل'], ['📈', 'أسبوع بيوتفريش', 'كل سبت: المبيعات ومقارنتها وأفضل يوم والعميلات الجدد'], ['📊', 'تصدير Excel', 'كل البيانات بملف واحد للمحاسب أو الأرشيف'], ['🔐', 'صلاحيات وأمان', 'الموظفة تشوف شغلها، والمالية والرواتب للإدارة بس'], ['📱', 'تطبيق على الجوال', 'يتثبت على الشاشة الرئيسية ويفتح بسرعة'], ['🖨️', 'كل شي يطبع', 'التقارير والأدلة والنماذج والقسائم بهوية الصالون']];
+  const START = [['#/kit', 'عبّوا بطاقة المنشأة', 'الروابط وأوقات الدوام، عشان تتعبّى الرسائل والنماذج'], ['#/team', 'أضيفوا الفريق ورتبوا المناوبات', 'واربطوا حساب كل موظفة بملفها'], ['#/rules?t=docs', 'سجّلوا تواريخ التراخيص', 'وجاوبوا على أسئلة القواعد الخمسة'], ['#/ops?t=services', 'أضيفوا خدمات الصالون', 'بأسعارها ومنتجاتها'], ['#/finance', 'حطّوا هدف الشهر', 'وابدؤوا الإقفال اليومي من الليلة'], ['#/clients', 'غيّروا مكافأة الولاء', 'لشي محدد مثل «مانيكير هدية»']];
+
+  function pageTour(view) {
+    let i = 0;
+    const real = TOUR.filter((s) => s.img).length;
+    view.innerHTML = `<div class="tour" tabindex="-1">
+      <div class="tr-bg"></div>
+      <header class="tr-top"><img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><div class="tr-ch" id="tr-ch"></div><a class="tr-x" href="#/home" aria-label="إغلاق">×</a></header>
+      <main class="tr-stage" id="tr-stage"></main>
+      <footer class="tr-foot"><div class="tr-prog" id="tr-prog">${TOUR.map((_, k) => `<i data-k="${k}"></i>`).join('')}</div>
+        <div class="tr-nav"><button class="tr-btn" id="tr-prev" aria-label="السابق">→</button><span class="tr-n num" id="tr-n"></span><button class="tr-btn pri" id="tr-next">التالي ←</button></div></footer>
+    </div>`;
+    const stage = $('#tr-stage', view), root = $('.tour', view);
+    const chs = [...new Set(TOUR.map((s) => s.ch))];
+    const slideHTML = (s, k) => {
+      if (s.cover) return `<div class="tr-cover"><img class="tr-logo" src="../home/assets/Beautfresh-brown.svg" alt=""><span class="tr-eb">جولة في نظام بيوتفريش</span><h1>كل الصالون،<br>في مكان واحد.</h1><p>${real} ميزة صُممت لصالون نسائي سعودي: من الحجز والعميلات، إلى المال والفريق والتشغيل والجودة. خذوا خمس دقايق وتعرفوا عليها وحدة وحدة.</p><button class="tr-go" data-next>ابدؤوا الجولة ←</button><div class="tr-roses">${[1, 2, 3, 4].map((r) => `<img src="../home/assets/rosette-${r}.svg" alt="">`).join('')}</div></div>`;
+      if (s.silent) return `<div class="tr-text wide"><span class="tr-eb">يشتغل بصمت</span><h2>أشياء تصير لحالها</h2><p class="tr-d">ما تحتاج منكم شي، بس تعرفون إنها موجودة.</p><div class="tr-grid">${SILENT.map(([e, t, d], j) => `<div class="tr-cell" style="--d:${j * 60}ms"><span>${e}</span><b>${t}</b><small>${d}</small></div>`).join('')}</div></div>`;
+      if (s.end) return `<div class="tr-text wide"><span class="tr-eb">ابدؤوا من هنا</span><h2>ست خطوات، ويصير النظام نظامكم</h2><p class="tr-d">كل خطوة تفتح المكان اللي تسوونها فيه.</p><div class="tr-start">${START.map(([h, t, d], j) => `<a href="${h}" style="--d:${j * 70}ms"><span class="num">${AR_NUM(j + 1)}</span><div><b>${t}</b><small>${d}</small></div><i>←</i></a>`).join('')}</div><a class="tr-go" href="#/home" style="margin-top:22px">يلا نبدأ 🤍</a></div>`;
+      return `<div class="tr-slide"><div class="tr-text"><span class="tr-eb">${s.eb}</span><h2>${s.t}</h2><p class="tr-d">${s.d}</p><ul>${s.b.map((x, j) => `<li style="--d:${150 + j * 80}ms">${x}</li>`).join('')}</ul>
+        ${s.go ? `<a class="tr-open" href="${s.go}">افتحوا القسم ←</a>` : s.href ? `<a class="tr-open" href="${s.href}" target="_blank" rel="noopener">افتحوا الصفحة ↗</a>` : ''}</div>
+        <div class="tr-phone"><div class="tr-screen"><img src="assets/tour/${s.img}.webp" alt="${esc(s.t)}" loading="eager"></div></div></div>`;
+    };
+    const show = (k, dir = 1) => {
+      i = Math.max(0, Math.min(TOUR.length - 1, k));
+      const s = TOUR[i];
+      stage.innerHTML = `<div class="tr-wrap ${dir > 0 ? 'fwd' : 'back'}">${slideHTML(s, i)}</div>`;
+      $('#tr-ch', view).innerHTML = chs.map((c) => `<button class="${c === s.ch ? 'on' : ''}" data-ch="${c}">${c}</button>`).join('');
+      $$('#tr-prog i', view).forEach((e, k2) => { e.className = k2 < i ? 'done' : k2 === i ? 'on' : ''; });
+      $('#tr-n', view).textContent = `${AR_NUM(i + 1)} / ${AR_NUM(TOUR.length)}`;
+      $('#tr-prev', view).disabled = i === 0;
+      $('#tr-next', view).style.visibility = i === TOUR.length - 1 ? 'hidden' : '';
+      root.classList.toggle('is-cover', !!s.cover);
+      $$('[data-next]', stage).forEach((b) => b.onclick = () => show(i + 1, 1));
+      $$('[data-ch]', view).forEach((b) => b.onclick = () => show(TOUR.findIndex((x) => x.ch === b.dataset.ch), 1));
+      const nx = TOUR[i + 1]; if (nx?.img) { const im = new Image(); im.src = `assets/tour/${nx.img}.webp`; }
+      try { localStorage.setItem('bf-tour-seen', '1'); } catch {}
+    };
+    $('#tr-next', view).onclick = () => show(i + 1, 1);
+    $('#tr-prev', view).onclick = () => show(i - 1, -1);
+    $$('#tr-prog i', view).forEach((e) => e.onclick = () => show(Number(e.dataset.k), Number(e.dataset.k) > i ? 1 : -1));
+    const onKey = (e) => { if (!document.body.contains(root)) { document.removeEventListener('keydown', onKey); return; } if (e.key === 'ArrowLeft') show(i + 1, 1); else if (e.key === 'ArrowRight') show(i - 1, -1); else if (e.key === 'Escape') location.hash = '#/home'; };
+    document.addEventListener('keydown', onKey);
+    let x0 = null;
+    root.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    root.addEventListener('touchend', (e) => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 60) show(i + (dx > 0 ? 1 : -1), dx > 0 ? 1 : -1); x0 = null; }, { passive: true });
+    document.body.classList.add('noscroll');
+    const clean = () => { if (!document.body.contains(root)) { document.body.classList.remove('noscroll'); window.removeEventListener('hashchange', clean); } };
+    window.addEventListener('hashchange', () => setTimeout(clean, 0));
+    show(0);
+    root.focus();
+  }
+
   /* ======================= finance ======================= */
   const EXP_CAT = { rent: 'إيجار', salaries: 'رواتب', commissions: 'عمولات', utilities: 'كهرباء وماء', telecom: 'إنترنت واتصالات', marketing: 'تسويق وإعلانات', maintenance: 'صيانة', government: 'رسوم حكومية وتراخيص', subscriptions: 'اشتراكات وأنظمة', hospitality: 'ضيافة', transport: 'مشاوير وتوصيل', supplies_other: 'مستلزمات خارج المخزون', other: 'أخرى' };
   const PAY_KEYS = [['cash', 'كاش'], ['card', 'شبكة'], ['transfer', 'تحويل'], ['online', 'رابط دفع'], ['bnpl', 'تابي وتمارا'], ['other', 'أخرى']];

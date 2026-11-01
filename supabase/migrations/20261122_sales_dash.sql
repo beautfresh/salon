@@ -184,6 +184,7 @@ begin
     'kp', private.sd_kpi_t(private.rd(pf), least(private.rd(p_from), private.rd(pf) + el)),
     'ky', case when has_ly then private.sd_kpi_t(private.rd(yf), least(private.rd(yt), private.rd(yf) + el)) end,
     'partial', t_end < private.rd(d1),
+    'kp_ok', first_day is not null and pf >= first_day,
     'series', private.sd_series(p_from, d1, monthly),
     'cmp', private.sd_series(cf, ct, monthly),
     'services', coalesce((select jsonb_agg(jsonb_build_object('id', product_id, 'name', name, 'cat', cat, 'grp', grp, 'n', n, 'v', v, 'cl', cl, 'pv', pv, 'pn', pn) order by v desc) from svc), '[]'::jsonb),

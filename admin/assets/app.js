@@ -4379,6 +4379,7 @@
     }
 
     function render(r, s, e, dir) {
+      if (r.kp_ok === false && !r._fixed) { r.kp = {}; r.services.forEach((x) => { x.pv = 0; x.pn = 0; }); r.providers.forEach((x) => { x.pv = 0; }); r.groups.forEach((x) => { x.pv = 0; }); if (r.cmp_kind !== 'ly') r.cmp = []; r._fixed = true; }
       const lens = st.lens, K = r.k, KP = r.kp, KY = r.ky, monthly = r.unit === 'month';
       const isCurrent = dk(s) <= tk && tk <= dk(e);
       const cmpName = r.cmp_kind === 'ly' ? 'نفس الفترة السنة الماضية' : SD_PREV[lens];

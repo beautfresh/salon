@@ -306,18 +306,19 @@
         <div class="main">
           <header class="topbar">
             <div class="tb-title"><img class="tb-logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><h1 id="page-title"></h1></div>
-            <a class="tb-tour" href="#/tour"><span>✦</span><b>جولة المميزات</b></a><div class="who"><span class="hide-sm">${esc(p.full_name || p.login)}</span><span class="avatar">${esc(initial(p.full_name || p.login))}</span></div>
+            <button type="button" class="tb-quick" id="fab2" aria-label="إجراء سريع">${I.plus}<b>إجراء سريع</b></button><a class="tb-tour" href="#/tour"><span>✦</span><b>جولة المميزات</b></a><div class="who"><span class="hide-sm">${esc(p.full_name || p.login)}</span><span class="avatar">${esc(initial(p.full_name || p.login))}</span></div>
           </header>
           <div class="content" id="view"></div>
         </div>
         <nav class="bottomnav">
           <a href="#/home" data-nav="home"><span class="ic">${I.home}</span>الرئيسية</a>
           <a href="#/bookings" data-nav="bookings"><span class="ic">${I.cal}</span>الحجوزات</a>
-          <a href="#/issue" data-nav="issue" class="primary"><span class="ic">${I.out}</span>صرف</a>
+          <button type="button" class="fab" id="fab" aria-label="إجراء سريع"><span class="ic">${I.plus}</span>إجراء</button>
           <a href="#/clients" data-nav="clients"><span class="ic">${I.heart}</span>العميلات</a>
           <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>المزيد</a>
         </nav>
       </div>`;
+    $('#fab').onclick = quickActions; $('#fab2').onclick = quickActions;
     $('[data-act=out]').onclick = () => sb.auth.signOut();
     $('[data-act=pw]').onclick = changePassword;
     S.shellReady = true;
@@ -546,7 +547,7 @@
     const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
-      <a class="tour-banner" href="#/tour"><div class="tb-txt"><span>جديد في بيوتفريش ✦</span><b>جولة في كل المميزات</b><small>٢١ ميزة، وحدة وحدة، في خمس دقايق</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-3.svg" alt=""></a>
+      <a class="tour-banner" href="#/tour"><div class="tb-txt"><span>جديد في بيوتفريش ✦</span><b>جولة في كل المميزات</b><small>٢٢ ميزة، وحدة وحدة، في خمس دقايق</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-3.svg" alt=""></a>
       ${myShift}
       ${pulse}
       ${alertsHtml}
@@ -3700,6 +3701,7 @@
   const TOUR = [
     { ch: 'البداية', cover: true },
     { ch: 'اليوم', img: 'home', go: '#/home', eb: 'الرئيسية', t: 'لوحة الصباح', d: 'أول شاشة تفتحونها كل يوم. تختصر لكم وضع الصالون في نظرة وحدة، وتقول وش يحتاج انتباهكم.', b: ['عدسة اليوم والأسبوع والشهر: المبيعات وصافي الربح ودائرة هدف الشهر', '«يحتاج انتباهك»: يوم ما انقفل، شكوى مفتوحة، عيد ميلاد، عطل، وثيقة تقرب تنتهي', '«ورديتي» لكل موظفة: دوامها اليوم وقوائمها وحجوزاتها والأدلة اللي تنتظر توقيعها'] },
+    { ch: 'اليوم', img: 'quick', go: '#/home', eb: 'الإجراء السريع', t: 'زر «+» في كل مكان', d: 'الزر اللي بالنص في الجوال يفتح أكثر الأشياء اللي تنسوى كل يوم، بضغطتين.', b: ['ختم زيارة عميلة، صرف من المخزون، فاتورة شراء', 'إقفال اليوم ومصروف (للإدارة)', 'بلّغ عن عطل، رأي عميلة، طلب إجازة', 'كل واحد يشوف بس اللي يخصه حسب صلاحيته'] },
     { ch: 'اليوم', img: 'booking', go: '#/bookings', eb: 'الحجوزات المنزلية', t: 'الصالون يوصل لين بابها', d: 'موقع حجز خاص بالخدمات المنزلية بهوية بيوتفريش، والحجوزات توصل للوحة مباشرة.', b: ['العميلة تحجز بأربع خطوات: الخدمة، الحي، الوقت، بياناتها', 'الأوقات المتاحة تنحسب لحالها حسب عدد الفرق ووقت التنقل والإجازات', 'تأكيد الحجز وتعيين الأخصائية وتسجيل الدفع ورسائل واتساب جاهزة', 'إشعار فوري على جوالاتكم مع كل حجز جديد'] },
     { ch: 'المال', img: 'finance', go: '#/finance', eb: 'المالية', t: 'أرقام الصالون بوضوح', d: 'تعرفون كم دخل، وكم صرفتوا، وكم صافي الربح، بأي فترة تبونها.', b: ['إقفال يومي حسب طريقة الدفع والأقسام، ويطابق التفصيل مع الإجمالي', 'المصروفات بـ ١٣ تصنيف تناسب الصالون', 'عدسة يوم وأسبوع وشهر وربع وسنة، ومقارنة بالفترة اللي قبلها', 'هدف شهري يقول لكم كم باقي باليوم عشان توصلون'] },
     { ch: 'المال', img: 'report', go: '#/finance?l=m', eb: 'تقرير الشهر', t: 'تقرير جاهز للطباعة', d: 'آخر كل شهر بضغطة وحدة: تقرير بهوية الصالون، يطبع أو ينحفظ PDF.', b: ['صافي الربح والهامش والهدف ومقارنة بالشهر الماضي', 'رسم المبيعات يوم بيوم، وطرق الدفع والمصروفات', 'أعلى العميلات صرفًا، والآراء والحملات', 'خانة لقرارات الشهر الجاي واعتماد الإدارة'] },
@@ -3744,7 +3746,7 @@
       if (s.end) return `<div class="tr-text wide"><span class="tr-eb">ابدؤوا من هنا</span><h2>ست خطوات، ويصير النظام نظامكم</h2><p class="tr-d">كل خطوة تفتح المكان اللي تسوونها فيه.</p><div class="tr-start">${START.map(([h, t, d], j) => `<a href="${h}" style="--d:${j * 70}ms"><span class="num">${AR_NUM(j + 1)}</span><div><b>${t}</b><small>${d}</small></div><i>←</i></a>`).join('')}</div><a class="tr-go" href="#/home" style="margin-top:22px">يلا نبدأ 🤍</a></div>`;
       return `<div class="tr-slide"><div class="tr-text"><span class="tr-eb">${s.eb}</span><h2>${s.t}</h2><p class="tr-d">${s.d}</p><ul>${s.b.map((x, j) => `<li style="--d:${150 + j * 80}ms">${x}</li>`).join('')}</ul>
         ${s.go ? `<a class="tr-open" href="${s.go}">افتحوا القسم ←</a>` : s.href ? `<a class="tr-open" href="${s.href}" target="_blank" rel="noopener">افتحوا الصفحة ↗</a>` : ''}</div>
-        <div class="tr-phone"><div class="tr-screen"><img src="assets/tour/${s.img}.webp" alt="${esc(s.t)}" loading="eager"></div></div></div>`;
+        <div class="tr-phone"><div class="tr-screen"><div class="tr-sb"><b class="num">9:41</b><span class="tr-isl"></span><span class="tr-ics"><i></i><i></i><i></i></span></div><img src="assets/tour/${s.img}.webp" alt="${esc(s.t)}" loading="eager"></div></div></div>`;
     };
     const show = (k, dir = 1) => {
       i = Math.max(0, Math.min(TOUR.length - 1, k));
@@ -3776,6 +3778,47 @@
     root.focus();
   }
 
+
+  /* ======================= الإجراءات السريعة ======================= */
+  function pickClient(title, done) {
+    modal(`<h3>${title}</h3><div class="field"><input class="input" id="pc-q" placeholder="بحث بالاسم أو الجوال" autocomplete="off"></div><div class="list" id="pc-r" style="max-height:50vh;overflow:auto"></div>
+      <div class="actions end mt"><button class="btn" id="pc-new">${I.plus} عميلة جديدة</button></div>`, async (el, close) => {
+      const pool = await q(sb.from('clients_overview').select('*').order('last_visit', { ascending: false, nullsFirst: false }).limit(3000)).catch(() => []);
+      const draw = () => { const t = $('#pc-q', el).value.trim(); const r = (t ? pool.filter((c) => c.name.includes(t) || (c.phone || '').includes(t)) : pool).slice(0, 30);
+        $('#pc-r', el).innerHTML = r.map((c) => `<button class="row" data-c="${c.id}"><span class="cav ${c.segment}">${esc(initial(c.name))}</span><div class="grow"><div class="title">${esc(c.name)}</div><div class="meta" dir="ltr" style="text-align:right">${esc(c.phone || '')}</div></div></button>`).join('') || '<div class="empty">ما فيه نتائج</div>';
+        $$('[data-c]', el).forEach((b) => b.onclick = () => { close(); done(pool.find((c) => c.id === Number(b.dataset.c))); }); };
+      $('#pc-q', el).addEventListener('input', draw); draw();
+      $('#pc-new', el).onclick = () => { close(); clientForm(null, async (id) => { const c = await q(sb.from('clients_overview').select('*').eq('id', id).maybeSingle()); if (c) done(c); }); };
+    });
+  }
+  function quickActions() {
+    const M = isManager();
+    const A = [
+      ['visit', I.heart, 'ختم زيارة', 'لعميلة في الصالون', true],
+      ['issue', I.out, 'صرف من المخزون', 'منتجات استخدمتوها', true],
+      ['closing', I.coin, 'إقفال اليوم', 'مبيعات اليوم', M],
+      ['expense', I.invoice, 'مصروف', 'فاتورة أو دفعة', M],
+      ['purchase', I.cart, 'فاتورة شراء', 'بضاعة وصلت', true],
+      ['fault', I.wrench, 'بلّغ عن عطل', 'جهاز أو كرسي', true],
+      ['feedback', I.check, 'رأي عميلة', 'مديح أو شكوى', true],
+      ['leave', I.cal, 'طلب إجازة', 'لك أو لموظفة', true],
+    ].filter((x) => x[4]);
+    const close = modal(`<div class="qa-h"><b>إجراء سريع</b><span>وش تبون تسجّلون؟</span></div><div class="qa-grid">${A.map(([k, ic, t, d], i) => `<button class="qa" data-qa="${k}" style="--d:${i * 35}ms"><span class="qa-ic">${ic}</span><b>${t}</b><small>${d}</small></button>`).join('')}</div>`, (el, c) => {
+      el.closest('.modal-back')?.classList.add('sheet');
+      $$('[data-qa]', el).forEach((b) => b.onclick = async () => {
+        const k = b.dataset.qa; c();
+        if (k === 'visit') pickClient('ختم زيارة لمين؟', (cl) => visitForm(cl, () => route()));
+        else if (k === 'issue') location.hash = '#/issue';
+        else if (k === 'closing') location.hash = '#/closing';
+        else if (k === 'expense') expenseForm(null, () => route());
+        else if (k === 'purchase') location.hash = '#/invoice/new';
+        else if (k === 'fault') issueForm(await q(sb.from('assets').select('id,name,category,location').order('name')).catch(() => []), null);
+        else if (k === 'feedback') pickClient('رأي من مين؟', (cl) => feedbackForm(null, cl, () => route()));
+        else if (k === 'leave') leaveForm(await teamData());
+      });
+    });
+    void close;
+  }
   /* ======================= finance ======================= */
   const EXP_CAT = { rent: 'إيجار', salaries: 'رواتب', commissions: 'عمولات', utilities: 'كهرباء وماء', telecom: 'إنترنت واتصالات', marketing: 'تسويق وإعلانات', maintenance: 'صيانة', government: 'رسوم حكومية وتراخيص', subscriptions: 'اشتراكات وأنظمة', hospitality: 'ضيافة', transport: 'مشاوير وتوصيل', supplies_other: 'مستلزمات خارج المخزون', other: 'أخرى' };
   const PAY_KEYS = [['cash', 'كاش'], ['card', 'شبكة'], ['transfer', 'تحويل'], ['online', 'رابط دفع'], ['bnpl', 'تابي وتمارا'], ['other', 'أخرى']];

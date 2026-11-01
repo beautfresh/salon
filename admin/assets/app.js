@@ -4354,6 +4354,7 @@
       go();
     }));
 
+    let retried = false;
     async function go(dir = 0) {
       const my = ++seq; const [s, e] = range();
       history.replaceState(null, '', url()); drawNav();
@@ -4363,12 +4364,15 @@
       try {
         const [r, p] = await Promise.all([fetchDash(s, e), P ? Promise.resolve(P) : q(sb.rpc('sales_pulse'))]);
         if (!alive() || my !== seq) return;
-        P = p; R = r;
+        P = p; R = r; retried = false;
         render(r, s, e, dir);
         // نجهّز الفترة اللي قبل بالخلفية عشان تفتح فورًا
-        if (st.lens !== 'c') { const [ps, pe] = lensRange(st.lens, lensShift(st.lens, st.at, -1)); setTimeout(() => fetchDash(ps, pe).catch(() => {}), 400); }
+        if (['d', 'w', 'm'].includes(st.lens)) { const [ps, pe] = lensRange(st.lens, lensShift(st.lens, st.at, -1)); setTimeout(() => fetchDash(ps, pe).catch(() => {}), 600); }
       } catch (err) {
-        if (my === seq) toast(errMsg(err), true);
+        if (my !== seq || !alive()) return;
+        if (!retried) { retried = true; return go(dir); }
+        a.innerHTML = `<div class="sd-err"><b>ما قدرنا نجيب الأرقام هالمرة</b><span>غالبًا النت أو الفترة كبيرة. جرّب مرة ثانية.</span><button class="btn primary" id="sd-retry">حاول مرة ثانية</button></div>`; b.innerHTML = '';
+        $('#sd-retry', a).onclick = () => { retried = false; go(); };
       } finally {
         if (my === seq) { a.classList.remove('sd-busy'); b.classList.remove('sd-busy'); prog.classList.remove('on'); }
       }

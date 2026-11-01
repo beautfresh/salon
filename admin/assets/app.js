@@ -1940,7 +1940,10 @@
     const avg = c.visits ? c.spend / c.visits : 0;
     const full = L.active && c.stamps >= L.stamps;
     const T = waTpl(c, L);
-    const tpls = [['thanks', 'شكر بعد الزيارة'], ['remind', 'تذكير بموعد'], ['stamps', full ? 'مكافأتك جاهزة' : 'كم باقي للمكافأة'], ['miss', 'وحشتينا'], ['bday', 'عيد ميلاد']];
+    const tok = (await q(sb.from('clients').select('card_token').eq('id', id).maybeSingle()).catch(() => null))?.card_token;
+    const cardUrl = tok ? new URL(`../card/#${tok}`, location.href).href : null;
+    if (cardUrl) T.card = `هلا ${firstName(c.name)} 🤍\nهذي بطاقتك في بيوتفريش، تشوفين فيها أختامك ومكافأتك وزياراتك:\n${cardUrl}`;
+    const tpls = [['thanks', 'شكر بعد الزيارة'], ['remind', 'تذكير بموعد'], ['stamps', full ? 'مكافأتك جاهزة' : 'كم باقي للمكافأة'], ...(cardUrl ? [['card', '🪪 رابط بطاقتها']] : []), ['miss', 'وحشتينا'], ['bday', 'عيد ميلاد']];
     let freq = null;
     if (visits.length >= 3) { const ds = visits.map((v) => D(v.day)).sort((a, b) => a - b); freq = Math.round((ds[ds.length - 1] - ds[0]) / 86400000 / (ds.length - 1)); }
     const nextDue = freq && c.last_visit ? new Date(D(c.last_visit).getTime() + freq * 86400000) : null;
@@ -3650,6 +3653,49 @@
       });
     });
   }
+
+  /* ======================= تقرير الشريكتين ======================= */
+  async function monthReport(mStart) {
+    const s0 = D(mStart), e0 = new Date(s0.getFullYear(), s0.getMonth() + 1, 0, 12);
+    const from = dk(s0), to = dk(e0);
+    const [r, tgt, vis, newC, fb, cmps, K] = await Promise.all([
+      q(sb.rpc('fin_range', { p_from: from, p_to: to })),
+      q(sb.from('fin_targets').select('revenue').eq('month', from).maybeSingle()).catch(() => null),
+      q(sb.from('client_visits').select('client_id,amount,clients(name)').gte('day', from).lte('day', to).limit(20000)).catch(() => []),
+      sb.from('clients').select('id', { count: 'exact', head: true }).gte('created_at', from + 'T00:00:00+03:00').lte('created_at', to + 'T23:59:59+03:00').then((x) => x.count || 0, () => 0),
+      q(sb.from('client_feedback').select('kind,rating,status').gte('day', from).lte('day', to)).catch(() => []),
+      q(sb.from('mkt_campaigns').select('*').lte('starts_on', to).or(`ends_on.gte.${from},ends_on.is.null`)).catch(() => []),
+      kitProfile().catch(() => ({})),
+    ]);
+    const mName = `${MONTHS_AR[s0.getMonth()]} ${s0.getFullYear()}`;
+    const delta = r.prev_revenue > 0 ? Math.round(((r.revenue - r.prev_revenue) / r.prev_revenue) * 100) : null;
+    const margin = r.revenue ? Math.round((r.net / r.revenue) * 100) : 0;
+    const top = Object.values(vis.reduce((a, v) => { const k = v.client_id; a[k] = a[k] || { name: v.clients?.name || '—', n: 0, s: 0 }; a[k].n++; a[k].s += Number(v.amount || 0); return a; }, {})).sort((a, b) => b.s - a.s).slice(0, 5);
+    const rated = fb.filter((f) => f.rating); const avgR = rated.length ? (rated.reduce((a, f) => a + f.rating, 0) / rated.length).toFixed(1) : null;
+    const maxD = Math.max(1, ...r.days.map((d) => Number(d.salon) + Number(d.home)));
+    const W = 680, H = 150, bw = W / r.days.length;
+    const chart = `<svg viewBox="0 0 ${W} ${H + 18}" class="rp-chart">${r.days.map((d, i) => { const hs = (Number(d.salon) / maxD) * H, hh = (Number(d.home) / maxD) * H; const x = W - (i + 1) * bw + bw * 0.18; return `<rect x="${x}" y="${H - hs - hh}" width="${bw * 0.64}" height="${hh}" fill="#B88A68" rx="1.5"/><rect x="${x}" y="${H - hs}" width="${bw * 0.64}" height="${hs}" fill="#5A2A22" rx="1.5"/>${(i + 1) % 5 === 0 || i === 0 ? `<text x="${x + bw * 0.32}" y="${H + 14}" font-size="9" text-anchor="middle" fill="#7A5D51">${i + 1}</text>` : ''}`; }).join('')}<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="#DCCFBD"/></svg>`;
+    const kv = (rows) => `<table class="rp-kv">${rows.filter(Boolean).map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('')}</table>`;
+    const pm = PAY_KEYS.map(([k, l]) => [l, Number(r.methods[k] || 0)]).filter((x) => x[1] > 0);
+    const ex = Object.entries(r.exp_cats).map(([k, v]) => [EXP_CAT[k] || k, Number(v)]).sort((a, b) => b[1] - a[1]);
+    const html = `<div class="pp-wrap"><div class="pp rp">
+      <section class="rp-cover"><img src="../home/assets/Beautfresh-brown.svg" alt=""><span class="rp-eb">تقرير الشريكتين</span><h1>${mName}</h1><p>${esc(K.legal_name || 'بيوتفريش')}</p><img class="rp-rose" src="../home/assets/rosette-3.svg" alt=""></section>
+      <section class="rp-hero"><div><span>صافي الربح</span><b class="num">${sar(r.net)} <small>ر.س</small></b><em>هامش ${margin}٪</em></div><div><span>المبيعات</span><b class="num">${sar(r.revenue)}</b>${delta != null ? `<em>${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}٪ عن الشهر الماضي</em>` : ''}</div>${tgt ? `<div><span>الهدف</span><b class="num">${sar(tgt.revenue)}</b><em>تحقق ${Math.round((r.revenue / tgt.revenue) * 100)}٪</em></div>` : ''}</section>
+      <h2>نصيب الشريكتين</h2>
+      <table class="pp-t rp-p"><thead><tr><th>الشريكة</th><th>النسبة</th><th>النصيب من صافي الربح</th><th>التوقيع</th></tr></thead><tbody>${r.partners.map((p) => `<tr><td>${esc(p.name)}</td><td class="num">${Number(p.pct)}٪</td><td class="num"><b>${sar(p.amount)} ر.س</b></td><td></td></tr>`).join('')}</tbody></table>
+      <h2>المبيعات يومًا بيوم</h2>${chart}<p class="pp-small"><span style="color:#5A2A22">■</span> الصالون ${sar(r.salon)} ر.س &nbsp; <span style="color:#B88A68">■</span> الخدمات المنزلية ${sar(r.home)} ر.س &nbsp;·&nbsp; ${r.closed_days} يوم مقفل</p>
+      <div class="rp-2"><div><h2>الأرقام</h2>${kv([['المبيعات', sar(r.revenue)], ['المشتريات (فواتير معتمدة)', sar(r.purchases)], ['المصروفات', sar(r.expenses)], ['صافي الربح', `<b>${sar(r.net)}</b>`], r.methods.clients && ['متوسط الفاتورة', sar(r.salon / r.methods.clients)], r.closed_days && ['متوسط اليوم', sar(r.salon / r.closed_days)]])}</div>
+        <div><h2>طرق الدفع</h2>${pm.length ? kv(pm.map(([l, v]) => [l, `${sar(v)} <small>(${Math.round((v / (r.salon || 1)) * 100)}٪)</small>`])) : '<p class="pp-small">ما فيه إقفالات</p>'}</div></div>
+      <div class="rp-2"><div><h2>المصروفات</h2>${ex.length ? kv(ex.map(([l, v]) => [l, sar(v)])) : '<p class="pp-small">ما فيه مصروفات مسجلة</p>'}</div>
+        <div><h2>العميلات</h2>${kv([['عميلات جدد', newC], ['زيارات مسجلة', vis.length], ['مديح', fb.filter((f) => f.kind === 'praise').length], ['شكاوى', `${fb.filter((f) => f.kind === 'complaint').length}${fb.some((f) => f.kind === 'complaint' && f.status === 'open') ? ' (فيه مفتوحة)' : ''}`], avgR && ['متوسط التقييم', `${avgR} / ٥`]])}
+          ${top.length ? `<h3>أعلى العميلات صرفًا</h3><ol class="rp-top">${top.map((t) => `<li><span>${esc(t.name)}</span><span class="num">${sar(t.s)} ر.س · ${t.n} زيارة</span></li>`).join('')}</ol>` : ''}</div></div>
+      ${cmps.length ? `<h2>الحملات</h2><table class="pp-t"><thead><tr><th>الحملة</th><th>الصرف</th><th>عميلات جدد</th><th>المبيعات</th><th>العائد</th></tr></thead><tbody>${cmps.map((c) => `<tr><td>${esc(c.name)}</td><td class="num">${c.spent != null ? sar(c.spent) : '—'}</td><td class="num">${c.new_clients ?? '—'}</td><td class="num">${c.revenue != null ? sar(c.revenue) : '—'}</td><td class="num">${c.spent > 0 && c.revenue != null ? (c.revenue / c.spent).toFixed(1) + '×' : '—'}</td></tr>`).join('')}</tbody></table>` : ''}
+      <h2>ملاحظات وقرارات الشهر الجاي</h2><div class="rp-notes" contenteditable="true">اكتبوا هنا قبل الطباعة…</div>
+      <div class="pp-sign"><div><label>${esc(r.partners[0]?.name || 'الشريكة الأولى')}</label><div class="pp-line"></div></div><div><label>${esc(r.partners[1]?.name || 'الشريكة الثانية')}</label><div class="pp-line"></div></div><div><label>التاريخ</label><div class="pp-line"></div></div></div>
+      <p class="pp-small" style="text-align:center;margin-top:28px">صدر من نظام بيوتفريش · المبيعات من الإقفال اليومي والحجوزات المنزلية المدفوعة، والمشتريات من فواتير الشراء المعتمدة.</p>
+    </div></div>`;
+    paper(`تقرير ${mName}`, html, { mount: (ov) => { const n = $('.rp-notes', ov); n.addEventListener('focus', () => { if (n.textContent.startsWith('اكتبوا هنا')) n.textContent = ''; }, { once: true }); } });
+  }
   /* ======================= finance ======================= */
   const EXP_CAT = { rent: 'إيجار', salaries: 'رواتب', commissions: 'عمولات', utilities: 'كهرباء وماء', telecom: 'إنترنت واتصالات', marketing: 'تسويق وإعلانات', maintenance: 'صيانة', government: 'رسوم حكومية وتراخيص', subscriptions: 'اشتراكات وأنظمة', hospitality: 'ضيافة', transport: 'مشاوير وتوصيل', supplies_other: 'مستلزمات خارج المخزون', other: 'أخرى' };
   const PAY_KEYS = [['cash', 'كاش'], ['card', 'شبكة'], ['transfer', 'تحويل'], ['online', 'رابط دفع'], ['bnpl', 'تابي وتمارا'], ['other', 'أخرى']];
@@ -3739,7 +3785,7 @@
         <div class="fin-title"><h2>${lensTitle(lens, s, e)}</h2>${!isCurrent ? `<a class="small" href="${link(lens, D(todayKey))}">ارجع للحالي</a>` : ''}</div>
         <a class="icon-btn ${dk(e) >= todayKey ? 'off' : ''}" href="${link(lens, lensShift(lens, at, 1))}" aria-label="التالي">‹</a>
       </div>
-      <div class="fin-actions"><a class="btn primary" href="#/closing${lens === 'd' ? `?d=${dk(s)}` : ''}">${I.plus} إقفال اليوم</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(s)}">المصروفات</a></div>
+      <div class="fin-actions"><a class="btn primary" href="#/closing${lens === 'd' ? `?d=${dk(s)}` : ''}">${I.plus} إقفال اليوم</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(s)}">المصروفات</a>${lens === 'm' ? '<button class="btn" id="rp-go">📄 تقرير الشهر</button>' : ''}</div>
       ${unclosed && isCurrent && lens !== 'd' ? `<a class="notice warn" style="display:block" href="#/closing">فيه ${unclosed} ${unclosed === 1 ? 'يوم' : unclosed <= 10 ? 'أيام' : 'يوم'} ${LENS_THIS[lens]} بدون إقفال ←</a>` : ''}
       ${dayCard}
       <div class="fin-hero">
@@ -3761,6 +3807,7 @@
       <div class="section-title"><h2>المصروفات</h2><a class="small" href="#/expenses?m=${monthKey(s)}">كل المصروفات</a></div>
       <div class="card">${exps.length ? bars(exps, exps[0][1], ident) : `<div class="empty">ما فيه مصروفات ${LENS_THIS[lens]}</div>`}</div>`;
     $('#exp-new').onclick = () => expenseForm(null, () => route());
+    $('#rp-go')?.addEventListener('click', (e) => busy(e.currentTarget, () => monthReport(monthKey(s)).catch((err) => toast(errMsg(err), true))));
     $('#tgt-set')?.addEventListener('click', () => targetForm(monthKey(s), tgt?.revenue, r.prev_revenue));
   }
 

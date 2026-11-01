@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>بطاقتي · بيوتفريش</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#3F1D17">
+<meta property="og:title" content="بطاقتي في بيوتفريش">
+<meta property="og:description" content="أختامك ومكافأتك وزياراتك، في مكان واحد.">
+<meta property="og:image" content="https://beautfresh.com/home/assets/og.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--oud:#5A2A22;--oud2:#3F1D17;--sand:#E8DFD1;--paper:#F3EDE4;--ink:#4A2620;--ink2:#7A5D51;--gold:#C9A46A;--cream:#F3EBDF}
+*{box-sizing:border-box}html,body{margin:0}body{font-family:Tajawal,system-ui,sans-serif;background:var(--sand);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 16px 40px}
+.wrap{width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px}
+.logo{height:44px;align-self:center;margin-bottom:4px}
+.card{position:relative;overflow:hidden;border-radius:28px;padding:24px 22px;color:var(--cream);background:linear-gradient(150deg,#6A3229,var(--oud2));box-shadow:0 30px 50px -30px rgba(63,29,23,.9);animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+.card::after{content:"";position:absolute;inset:0;background:url(../home/assets/rosette-2.svg) 0 0/30px 30px;opacity:.06;filter:brightness(0) invert(1);pointer-events:none}
+.top{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1}
+.top img{height:30px;filter:brightness(0) invert(94%) sepia(9%) saturate(380%) hue-rotate(335deg)}
+.top span{font-size:12px;color:#D9C6B7;letter-spacing:.04em}
+.vip{background:linear-gradient(140deg,#E3C890,#A8834C);color:#3F1D17;font-weight:700;font-size:11px;padding:3px 10px;border-radius:999px}
+h1{position:relative;z-index:1;margin:22px 0 4px;font-size:26px;font-weight:500;color:#fff}
+.sub{position:relative;z-index:1;margin:0;color:#D9C6B7;font-size:14px}
+.stamps{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:12px;margin:24px 0 18px}
+.stamps i{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;border:1.5px dashed rgba(243,235,223,.35);max-width:60px;width:100%;justify-self:center}
+.stamps i b{font-size:13px;font-weight:500;color:rgba(243,235,223,.45)}
+.stamps i.on{border:0;background:var(--cream);animation:stamp .55s cubic-bezier(.3,1.6,.5,1) both}
+.stamps i.on img{width:64%;height:64%}
+.left{position:relative;z-index:1;font-size:15px;color:#E6D6C8}
+.left b{color:#fff;font-weight:500}
+.full{position:relative;z-index:1;margin-top:4px;padding:12px 14px;border-radius:16px;background:var(--cream);color:var(--oud);font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper);border-radius:20px;overflow:hidden;border:1px solid #D3C3AE;animation:rise .8s .1s both}
+.stats div{padding:14px 6px;text-align:center}.stats div+div{border-inline-start:1px solid #D3C3AE}
+.stats b{display:block;font-size:18px;font-weight:700}.stats span{font-size:11.5px;color:var(--ink2)}
+.hist{background:var(--paper);border-radius:20px;border:1px solid #D3C3AE;padding:14px 16px;animation:rise .8s .2s both}
+.hist h2{margin:0 0 6px;font-size:14px;color:var(--ink2);font-weight:500}
+.hist div{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px dashed #D3C3AE;font-size:14px}.hist div:first-of-type{border:0}
+.hist span:last-child{color:var(--ink2);white-space:nowrap}
+.acts{display:flex;gap:10px;animation:rise .8s .3s both}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:999px;font:inherit;font-weight:500;text-decoration:none;border:1px solid #D3C3AE;color:var(--oud);background:var(--paper)}
+.btn.p{background:var(--oud);color:var(--cream);border-color:var(--oud)}
+.btn svg{width:18px;height:18px}
+.msg{text-align:center;padding:60px 20px;color:var(--ink2);line-height:1.9}
+.foot{text-align:center;font-size:11px;letter-spacing:.25em;color:#A88F80;margin-top:8px}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes stamp{from{transform:scale(.3) rotate(-30deg);opacity:0}to{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><img class="logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><div class="msg">لحظة…</div></div>
+<script src="../vendor/supabase.js"></script>
+<script src="../assets/config.js"></script>
+<script>
+(async () => {
+  const app = document.getElementById('app');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const M = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const dd = (s) => { const d = new Date(s + 'T12:00:00'); return `${d.getDate()} ${M[d.getMonth()]}`; };
+  const head = '<img class="logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش">';
+  const token = location.hash.replace(/^#\/?/, '');
+  if (!/^[0-9a-f-]{36}$/i.test(token)) { app.innerHTML = head + '<div class="msg">الرابط غير صحيح.<br>اطلبي رابط بطاقتك من بيوتفريش 🤍</div>'; return; }
+  const cfg = window.APP_CONFIG || window.CONFIG || {};
+  const sb = window.supabase.createClient(cfg.supabaseUrl || cfg.SUPABASE_URL, cfg.supabaseKey || cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY);
+  const { data: c, error } = await sb.rpc('bf_loyalty_card', { p_token: token });
+  if (error || !c) { app.innerHTML = head + '<div class="msg">ما لقينا البطاقة.<br>تواصلي معنا ونرسل لك الرابط من جديد 🤍</div>'; return; }
+  const n = Math.min(c.stamps, c.stamps_total), left = c.stamps_total - n, full = c.active && n >= c.stamps_total;
+  const leftTxt = left === 1 ? 'زيارة وحدة' : left === 2 ? 'زيارتين' : left + ' زيارات';
+  const wa = c.whatsapp ? `https://wa.me/966${String(c.whatsapp).replace(/\D/g, '').replace(/^0/, '')}` : '';
+  app.innerHTML = `
+    <div class="card">
+      <div class="top"><img src="../home/assets/Beautfresh-brown.svg" alt="">${c.vip ? '<span class="vip">VIP</span>' : '<span>بطاقة الولاء</span>'}</div>
+      <h1>هلا ${esc(c.name)} 🤍</h1><p class="sub">${c.since ? `معنا من ${dd(c.since)}` : 'نورتي بيوتفريش'}</p>
+      ${c.active ? `<div class="stamps">${Array.from({ length: c.stamps_total }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="animation-delay:${300 + i * 90}ms">${i < n ? '<img src="../home/assets/rosette-1.svg" alt="">' : `<b>${i + 1}</b>`}</i>`).join('')}</div>
+      ${full ? `<div class="full">مبروك! وصلتي لمكافأتك: ${esc(c.reward)}. نستناك 🤍</div>` : `<div class="left">باقي لك <b>${leftTxt}</b> وتوصلين لـ <b>${esc(c.reward)}</b></div>`}` : '<p class="sub" style="margin-top:18px">شكرًا إنك من عائلة بيوتفريش.</p>'}
+    </div>
+    <div class="stats"><div><b>${c.visits}</b><span>زيارة</span></div><div><b>${c.redeemed}</b><span>مكافأة استلمتيها</span></div><div><b>${c.last ? dd(c.last) : '—'}</b><span>آخر زيارة</span></div></div>
+    ${c.recent.length ? `<div class="hist"><h2>آخر زياراتك</h2>${c.recent.map((v) => `<div><span>${esc(v.services || (v.home ? 'زيارة منزلية' : 'زيارة'))}</span><span>${dd(v.day)}</span></div>`).join('')}</div>` : ''}
+    <div class="acts">${c.booking ? `<a class="btn p" href="${esc(c.booking)}">احجزي موعدك</a>` : ''}${wa ? `<a class="btn" href="${wa}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8z"/></svg>واتساب</a>` : ''}</div>
+    <div class="foot">THE FRESH VERSION OF YOU</div>`;
+})();
+</script>
+</body>
+</html>

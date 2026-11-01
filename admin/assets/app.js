@@ -4387,7 +4387,7 @@
         const mx = Math.max(1, ...S.map((x) => Number(x.c)));
         const pts = S.map((x, i) => [100 - (i / (S.length - 1)) * 100, 96 - (Number(x.c) / mx) * 86]);
         const line = pts.map((p) => p.join(',')).join(' ');
-        return `<svg class="sd-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A5A45" stop-opacity=".22"/><stop offset="1" stop-color="#8A5A45" stop-opacity="0"/></linearGradient></defs><polygon class="sd-area" points="100,100 ${line} 0,100" fill="url(#sdg)"/><polyline class="sd-line" pathLength="1" points="${line}" fill="none" stroke="#5A2A22" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+        return `<svg class="sd-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A5A45" stop-opacity=".22"/><stop offset="1" stop-color="#8A5A45" stop-opacity="0"/></linearGradient></defs><polygon points="100,100 ${line} 0,100" fill="url(#sdg)"/><polyline points="${line}" fill="none" stroke="#5A2A22" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
       })();
       const tgtHtml = (() => {
         if (!(lens === 'm' && isCurrent)) return '';
@@ -4509,9 +4509,9 @@
             <div data-tip="الحجوزات المؤكدة والمعلقة للسبعة أيام الجاية (يزيد كل ما حجزوا أكثر)"><span>محجوز للأسبوع الجاي</span><b class="num">${sdCu('p4', P.next7.v)}</b><em>${sdN(P.next7.n)} حجز</em></div>
           </div>
           <div class="sd-cum">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <svg class="${firstPulse ? 'draw' : ''}" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               <polyline class="w" points="${lineW}" vector-effect="non-scaling-stroke"/>
-              <polyline class="t ${firstPulse ? 'draw' : ''}" pathLength="1" points="${lineT}" vector-effect="non-scaling-stroke"/>
+              <polyline class="t" points="${lineT}" vector-effect="non-scaling-stroke"/>
             </svg>
             ${lastT ? `<span class="sd-now-dot" style="inset-inline-start:${X(lastT.h)}%;top:${Y(lastT.t)}%"></span>` : ''}
             <div class="sd-cum-x">${[10, 13, 16, 19, 22].map((h) => `<span style="inset-inline-start:${X(h - 1)}%">${sdHour(h)}</span>`).join('')}</div>

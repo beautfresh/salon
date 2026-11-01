@@ -30,17 +30,17 @@ language sql stable set search_path = '' as $$
   from x left join public.salon_svc_cats c on c.id = x.cid
 $$;
 
--- مؤشرات فترة [d0, d1)
-create or replace function private.sd_kpi(d0 date, d1 date) returns jsonb
+-- مؤشرات فترة [t0, t1)
+create or replace function private.sd_kpi_t(t0 timestamptz, t1 timestamptz) returns jsonb
 language sql stable set search_path = '' as $$
   with o as (
     select coalesce(sum(total), 0) sales, coalesce(sum(subtotal), 0) net_sales, coalesce(sum(discount), 0) disc,
            coalesce(sum(tax), 0) tax, count(*) orders
-    from public.rekaz_orders where status = 'confirmed' and created_at >= private.rd(d0) and created_at < private.rd(d1)),
+    from public.rekaz_orders where status = 'confirmed' and created_at >= t0 and created_at < t1),
   t as (
     select coalesce(sum(amount) filter (where type <> 'refund'), 0) paid, coalesce(sum(amount) filter (where type = 'refund'), 0) refunds,
            count(*) filter (where type <> 'refund') ops
-    from public.rekaz_transactions where status = 'confirmed' and processed_at >= private.rd(d0) and processed_at < private.rd(d1)),
+    from public.rekaz_transactions where status = 'confirmed' and processed_at >= t0 and processed_at < t1),
   r as (
     select coalesce(sum(total) filter (where status = 'confirmed'), 0) svc,
            count(*) filter (where status = 'confirmed') bookings,
@@ -52,14 +52,14 @@ language sql stable set search_path = '' as $$
            coalesce(sum(total) filter (where status = 'pending' and end_at < now()), 0) noshow_value,
            count(*) all_n,
            coalesce(sum(extract(epoch from end_at - start_at) / 3600) filter (where status = 'confirmed'), 0) hours
-    from public.rekaz_reservations where start_at >= private.rd(d0) and start_at < private.rd(d1)),
+    from public.rekaz_reservations where start_at >= t0 and start_at < t1),
   n as (
     select count(*) new_clients from (
       select customer_id, min(start_at) f from public.rekaz_reservations where status = 'confirmed' group by 1) z
-    where f >= private.rd(d0) and f < private.rd(d1)),
+    where f >= t0 and f < t1),
   h as (
     select coalesce(sum(total), 0) home from public.home_bookings
-    where payment_status = 'paid' and status <> 'cancelled' and starts_at >= private.rd(d0) and starts_at < private.rd(d1))
+    where payment_status = 'paid' and status <> 'cancelled' and starts_at >= t0 and starts_at < t1)
   select jsonb_build_object(
     'sales', o.sales, 'net_sales', o.net_sales, 'discount', o.disc, 'tax', o.tax, 'orders', o.orders,
     'collected', t.paid - t.refunds, 'paid', t.paid, 'refunds', t.refunds, 'ops', t.ops,
@@ -69,6 +69,9 @@ language sql stable set search_path = '' as $$
     'avg_ticket', case when r.visits > 0 then round(r.svc / r.visits, 2) else 0 end)
   from o, t, r, n, h
 $$;
+
+create or replace function private.sd_kpi(d0 date, d1 date) returns jsonb
+language sql stable set search_path = '' as $$ select private.sd_kpi_t(private.rd(d0), private.rd(d1)) $$;
 
 -- سلسلة زمنية (يوم أو شهر)
 create or replace function private.sd_series(d0 date, d1 date, monthly boolean) returns jsonb
@@ -105,24 +108,34 @@ declare
   first_day date;
   has_ly boolean;
   cf date; ct date;
+  t_from timestamptz := private.rd(p_from);
+  t_end timestamptz := least(private.rd(p_to + 1), now());
+  el interval;
+  nm int;
   res jsonb;
 begin
   if coalesce(private.my_role()::text, '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
   if p_to < p_from or span > 400 then raise exception 'فترة غير صالحة'; end if;
   select (min(processed_at) at time zone 'Asia/Riyadh')::date into first_day from public.rekaz_transactions;
   has_ly := first_day is not null and first_day <= yf;
+  -- الفترة اللي قبل: إذا الفترة أشهر كاملة نرجع بنفس عدد الأشهر، وإلا بنفس عدد الأيام
+  if extract(day from p_from) = 1 and extract(day from d1) = 1 then
+    nm := (extract(year from d1) * 12 + extract(month from d1) - extract(year from p_from) * 12 - extract(month from p_from))::int;
+    pf := (p_from - make_interval(months => nm))::date;
+  end if;
+  -- الفترة الحالية لين اللحظة، والمقارنة بنفس المدة بالضبط
+  if t_end < t_from then t_end := t_from; end if;
+  el := t_end - t_from;
   -- السلسلة المقارنة: السنة الماضية إذا موجودة، وإلا الفترة اللي قبل
-  if has_ly then cf := yf; ct := yt;
-  elsif monthly then cf := (date_trunc('month', p_from) - ((date_trunc('month', p_to) - date_trunc('month', p_from)) + interval '1 month'))::date; ct := date_trunc('month', p_from)::date;
-  else cf := pf; ct := p_from; end if;
+  if has_ly then cf := yf; ct := yt; else cf := pf; ct := p_from; end if;
 
   with
   rr as (
     select r.*, (r.start_at at time zone 'Asia/Riyadh') lt, greatest(cardinality(coalesce(r.provider_ids, '{}')), 1) pc
-    from public.rekaz_reservations r where r.start_at >= private.rd(p_from) and r.start_at < private.rd(d1)),
+    from public.rekaz_reservations r where r.start_at >= t_from and r.start_at < t_end),
   rp as (
     select r.product_id, r.total from public.rekaz_reservations r
-    where r.status = 'confirmed' and r.start_at >= private.rd(pf) and r.start_at < private.rd(p_from)),
+    where r.status = 'confirmed' and r.start_at >= private.rd(pf) and r.start_at < least(private.rd(p_from), private.rd(pf) + el)),
   pc as (select * from private.rk_prod_cat()),
   svc as (
     select rr.product_id, max(rr.product_name) name, max(pc.cat) cat, max(pc.grp) grp, count(*) n, sum(rr.total) v,
@@ -145,7 +158,7 @@ begin
   prov_prev as (
     select pid, coalesce(sum(r.total / greatest(cardinality(r.provider_ids), 1)), 0) v
     from public.rekaz_reservations r, unnest(coalesce(r.provider_ids, '{}')) pid
-    where r.status = 'confirmed' and r.start_at >= private.rd(pf) and r.start_at < private.rd(p_from) group by pid),
+    where r.status = 'confirmed' and r.start_at >= private.rd(pf) and r.start_at < least(private.rd(p_from), private.rd(pf) + el) group by pid),
   prov_ret as (  -- عميلات رجعوا لنفس الأخصائية
     select pr.pid, count(distinct pr.customer_id) filter (where exists (
       select 1 from public.rekaz_reservations x where x.customer_id = pr.customer_id and x.status = 'confirmed'
@@ -165,9 +178,10 @@ begin
     'from', p_from, 'to', p_to, 'unit', case when monthly then 'month' else 'day' end,
     'cmp_kind', case when has_ly then 'ly' else 'prev' end, 'first_day', first_day,
     'synced_at', (select max(finished_at) from public.rekaz_sync_log where ok),
-    'k', private.sd_kpi(p_from, d1),
-    'kp', private.sd_kpi(pf, p_from),
-    'ky', case when has_ly then private.sd_kpi(yf, yt) end,
+    'k', private.sd_kpi_t(t_from, t_end),
+    'kp', private.sd_kpi_t(private.rd(pf), least(private.rd(p_from), private.rd(pf) + el)),
+    'ky', case when has_ly then private.sd_kpi_t(private.rd(yf), least(private.rd(yt), private.rd(yf) + el)) end,
+    'partial', t_end < private.rd(d1),
     'series', private.sd_series(p_from, d1, monthly),
     'cmp', private.sd_series(cf, ct, monthly),
     'services', coalesce((select jsonb_agg(jsonb_build_object('id', product_id, 'name', name, 'cat', cat, 'grp', grp, 'n', n, 'v', v, 'cl', cl, 'pv', pv, 'pn', pn) order by v desc) from svc), '[]'::jsonb),
@@ -236,7 +250,7 @@ begin
     'now', now(), 'today', today,
     'synced_at', (select max(finished_at) from public.rekaz_sync_log where ok),
     'k', private.sd_kpi(today, today + 1),
-    'kw', private.sd_kpi(today - 7, today - 6),
+    'kw', private.sd_kpi_t(private.rd(today - 7), now() - interval '7 days'),
     'hours', (select coalesce(jsonb_agg(jsonb_build_object('h', h, 't', t, 'w', w) order by h), '[]'::jsonb) from (
         select g h,
           (select coalesce(sum(case when type = 'refund' then -amount else amount end), 0) from public.rekaz_transactions
@@ -252,9 +266,9 @@ begin
         where status = 'confirmed' and start_at >= private.rd(today - 6) and start_at < private.rd(today + 1)),
     'rest_month', (select jsonb_build_object('n', count(*), 'v', coalesce(sum(total), 0)) from public.rekaz_reservations
         where status in ('confirmed', 'pending') and start_at >= now() and start_at < private.rd(me)),
-    'mtd', private.sd_kpi(ms, today + 1),
+    'mtd', private.sd_kpi_t(private.rd(ms), now()),
     'last_month', private.sd_kpi((ms - interval '1 month')::date, ms),
-    'lm_same', private.sd_kpi((ms - interval '1 month')::date, least((today - interval '1 month')::date + 1, ms)),
+    'lm_same', private.sd_kpi_t(private.rd((ms - interval '1 month')::date), least(private.rd(ms), now() - interval '1 month')),
     'month_days', me - ms, 'day_of_month', today - ms + 1,
     'target', (select revenue from public.fin_targets where month = ms),
     'recent', coalesce((select jsonb_agg(jsonb_build_object('at', t.processed_at, 'v', t.amount, 'type', t.type, 'm', t.method, 'name', o.customer_name) order by t.processed_at desc)

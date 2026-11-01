@@ -4236,7 +4236,7 @@
   const LENS_THIS = { d: 'هذا اليوم', w: 'هذا الأسبوع', m: 'هذا الشهر', q: 'هذا الربع', y: 'هذي السنة' };
 
   /* ======================= لوحة المبيعات ======================= */
-  const SD_LENSES = [['d', 'اليوم'], ['w', 'الأسبوع'], ['m', 'الشهر'], ['q', 'الربع'], ['y', 'السنة'], ['c', 'فترة مخصصة']];
+  const SD_LENSES = [['d', 'اليوم'], ['w', 'الأسبوع'], ['m', 'الشهر'], ['q', 'الربع'], ['y', 'السنة'], ['c', 'مخصص']];
   const SD_TABS = [['sales', 'المبيعات'], ['svc', 'الخدمات'], ['team', 'الأخصائيات'], ['clients', 'العميلات'], ['time', 'أوقات الذروة'], ['profit', 'الربح الصافي']];
   const SD_GRP = { hair: 'الشعر', nails: 'الأظافر', face: 'خدمات الوجه', lashes: 'الرموش والحواجب', makeup: 'المكياج', other: 'الباقات والعروض' };
   const SD_METH = { point_of_sales: 'شبكة (مدى وفيزا)', cash: 'كاش', bank_transfer: 'تحويل بنكي', buy_now_pay_later: 'تابي وتمارا', online: 'دفع إلكتروني', other: 'أخرى' };
@@ -4287,7 +4287,7 @@
 
     /* ---------- البطل ---------- */
     const spark = (() => {
-      const S = r.series; if (S.length < 2) return '';
+      const S = r.series.filter((x) => x.k <= todayR()); if (S.length < 2) return '';
       const mx = Math.max(1, ...S.map((x) => Number(x.c)));
       const pts = S.map((x, i) => [(i / (S.length - 1)) * 100, 96 - (Number(x.c) / mx) * 86]);
       const line = pts.map((p) => p.join(',')).join(' ');
@@ -4347,7 +4347,7 @@
 
         <div class="fin-hero sd-hero">
           <div class="fin-hero-top"><span data-tip="المدفوعات اللي دخلت فعلًا في الفترة ناقص المسترجع، نفس رقم «صافي المبالغ المدفوعة» في ركاز">صافي المحصّل ⓘ</span>
-            <span class="sd-chips">${sdChip(K.collected, KP.collected, { tip: `${SD_PREV[lens]}: ${sar(KP.collected)} ر.س` }).replace('</span>', ` عن ${SD_PREV[lens]}</span>`)}${KY ? sdChip(K.collected, KY.collected, { tip: `السنة الماضية: ${sar(KY.collected)} ر.س` }).replace('</span>', ' عن السنة الماضية</span>') : ''}</span></div>
+            <span class="sd-chips">${sdChip(K.collected, KP.collected, { tip: `${r.partial ? 'لين نفس الوقت من ' : ''}${SD_PREV[lens]}: ${sar(KP.collected)} ر.س` }).replace('</span>', ` عن ${r.partial ? 'نفس الوقت ' : ''}${SD_PREV[lens]}</span>`)}${KY ? sdChip(K.collected, KY.collected, { tip: `السنة الماضية: ${sar(KY.collected)} ر.س` }).replace('</span>', ' عن السنة الماضية</span>') : ''}</span></div>
           <div class="fin-net num">${sar(K.collected)} <small>ر.س</small></div>
           ${spark}
           ${tgtHtml}

@@ -262,7 +262,7 @@ begin
         where today - c.last > greatest(35, c.gap * 1.8) and today - c.last <= 240
           and not exists (select 1 from public.rekaz_reservations f where f.customer_id = c.customer_id and f.start_at > now() and f.status <> 'cancelled'))
       select jsonb_build_object('n', (select count(*) from risk),
-        'monthly_value', (select coalesce(round(sum(spend / greatest((last - first)::numeric / 30, 1))), 0) from risk),
+        'spend', (select coalesce(round(sum(spend)), 0) from risk),
         'list', coalesce((select jsonb_agg(jsonb_build_object('id', r.customer_id, 'name', cu.name, 'phone', cu.phone, 'visits', r.visits, 'spend', r.spend,
               'last', r.last, 'since', r.since, 'gap', round(r.gap), 'fav', r.fav) order by r.spend desc)
             from (select * from risk order by spend desc limit 40) r left join public.rekaz_customers cu on cu.id = r.customer_id), '[]'::jsonb))),

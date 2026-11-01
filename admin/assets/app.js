@@ -117,6 +117,7 @@
 
   /* ======================= icons ======================= */
   const I = {
+    kit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M3 12h18M10 12v2h4v-2"/></svg>',
     wrench: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-3-3 8-8-1.3-1.3a4 4 0 0 0-5-5L13 5z"/><path d="M3 21l6-6"/></svg>',
     shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
@@ -276,33 +277,16 @@
 
   /* ======================= shell & router ======================= */
   function navLinks() {
-    const L = [
-      { href: '#/home', label: 'الرئيسية', icon: I.home, key: 'home' },
-      { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
+    const M = isManager(), A = isAdmin();
+    const G = [
+      ['اليوم', [['home', 'الرئيسية', I.home], ['bookings', 'الحجوزات المنزلية', I.cal]]],
+      ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['finance', 'المالية', I.coin]]],
+      ['الفريق والتشغيل', [['team', 'الفريق', I.users], ['ops', 'التشغيل', I.check], ['assets', 'الأصول والصيانة', I.wrench], ['rules', 'قواعد بيوتفريش', I.shield]]],
+      ['المخزون', [['items', 'الأصناف', I.box], ['issue', 'صرف من المخزون', I.out], ['invoices', 'فواتير الشراء', I.invoice], ['shopping', 'قائمة المشتريات', I.cart], ['movements', 'سجل الحركات', I.list], M && ['reports', 'التقارير', I.chart]]],
+      ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
     ];
-    L.push({ href: '#/clients', label: 'العميلات', icon: I.heart, key: 'clients' });
-    L.push({ href: '#/rules', label: 'قواعد بيوتفريش', icon: I.shield, key: 'rules' });
-    L.push({ href: '#/ops', label: 'التشغيل', icon: I.check, key: 'ops' });
-    L.push({ href: '#/assets', label: 'الأصول والصيانة', icon: I.wrench, key: 'assets' });
-    L.push({ href: '#/team', label: 'الفريق', icon: I.users, key: 'team' });
-    L.push({ href: '#/marketing', label: 'التسويق', icon: I.mega, key: 'marketing' });
-    if (isManager()) L.push({ href: '#/finance', label: 'المالية', icon: I.coin, key: 'finance' });
-    L.push(
-      { sep: true },
-      { href: '#/items', label: 'الأصناف', icon: I.box, key: 'items' },
-      { href: '#/issue', label: 'صرف من المخزون', icon: I.out, key: 'issue' },
-      { href: '#/invoices', label: 'فواتير الشراء', icon: I.invoice, key: 'invoices' },
-      { sep: true },
-      { href: '#/shopping', label: 'قائمة المشتريات', icon: I.cart, key: 'shopping' },
-      { href: '#/movements', label: 'سجل الحركات', icon: I.list, key: 'movements' },
-    );
-    if (isManager()) L.push({ href: '#/reports', label: 'التقارير', icon: I.chart, key: 'reports' });
-    if (isAdmin()) {
-      L.push({ sep: true });
-      L.push({ href: '#/users', label: 'المستخدمين', icon: I.users, key: 'users' });
-      L.push({ href: '#/catalog', label: 'الفئات والموردين', icon: I.tag, key: 'catalog' });
-      L.push({ href: '#/more', label: 'الإعدادات', icon: I.key, key: 'more' });
-    }
+    const L = [];
+    G.forEach(([g, its]) => { L.push({ group: g }); its.filter(Boolean).forEach(([k, l, ic]) => L.push({ href: `#/${k}`, label: l, icon: ic, key: k, group: g })); });
     return L;
   }
 
@@ -312,7 +296,7 @@
       <div class="shell">
         <aside class="sidebar">
           <div class="brand"><img class="logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><span>لوحة الإدارة</span></div>
-          <nav>${navLinks().map((l) => l.sep ? '<div class="sep"></div>' : `<a href="${l.href}" data-nav="${l.key}"><span class="ic">${l.icon}</span>${l.label}</a>`).join('')}</nav>
+          <nav>${navLinks().map((l) => !l.href ? `<div class="nav-g">${l.group}</div>` : `<a href="${l.href}" data-nav="${l.key}"><span class="ic">${l.icon}</span>${l.label}</a>`).join('')}</nav>
           <div class="foot">
             <div style="color:#fff;font-weight:600">${esc(p.full_name || p.login)}</div>
             <div>${ROLE_LABEL[p.role]}</div>
@@ -330,8 +314,8 @@
           <a href="#/home" data-nav="home"><span class="ic">${I.home}</span>الرئيسية</a>
           <a href="#/bookings" data-nav="bookings"><span class="ic">${I.cal}</span>الحجوزات</a>
           <a href="#/issue" data-nav="issue" class="primary"><span class="ic">${I.out}</span>صرف</a>
-          <a href="#/invoices" data-nav="invoices"><span class="ic">${I.invoice}</span>الفواتير</a>
-          <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>الإعدادات</a>
+          <a href="#/clients" data-nav="clients"><span class="ic">${I.heart}</span>العميلات</a>
+          <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>المزيد</a>
         </nav>
       </div>`;
     $('[data-act=out]').onclick = () => sb.auth.signOut();
@@ -380,6 +364,7 @@
     reports: { title: 'التقارير', nav: 'reports', fn: pageReports, manager: true },
     users: { title: 'المستخدمين', nav: 'users', fn: pageUsers, admin: true },
     catalog: { title: 'الفئات والموردين', nav: 'catalog', fn: pageCatalog, admin: true },
+    kit: { title: 'عُدّة بيوتفريش', nav: 'kit', fn: pageKit },
     more: { title: 'الإعدادات', nav: 'more', fn: pageMore },
   };
 
@@ -1495,15 +1480,16 @@
 
   /* ---------- more (mobile) ---------- */
   async function pageMore(view) {
-    const links = navLinks().filter((l) => !l.sep && !['home', 'bookings', 'issue', 'invoices', 'more'].includes(l.key));
+    const links = navLinks().filter((l) => l.href && !['home', 'more'].includes(l.key));
+    const groups = [...new Set(links.map((l) => l.group))];
     view.innerHTML = `
       <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
         <span class="avatar" style="width:44px;height:44px;font-size:18px">${esc(initial(S.profile.full_name || S.profile.login))}</span>
         <div><div style="font-weight:700">${esc(S.profile.full_name || S.profile.login)}</div><div class="muted small">${ROLE_LABEL[S.profile.role]}</div></div>
       </div>
       <div id="push-box"></div>
-      <div class="list">
-        ${links.map((l) => `<a class="row" href="${l.href}"><span class="ic" style="color:var(--accent)">${l.icon}</span><div class="grow title">${l.label}</div></a>`).join('')}
+      ${groups.map((g) => `<div class="svc-cat-h">${g}</div><div class="more-grid">${links.filter((l) => l.group === g).map((l) => `<a class="mtile" href="${l.href}"><span class="ic">${l.icon}</span><b>${l.label}</b></a>`).join('')}</div>`).join('')}
+      <div class="list mt">
         <a class="row" href="install.html"><span class="ic" style="color:var(--accent)">${I.home}</span><div class="grow title">ثبّت التطبيق على الجوال</div></a>
         <button class="row" id="m-pw"><span class="ic" style="color:var(--accent)">${I.key}</span><div class="grow title">تغيير كلمة المرور</div></button>
         <button class="row" id="m-out"><span class="ic" style="color:var(--danger)">${I.logout}</span><div class="grow title" style="color:var(--danger)">تسجيل الخروج</div></button>
@@ -3120,7 +3106,8 @@
       <div class="gr-body">${guideHTML(g)}
         <div class="gr-sign">${signed ? `<div class="gs-done">✓ موقّع على الإصدار ${AR_NUM(g.version)}</div>` : `<button class="btn primary" data-sign>قرأت الدليل وألتزم فيه</button>${mine ? `<p class="muted small">الدليل انعدّل بعد توقيعك، والإصدار الجديد يحتاج توقيع.</p>` : ''}`}</div></div>`;
     document.body.appendChild(ov); document.body.classList.add('noscroll');
-    const close = () => { ov.remove(); document.body.classList.remove('noscroll'); };
+    const close = () => { ov.remove(); document.body.classList.remove('noscroll'); window.removeEventListener('hashchange', close); };
+    window.addEventListener('hashchange', close);
     $('[data-x]', ov).onclick = close;
     $('[data-pr]', ov).onclick = () => { document.body.classList.add('printing-guide'); window.print(); setTimeout(() => document.body.classList.remove('printing-guide'), 500); };
     $('[data-ed]', ov)?.addEventListener('click', () => { close(); guideForm(g); });
@@ -3340,6 +3327,242 @@
         try { if (s) await q(sb.from('subscriptions').update(row).eq('id', s.id)); else await q(sb.from('subscriptions').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
       });
       $('#sf2-del', el)?.addEventListener('click', async () => { try { await q(sb.from('subscriptions').delete().eq('id', s.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+    });
+  }
+
+  /* ======================= عُدّة بيوتفريش ======================= */
+  const KF = [
+    ['الهوية', [['brand', 'الاسم التجاري'], ['brand_en', 'الاسم بالإنجليزي'], ['legal_name', 'اسم المنشأة في السجل'], ['tagline', 'الشعار النصي']]],
+    ['النظامية', [['cr', 'رقم السجل التجاري'], ['vat', 'الرقم الضريبي'], ['national_address', 'العنوان الوطني'], ['short_address', 'الرمز المختصر'], ['city', 'المدينة']]],
+    ['التواصل', [['phone', 'الجوال'], ['whatsapp', 'واتساب'], ['instagram', 'انستقرام'], ['tiktok', 'تيك توك'], ['snap', 'سناب'], ['hours', 'أوقات الدوام']]],
+    ['الروابط', [['site', 'الموقع'], ['booking', 'رابط الحجز (ركاز)'], ['home_booking', 'حجز الخدمات المنزلية'], ['maps', 'الموقع على الخريطة'], ['review', 'رابط تقييم قوقل']]],
+    ['البنك', [['bank_name', 'البنك'], ['beneficiary', 'اسم المستفيد'], ['iban', 'الآيبان']]],
+  ];
+  const MCAT = { booking: 'الحجز', visit: 'بعد الزيارة', service: 'العناية', issues: 'المواقف الصعبة', seasons: 'المناسبات', team: 'الفريق' };
+  let KIT = null;
+  async function kitProfile(force) { if (!KIT || force) KIT = (await q(sb.from('kit_profile').select('data').eq('id', 1).maybeSingle()))?.data || {}; return KIT; }
+  let qrReady = null;
+  const loadQR = () => qrReady || (qrReady = new Promise((res, rej) => { const s = document.createElement('script'); s.src = '../vendor/qrcode.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }));
+  function qrSVG(text, color = '#5A2A22') {
+    const qr = window.qrcode(0, 'M'); qr.addData(unescape(encodeURIComponent(text))); qr.make();
+    const n = qr.getModuleCount(); let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
+    return `<svg class="qr" viewBox="-2 -2 ${n + 4} ${n + 4}" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff" rx="2"/><path d="${d}" fill="${color}"/></svg>`;
+  }
+  const waLinkOf = (num, text) => `https://wa.me/${waNum(num)}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+  const igLink = (h) => (h ? `https://instagram.com/${String(h).replace(/^@/, '')}` : '');
+  function copyTxt(t, label) { navigator.clipboard?.writeText(t).then(() => toast(`انسخ${label ? ': ' + label : ''}`), () => toast('ما قدرنا ننسخ', true)); }
+  function paper(title, html, opts = {}) {
+    const ov = document.createElement('div'); ov.className = 'greader';
+    ov.innerHTML = `<div class="gr-bar"><button class="icon-btn" data-x>×</button><b>${esc(title)}</b><span style="flex:1"></span>${opts.extra || ''}<button class="btn sm primary" data-pr>طباعة / PDF</button></div><div class="gr-body">${html}</div>`;
+    document.body.appendChild(ov); document.body.classList.add('noscroll');
+    const close = () => { ov.remove(); document.body.classList.remove('noscroll'); window.removeEventListener('hashchange', close); };
+    window.addEventListener('hashchange', close);
+    $('[data-x]', ov).onclick = close;
+    $('[data-pr]', ov).onclick = () => { document.body.classList.add('printing-guide'); window.print(); setTimeout(() => document.body.classList.remove('printing-guide'), 500); };
+    opts.mount && opts.mount(ov, close);
+    return close;
+  }
+
+  async function pageKit(view, _a, params, alive) {
+    const tab = params.get('t') || 'card';
+    const tabs = [['card', 'بطاقة المنشأة'], ['msgs', 'رسائل جاهزة'], ['forms', 'النماذج'], ['gifts', 'قسائم الهدايا']];
+    const head = `<div class="kit-intro"><span class="sh-eyebrow">كل ما تحتاجونه، في مكان واحد</span><h1>عُدّة بيوتفريش</h1></div>
+      <div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/kit?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
+    const [K] = await Promise.all([kitProfile(true), loadQR().catch(() => null)]);
+    if (!alive()) return;
+    if (tab === 'msgs') return kitMsgs(view, K, head, params, alive);
+    if (tab === 'forms') return kitForms(view, K, head);
+    if (tab === 'gifts') return kitGifts(view, K, head, alive);
+    const qrT = [['booking', 'الحجز', K.booking], ['review', 'تقييم قوقل', K.review], ['maps', 'الموقع', K.maps], ['whatsapp', 'واتساب', K.whatsapp ? waLinkOf(K.whatsapp) : ''], ['instagram', 'انستقرام', igLink(K.instagram)], ['home', 'الخدمات المنزلية', K.home_booking]].filter((x) => x[2]);
+    const sel = params.get('qr') && qrT.find((x) => x[0] === params.get('qr')) ? params.get('qr') : qrT[0]?.[0];
+    const cur = qrT.find((x) => x[0] === sel);
+    view.innerHTML = `${head}
+      <div class="kit-top">
+        <div class="bcard"><div class="bc-front"><img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><span>${esc(K.tagline || 'The Fresh Version of You')}</span><i></i></div>
+          <div class="bc-back"><b>${esc(K.legal_name || K.brand || 'بيوتفريش')}</b>${K.phone ? `<span dir="ltr">${esc(K.phone)}</span>` : ''}${K.instagram ? `<span dir="ltr">@${esc(String(K.instagram).replace(/^@/, ''))}</span>` : ''}${K.site ? `<span dir="ltr">${esc(K.site.replace(/^https?:\/\//, ''))}</span>` : ''}${K.hours ? `<span>${esc(K.hours)}</span>` : ''}</div></div>
+        ${cur && window.qrcode ? `<div class="qr-panel"><div class="chips wrap">${qrT.map(([k, l]) => `<a class="chip ${k === sel ? 'on' : ''}" href="#/kit?qr=${k}">${l}</a>`).join('')}</div>
+          <div class="qr-box">${qrSVG(cur[2])}<div><b>${cur[1]}</b><span dir="ltr">${esc(cur[2].replace(/^https?:\/\//, '').slice(0, 44))}</span><div class="actions" style="margin-top:10px"><button class="btn sm" id="qr-png">تحميل PNG</button><button class="btn sm" id="qr-copy">نسخ الرابط</button></div></div></div></div>` : ''}
+      </div>
+      <div class="kf-grid">${KF.map(([g, fs]) => `<div class="kf"><div class="kf-h"><b>${g}</b>${isManager() ? `<button class="tgt-edit" data-kg="${g}" style="color:var(--muted)">${I.edit}</button>` : ''}</div>${fs.map(([k, l]) => `<div class="kf-r ${K[k] ? '' : 'empty'}"><span>${l}</span><b ${/^(phone|whatsapp|iban|cr|vat|site|booking|home_booking|maps|review|instagram|tiktok|snap|short_address)$/.test(k) ? 'dir="ltr"' : ''}>${K[k] ? esc(K[k]) : '—'}</b>${K[k] ? `<button class="cp" data-cp="${k}" aria-label="نسخ">⧉</button>` : ''}</div>`).join('')}</div>`).join('')}</div>
+      ${isManager() ? `<p class="muted small mt">هذي البيانات تتعبّى لحالها في الرسائل والنماذج والقسائم.</p>` : ''}`;
+    $$('[data-cp]', view).forEach((b) => b.onclick = () => copyTxt(K[b.dataset.cp], KF.flatMap((x) => x[1]).find((x) => x[0] === b.dataset.cp)[1]));
+    $$('[data-kg]', view).forEach((b) => b.onclick = () => kitEdit(KF.find((x) => x[0] === b.dataset.kg)));
+    $('#qr-copy')?.addEventListener('click', () => copyTxt(cur[2], cur[1]));
+    $('#qr-png')?.addEventListener('click', () => {
+      const svg = $('.qr-box .qr', view).outerHTML.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"');
+      const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 1024; c.getContext('2d').drawImage(img, 0, 0); const a = document.createElement('a'); a.download = `beautfresh-qr-${sel}.png`; a.href = c.toDataURL('image/png'); a.click(); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+
+  function kitEdit([g, fs]) {
+    const K = KIT || {};
+    modal(`<h3>${g}</h3>${fs.map(([k, l]) => `<div class="field"><label>${l}</label><input class="input" data-k="${k}" value="${esc(K[k] || '')}" ${/^(phone|whatsapp|iban|cr|vat|site|booking|home_booking|maps|review|instagram|tiktok|snap|short_address)$/.test(k) ? 'dir="ltr"' : ''} maxlength="200"></div>`).join('')}
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="ke-s">حفظ</button></div>`, (el, close) => {
+      $('#ke-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const data = { ...K }; $$('[data-k]', el).forEach((i) => { const v = i.value.trim(); if (v) data[i.dataset.k] = v; else delete data[i.dataset.k]; });
+        try { await q(sb.from('kit_profile').upsert({ id: 1, data, updated_at: new Date().toISOString() })); KIT = data; toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  function fillMsg(body, vals) { return body.replace(/\{([^}]+)\}/g, (m, k) => (vals[k] != null && vals[k] !== '' ? vals[k] : m)); }
+  async function kitMsgs(view, K, head, params, alive) {
+    const cat = params.get('c') || 'all';
+    const rows = await q(sb.from('kit_messages').select('*').order('cat').order('sort'));
+    if (!alive()) return;
+    const shown = cat === 'all' ? rows : rows.filter((m) => m.cat === cat);
+    view.innerHTML = `${head}
+      <div class="chips wrap" style="margin-bottom:12px"><a class="chip ${cat === 'all' ? 'on' : ''}" href="#/kit?t=msgs">الكل</a>${Object.entries(MCAT).map(([k, l]) => `<a class="chip ${k === cat ? 'on' : ''}" href="#/kit?t=msgs&c=${k}">${l}</a>`).join('')}</div>
+      ${isManager() ? `<div class="actions" style="margin-bottom:12px"><button class="btn sm" id="km-new">${I.plus} رسالة</button></div>` : ''}
+      <div class="msg-grid">${shown.map((m, i) => `<button class="mcard" data-m="${m.id}" style="--d:${i * 40}ms"><span class="mc-cat">${MCAT[m.cat]}</span><b>${esc(m.title)}</b><p>${esc(m.body.slice(0, 120))}${m.body.length > 120 ? '…' : ''}</p></button>`).join('')}</div>
+      <p class="muted small mt">الكلمات بين { } تتعبّى لحالها من بيانات المنشأة، أو تكتبونها وقت الإرسال.</p>`;
+    $('#km-new')?.addEventListener('click', () => msgEdit(null));
+    $$('[data-m]', view).forEach((b) => b.onclick = () => composeMsg(rows.find((m) => m.id === Number(b.dataset.m)), K));
+  }
+
+  function composeMsg(m, K, preset = {}) {
+    const auto = { 'الموقع': K.maps || '', 'رابط_الحجز': K.booking || '', 'رابط_التقييم': K.review || '', 'الدوام': K.hours || '', ...preset };
+    const keys = [...new Set([...m.body.matchAll(/\{([^}]+)\}/g)].map((x) => x[1]))];
+    let phone = preset._phone || '';
+    modal(`
+      <span class="mc-cat">${MCAT[m.cat]}</span><h3 style="margin-top:6px">${esc(m.title)}</h3>
+      <div class="field"><label>العميلة</label><div class="cl-pick"><input class="input" id="cm-q" placeholder="ابحث بالاسم أو الجوال" autocomplete="off"><div class="cl-res" id="cm-r"></div></div></div>
+      ${keys.length ? `<div class="grid2">${keys.map((k) => `<div class="field"><label>${k.replace(/_/g, ' ')}</label><input class="input" data-ph="${k}" value="${esc(auto[k] || '')}"></div>`).join('')}</div>` : ''}
+      <div class="wa-prev"><div class="wa-bub" id="cm-p"></div></div>
+      <div class="actions end">${isManager() ? '<button class="btn" id="cm-ed">تعديل النص</button><span style="flex:1"></span>' : ''}<button class="btn" id="cm-cp">نسخ</button><a class="btn primary" id="cm-wa" target="_blank" rel="noopener">${I.wa} واتساب</a></div>`, (el, close) => {
+      const vals = () => { const v = { ...auto }; $$('[data-ph]', el).forEach((i) => { v[i.dataset.ph] = i.value.trim(); }); return v; };
+      const upd = () => { const t = fillMsg(m.body, vals()); $('#cm-p', el).innerHTML = esc(t).replace(/\{([^}]+)\}/g, '<mark>{$1}</mark>').replace(/\n/g, '<br>'); $('#cm-wa', el).href = phone ? waLinkOf(phone, t) : `https://wa.me/?text=${encodeURIComponent(t)}`; };
+      el.addEventListener('input', upd); upd();
+      let pool = null, tmr;
+      $('#cm-q', el).addEventListener('input', (e) => { clearTimeout(tmr); tmr = setTimeout(async () => {
+        const t = e.target.value.trim(); const box = $('#cm-r', el); if (t.length < 2) { box.innerHTML = ''; return; }
+        if (!pool) pool = await q(sb.from('clients').select('id,name,phone').limit(3000)).catch(() => []);
+        const res = pool.filter((c) => c.name.includes(t) || (c.phone || '').includes(t)).slice(0, 6);
+        box.innerHTML = res.map((c) => `<button type="button" data-c="${c.id}">${esc(c.name)} <span dir="ltr">${esc(c.phone || '')}</span></button>`).join('') || '<span class="muted small">ما فيه نتائج</span>';
+        $$('[data-c]', box).forEach((b) => b.onclick = () => { const c = pool.find((x) => x.id === Number(b.dataset.c)); phone = c.phone || ''; $('#cm-q', el).value = c.name; box.innerHTML = ''; const n = $('[data-ph="الاسم"]', el); if (n) n.value = firstName(c.name); upd(); });
+      }, 200); });
+      if (preset['الاسم']) $('#cm-q', el).value = preset['الاسم'];
+      $('#cm-cp', el).onclick = () => copyTxt(fillMsg(m.body, vals()), 'الرسالة');
+      $('#cm-ed', el)?.addEventListener('click', () => { close(); msgEdit(m); });
+    });
+  }
+
+  function msgEdit(m) {
+    modal(`<h3>${m ? 'تعديل الرسالة' : 'رسالة جديدة'}</h3>
+      <div class="grid2"><div class="field"><label>العنوان</label><input class="input" id="me-t" maxlength="80" value="${esc(m?.title || '')}"></div><div class="field"><label>التصنيف</label><select class="input" id="me-c">${Object.entries(MCAT).map(([k, l]) => `<option value="${k}" ${k === m?.cat ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
+      <div class="field"><label>النص</label><textarea class="input" id="me-b" rows="8" maxlength="1500">${esc(m?.body || 'هلا {الاسم} 🤍\n')}</textarea><p class="muted small" style="margin:6px 0 0">جاهزة تتعبّى لحالها: {الاسم} {الموقع} {رابط_الحجز} {رابط_التقييم} {الدوام}. وأي كلمة ثانية بين { } تنكتب وقت الإرسال.</p></div>
+      <div class="actions end">${m ? '<button class="btn danger" id="me-d">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="me-s">حفظ</button></div>`, (el, close) => {
+      $('#me-s', el).onclick = (e) => busy(e.currentTarget, async () => { const row = { title: $('#me-t', el).value.trim(), cat: $('#me-c', el).value, body: $('#me-b', el).value.trim() }; if (row.title.length < 2 || row.body.length < 2) return toast('اكتبوا العنوان والنص', true); try { if (m) await q(sb.from('kit_messages').update(row).eq('id', m.id)); else await q(sb.from('kit_messages').insert(row)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+      $('#me-d', el)?.addEventListener('click', async () => { try { await q(sb.from('kit_messages').delete().eq('id', m.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+    });
+  }
+
+  const FORMS = [
+    ['consult', 'استمارة العميلة والموافقة', 'الحساسية، والتفضيلات، وموافقة التصوير والرسائل', '📝'],
+    ['steril', 'سجل التعقيم الأسبوعي', 'يتعلّق جنب جهاز التعقيم، وتوقّع عليه الأخصائية', '🧼'],
+    ['counter', 'بطاقة طاولة الاستقبال', 'باركود الحجز والتقييم، بهوية الصالون', '🔳'],
+    ['custody', 'نموذج استلام عهدة', 'الأدوات والأجهزة اللي تستلمها الموظفة', '🧰'],
+    ['privacy', 'تعهد الخصوصية والسرية', 'خصوصية العميلات وصورهن وبياناتهن', '🤍'],
+  ];
+  function kitForms(view, K, head) {
+    view.innerHTML = `${head}<div class="form-grid">${FORMS.map(([k, t, d, e], i) => `<button class="fcard" data-f="${k}" style="--d:${i * 50}ms"><div class="fc-paper"><span>${e}</span><i></i><i></i><i></i></div><b>${t}</b><span>${d}</span></button>`).join('')}</div>
+      <p class="muted small mt">النماذج تتعبّى ببيانات المنشأة وتنطبع على A4. قوالب للاستئناس، وراجعوا أي صيغة نظامية مع مختص.</p>`;
+    $$('[data-f]', view).forEach((b) => b.onclick = () => openForm(b.dataset.f, K));
+  }
+  function formHead(K, title, sub) {
+    return `<header class="pp-h"><img src="../home/assets/Beautfresh-brown.svg" alt=""><div><h1>${esc(title)}</h1>${sub ? `<span>${esc(sub)}</span>` : ''}</div><div class="pp-meta">${esc(K.legal_name || K.brand || 'بيوتفريش')}${K.cr ? `<br>س.ت ${esc(K.cr)}` : ''}${K.phone ? `<br><span dir="ltr">${esc(K.phone)}</span>` : ''}</div></header>`;
+  }
+  const lines = (n) => Array.from({ length: n }, () => '<div class="pp-line"></div>').join('');
+  function openForm(k, K) {
+    const ft = FORMS.find((f) => f[0] === k)[1];
+    let html = '';
+    if (k === 'consult') html = `<div class="pp">${formHead(K, ft, 'تُعبّى في أول زيارة، وتُحدّث إذا تغيّر شي')}
+      <div class="pp-2"><div><label>الاسم</label>${lines(1)}</div><div><label>الجوال</label>${lines(1)}</div></div>
+      <div class="pp-2"><div><label>تاريخ الميلاد (اختياري)</label>${lines(1)}</div><div><label>كيف عرفتينا؟</label><div class="pp-opts">${['انستقرام', 'تيك توك', 'سناب', 'صديقة', 'مرّيت', 'غير'].map((x) => `<span>▢ ${x}</span>`).join('')}</div></div></div>
+      <h2>الصحة والحساسية</h2><div class="pp-q">${['عندك حساسية من أي منتج أو مادة؟', 'سبق صار عندك تهيّج من صبغة أو جيل أو أكريليك؟', 'حامل أو مرضعة؟', 'تستخدمين أدوية أو كريمات للبشرة حاليًا؟', 'عندك جرح أو التهاب في المنطقة اللي بنشتغل عليها؟'].map((x) => `<div><span>${x}</span><span class="pp-yn">▢ لا &nbsp; ▢ نعم</span></div>`).join('')}</div>
+      <label>تفاصيل</label>${lines(2)}
+      <h2>اختبار الحساسية للصبغة</h2><div class="pp-2"><div><label>تاريخ الاختبار</label>${lines(1)}</div><div><label>النتيجة</label><div class="pp-opts"><span>▢ سليم</span><span>▢ ظهر تهيّج</span></div></div></div>
+      <h2>تفضيلاتك</h2>${lines(2)}
+      <h2>موافقاتك</h2><div class="pp-q">${['أوافق على تصوير النتيجة ونشرها بدون إظهار وجهي', 'أوافق على تصوير النتيجة ونشرها مع وجهي', 'أوافق إن بيوتفريش ترسل لي عروض ومناسبات على الواتساب'].map((x) => `<div><span>${x}</span><span class="pp-yn">▢ نعم &nbsp; ▢ لا</span></div>`).join('')}</div>
+      <p class="pp-small">أقرّ إن المعلومات صحيحة، وأبلّغ الصالون بأي تغيير. بياناتك تُستخدم لخدمتك فقط وما تُشارك مع أحد.</p>
+      <div class="pp-sign"><div><label>توقيع العميلة</label>${lines(1)}</div><div><label>التاريخ</label>${lines(1)}</div><div><label>الأخصائية</label>${lines(1)}</div></div></div>`;
+    else if (k === 'steril') html = `<div class="pp land">${formHead(K, ft, 'الأسبوع: ____ / ____ / ________')}
+      <table class="pp-t"><thead><tr><th>اليوم</th><th>تجهيز المحلول</th><th>دورة الجهاز ١</th><th>دورة الجهاز ٢</th><th>دورة الجهاز ٣</th><th>تعقيم آخر اليوم</th><th>الأدوات أحادية الاستعمال انرمت</th><th>التوقيع</th></tr></thead>
+      <tbody>${['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'].map((d) => `<tr><td>${d}</td>${'<td></td>'.repeat(7)}</tr>`).join('')}</tbody></table>
+      <p class="pp-small">كل دورة تُكتب بوقتها (مثلًا ١١:٢٠) وتوقّع عليها اللي شغّلتها. أي خلل في الجهاز يُبلّغ عنه من التطبيق فورًا.</p>
+      <div class="pp-sign"><div><label>مراجعة المديرة</label>${lines(1)}</div><div><label>التاريخ</label>${lines(1)}</div></div></div>`;
+    else if (k === 'counter') {
+      const qa = K.booking && window.qrcode ? qrSVG(K.booking) : '', qb = K.review && window.qrcode ? qrSVG(K.review) : '';
+      html = `<div class="pp tent"><div class="tent-in"><img class="tent-logo" src="../home/assets/Beautfresh-brown.svg" alt=""><span class="tent-tag">${esc(K.tagline || 'The Fresh Version of You')}</span>
+        <div class="tent-q">${qa ? `<div>${qa}<b>احجزي موعدك الجاي</b></div>` : ''}${qb ? `<div>${qb}<b>قيّمي تجربتك</b><span>رأيك يفرق معنا 🤍</span></div>` : ''}</div>
+        ${!qa && !qb ? '<p class="pp-small">أضيفوا رابط الحجز ورابط تقييم قوقل في بطاقة المنشأة عشان تطلع الباركودات.</p>' : ''}
+        <span class="tent-ig">${K.instagram ? `@${esc(String(K.instagram).replace(/^@/, ''))}` : ''}</span></div></div>`;
+    } else if (k === 'custody') html = `<div class="pp">${formHead(K, ft)}
+      <div class="pp-2"><div><label>اسم الموظفة</label>${lines(1)}</div><div><label>تاريخ الاستلام</label>${lines(1)}</div></div>
+      <table class="pp-t"><thead><tr><th>#</th><th>الأداة أو الجهاز</th><th>العدد</th><th>الحالة عند الاستلام</th><th>ملاحظات</th></tr></thead><tbody>${Array.from({ length: 10 }, (_, i) => `<tr><td>${AR_NUM(i + 1)}</td><td></td><td></td><td></td><td></td></tr>`).join('')}</tbody></table>
+      <p class="pp-small">أقرّ باستلام ما سبق بحالة سليمة، وأتعهد بالمحافظة عليه واستخدامه للعمل فقط، وتسليمه عند طلبه أو عند انتهاء العمل.</p>
+      <div class="pp-sign"><div><label>توقيع الموظفة</label>${lines(1)}</div><div><label>توقيع الإدارة</label>${lines(1)}</div></div></div>`;
+    else html = `<div class="pp">${formHead(K, ft)}
+      <p class="pp-body">أنا الموظفة: ______________________ أعمل في ${esc(K.legal_name || K.brand || 'بيوتفريش')}، وأتعهد بالآتي:</p>
+      <ol class="pp-ol">${['ما أصوّر أي عميلة أو جزء منها إلا بموافقتها، وبجوال الصالون فقط.', 'ما أنشر أي صورة أو معلومة عن عميلة في حساباتي الشخصية.', 'ما أشارك أرقام العميلات أو بياناتهن مع أي أحد داخل الصالون أو خارجه.', 'ما أتكلم عن عميلة قدام عميلة ثانية، ولا أنقل كلام دار في الصالون.', 'أحافظ على سرية أسعار الموردين وبيانات الصالون الداخلية.', 'يستمر هذا التعهد بعد انتهاء عملي في الصالون.'].map((x) => `<li>${x}</li>`).join('')}</ol>
+      <p class="pp-small">أعرف إن مخالفة هذا التعهد تعرّضني للمساءلة حسب لائحة العمل والأنظمة.</p>
+      <div class="pp-sign"><div><label>الاسم</label>${lines(1)}</div><div><label>التوقيع</label>${lines(1)}</div><div><label>التاريخ</label>${lines(1)}</div></div></div>`;
+    paper(ft, `<div class="pp-wrap">${html}</div>`);
+  }
+
+  const genCode = () => 'BF-' + Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('');
+  const vState = (v) => (v.redeemed_on ? ['used', 'استُخدمت', ''] : v.expires_on && until(v.expires_on) < 0 ? ['exp', 'انتهت', 'danger'] : ['ok', 'سارية', 'ok']);
+  function voucherHTML(v, K) {
+    return `<div class="voucher"><div class="vc-l"><img class="vc-logo" src="../home/assets/Beautfresh-brown.svg" alt=""><span class="vc-eb">قسيمة هدية</span><h2>${esc(v.value_text)}</h2>
+      ${v.to_name ? `<span class="vc-to">إلى: <b>${esc(v.to_name)}</b></span>` : ''}${v.from_name ? `<span class="vc-to">من: <b>${esc(v.from_name)}</b></span>` : ''}${v.message ? `<p class="vc-msg">«${esc(v.message)}»</p>` : ''}
+      <span class="vc-exp">${v.expires_on ? `صالحة لين ${D(v.expires_on).getDate()} ${MONTHS_AR[D(v.expires_on).getMonth()]} ${D(v.expires_on).getFullYear()}` : ''}</span></div>
+      <div class="vc-r">${window.qrcode ? qrSVG(v.code, '#3F1D17') : ''}<b dir="ltr">${v.code}</b><span>${K.booking ? 'احجزي من الرابط بالبايو' : ''}</span></div><img class="vc-rose" src="../home/assets/rosette-2.svg" alt=""></div>`;
+  }
+  async function kitGifts(view, K, head, alive) {
+    const rows = await q(sb.from('gift_vouchers').select('*').order('created_at', { ascending: false }).limit(300));
+    if (!alive()) return;
+    const live = rows.filter((v) => vState(v)[0] === 'ok');
+    const out = live.filter((v) => v.paid).reduce((s, v) => s + Number(v.amount || 0), 0);
+    view.innerHTML = `${head}
+      <div class="seg-tiles"><div class="seg-tile on"><b class="num">${live.length}</b><span>قسائم سارية</span></div><div class="seg-tile gold"><b class="num">${sar(out)}</b><span>قيمتها (التزام علينا)</span></div><div class="seg-tile"><b class="num">${rows.filter((v) => v.redeemed_on).length}</b><span>استُخدمت</span></div><div class="seg-tile"><b class="num">${rows.filter((v) => vState(v)[0] === 'exp').length}</b><span>انتهت</span></div></div>
+      <div class="cl-bar mt"><input class="input" id="gv-q" placeholder="ابحث برقم القسيمة أو الاسم" dir="auto"><button class="btn primary" id="gv-new">${I.plus} قسيمة</button></div>
+      <div class="list" id="gv-l"></div>`;
+    const draw = () => { const t = $('#gv-q').value.trim().toUpperCase(); const r = t ? rows.filter((v) => v.code.includes(t) || (v.to_name || '').includes(t) || (v.from_name || '').includes(t)) : rows;
+      $('#gv-l').innerHTML = r.map((v) => { const [st, l, c] = vState(v); return `<button class="row" data-v="${v.id}"><span class="gv-ic">🎁</span><div class="grow"><div class="title">${esc(v.value_text)} ${v.to_name ? `<span class="muted small">· ${esc(v.to_name)}</span>` : ''}</div><div class="meta"><span dir="ltr">${v.code}</span> · ${dShort(v.issued_on)}${v.redeemed_on ? ` · استُخدمت ${dShort(v.redeemed_on)}` : ''}</div></div><span class="badge ${c}">${l}</span></button>`; }).join('') || '<div class="empty">قسيمة الهدية أحلى هدية تنعطى، وأحلى إعلان للصالون. سوّوا أول وحدة.</div>';
+      $$('[data-v]', view).forEach((b) => b.onclick = () => voucherView(rows.find((x) => x.id === Number(b.dataset.v)), K)); };
+    $('#gv-q').addEventListener('input', draw); draw();
+    $('#gv-new').onclick = () => voucherForm(K);
+  }
+  function voucherForm(K) {
+    const exp = dk(lensShift('m', D(todayR()), 6));
+    modal(`<h3>قسيمة هدية</h3>
+      <div class="chips wrap" style="margin-bottom:10px">${['مانيكير وبديكير', 'جلسة استشوار', 'باقة دلّعي نفسك', '٢٠٠ ريال', '٥٠٠ ريال'].map((x) => `<button type="button" class="chip" data-s="${x}">${x}</button>`).join('')}</div>
+      <div class="grid2"><div class="field"><label>الهدية</label><input class="input" id="gf-v" maxlength="80" placeholder="مانيكير وبديكير"></div><div class="field"><label>قيمتها (ر.س)</label><input class="input num" type="number" min="0" id="gf-a"></div></div>
+      <div class="grid2"><div class="field"><label>إلى</label><input class="input" id="gf-t" maxlength="60"></div><div class="field"><label>من</label><input class="input" id="gf-f" maxlength="60"></div></div>
+      <div class="field"><label>كلمة على القسيمة</label><input class="input" id="gf-m" maxlength="200" placeholder="كل عام وأنتِ بخير يا أحلى أخت"></div>
+      <div class="grid2"><div class="field"><label>صالحة لين</label><input class="input" type="date" id="gf-e" value="${exp}"></div><label class="check" style="align-self:end;margin-bottom:14px"><input type="checkbox" id="gf-p" checked> مدفوعة</label></div>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="gf-s">إصدار</button></div>`, (el, close) => {
+      $$('[data-s]', el).forEach((b) => b.onclick = () => { $('#gf-v', el).value = b.dataset.s; const n = b.dataset.s.match(/[٠-٩\d]+/); if (n) $('#gf-a', el).value = n[0].replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)); });
+      $('#gf-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { code: genCode(), value_text: $('#gf-v', el).value.trim(), amount: $('#gf-a', el).value === '' ? null : Number($('#gf-a', el).value), to_name: $('#gf-t', el).value.trim() || null, from_name: $('#gf-f', el).value.trim() || null, message: $('#gf-m', el).value.trim() || null, expires_on: $('#gf-e', el).value || null, paid: $('#gf-p', el).checked };
+        if (row.value_text.length < 2) return toast('اكتبوا الهدية', true);
+        try { const v = await q(sb.from('gift_vouchers').insert(row).select('*').single()); close(); voucherView(v, K, true); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+  function voucherView(v, K, fresh) {
+    const [st] = vState(v);
+    const text = `هلا ${v.to_name ? firstName(v.to_name) : ''} 🤍\nوصلتك هدية${v.from_name ? ` من ${v.from_name}` : ''} في بيوتفريش!\nقسيمتك: ${v.value_text}\nرقمها: ${v.code}${v.expires_on ? `\nصالحة لين ${v.expires_on}` : ''}${K.booking ? `\nاحجزي من هنا: ${K.booking}` : ''}`;
+    paper('قسيمة هدية', `<div class="pp-wrap">${voucherHTML(v, K)}</div>`, {
+      extra: `<a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}">${I.wa} أرسلها</a>${st === 'ok' ? '<button class="btn sm" data-red>استُخدمت اليوم</button>' : ''}${isManager() ? '<button class="btn sm" data-del>حذف</button>' : ''}`,
+      mount: (ov, close) => {
+        if (fresh) toast('القسيمة جاهزة 🎁');
+        $('[data-red]', ov)?.addEventListener('click', (e) => busy(e.currentTarget, async () => { try { await q(sb.from('gift_vouchers').update({ redeemed_on: todayR() }).eq('id', v.id)); toast('تم تسجيل الاستخدام'); close(); route(); } catch (err) { toast(errMsg(err), true); } }));
+        $('[data-del]', ov)?.addEventListener('click', async () => { try { await q(sb.from('gift_vouchers').delete().eq('id', v.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+        $('[data-x]', ov).addEventListener('click', () => { if (fresh) route(); });
+      },
     });
   }
 

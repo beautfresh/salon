@@ -204,3 +204,4 @@ h1{font-size:30px;font-weight:800;color:var(--oud);margin:8px 0 2px;line-height:
 .status.ok{background:#E3EFE3;color:#3F7A4C}.status.no{background:#F6E1DC;color:#8C2C1B}
 .waBtn{display:flex;gap:8px;align-items:center;justify-content:center;width:100%;background:#1F7A4D;color:#fff;border:0;border-radius:18px;padding:14px;font-weight:800;font-size:16px;text-decoration:none;margin-top:10px}
 .danger{background:none;border:1px solid #D9A79C;color:#8C2C1B;border-radius:16px;padding:12px;font-weight:700;width:100%;margin-top:8px}
+.top a{display:block;line-height:0}

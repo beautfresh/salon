@@ -461,6 +461,14 @@
       ]);
       bk = { today: td, pending: pd.count || 0, next: nx[0] || null };
     } catch (_) { /* bookings unavailable */ }
+    let sp = { today: 0, pending: 0 };
+    try {
+      const [a, b] = await Promise.all([
+        sb.from('salon_bookings').select('id', { count: 'exact', head: true }).gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 86400000).toISOString()).not('status', 'in', '(cancelled,no_show)'),
+        sb.from('salon_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending').gte('starts_at', new Date().toISOString()),
+      ]);
+      sp = { today: a.count || 0, pending: b.count || 0 };
+    } catch (_) { /* salon bookings unavailable */ }
     if (!alive()) return;
     const tk = todayR();
     let hl = _p.get('l') || (() => { try { return localStorage.getItem('bf-home-lens'); } catch { return null; } })() || 'd';
@@ -490,6 +498,8 @@
     const ready = L.active ? cl.filter((c) => c.stamps >= L.stamps).length : 0;
     const away = cl.filter((c) => c.segment === 'away').length;
     const alerts = [];
+    if (sp.pending) alerts.push(['warn', I.cal, sp.pending === 1 ? 'حجز من الموقع بانتظار التأكيد' : `${sp.pending} حجوزات من الموقع بانتظار التأكيد`, 'أرسلوا التأكيد على الواتساب', '#/appts?t=pending']);
+    if (sp.today) alerts.push(['', I.cal, `${sp.today === 1 ? 'موعد واحد' : sp.today + ' مواعيد'} في الصالون اليوم`, 'جدول اليوم', '#/appts']);
     if (isManager() && yc === null && D(yday).getDay() !== 5) alerts.push(['warn', I.coin, 'أمس ما انقفل', 'سجّلوا مبيعاته عشان تكتمل الأرقام', `#/closing?d=${yday}`]);
     if (isManager()) { try { const rc = JSON.parse(localStorage.getItem('bf-rules') || 'null'); if (rc && rc.risk) alerts.unshift(['danger', I.shield, `${rc.risk === 1 ? 'قاعدة وحدة' : rc.risk + ' قواعد'} في خطر`, `صحة بيوتفريش ${rc.score}٪`, '#/rules']); else if (!rc) alerts.push(['', I.shield, 'افحصوا صحة بيوتفريش', 'قواعد تنفحص على بيانات الصالون', '#/rules']); } catch {} }
     const [mIss, mPl] = await Promise.all([q(sb.from('maint_issues').select('id,title,created_at').eq('status', 'open')).catch(() => []), q(sb.from('maint_plans').select('*')).catch(() => [])]);

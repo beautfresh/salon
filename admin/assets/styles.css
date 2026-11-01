@@ -1378,3 +1378,11 @@ a.sd-in:hover .go { transform: translateX(-4px); color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .sd *, .sd-ind { animation: none !important; transition: none !important; } .sd-heat i { opacity: 1; } }
 .sd-err { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 34px 20px; border-radius: 24px; border: 1px dashed #C4A88F; background: var(--surface); animation: sdUp .4s both; }
 .sd-err b { font-size: 16px; } .sd-err span { font-size: 13.5px; color: var(--muted); margin-bottom: 8px; }
+@media (max-width: 560px) {
+  .sd .lens a { padding: 7px 11px; font-size: 13px; }
+  .sd-kpi em { white-space: normal; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; line-height: 1.5; }
+  .sd-kpi > b { font-size: 21px; }
+  #sd-body .section-title:has(.chips) { flex-wrap: wrap; }
+  #sd-body .section-title:has(.chips) .chips { width: 100%; }
+  .sd-heat-l { justify-content: center; }
+}

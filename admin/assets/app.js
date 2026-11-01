@@ -4410,7 +4410,7 @@
       const insights = (() => {
         const L = [];
         const pc = sdPct(K.collected, KP.collected);
-        if (pc != null && Math.abs(pc) >= 3) L.push(['📈', `المحصّل ${pc > 0 ? 'زاد' : 'نقص'} <b>${Math.abs(Math.round(pc))}٪</b> عن ${r.partial ? 'نفس الوقت ' : ''}${SD_PREV[lens]} (${sar(KP.collected)} ← ${sar(K.collected)} ر.س)`, pc > 0 ? 'good' : 'bad']);
+        if (pc != null && Math.abs(pc) >= 3) L.push(['📈', `المحصّل ${pc > 0 ? 'زاد' : 'نقص'} <b>${Math.abs(Math.round(pc))}٪</b> عن ${r.partial ? 'نفس الوقت ' : ''}${SD_PREV[lens]} من ${sar(KP.collected)} إلى ${sar(K.collected)} ر.س`, pc > 0 ? 'good' : 'bad']);
         const sv = r.services.filter((x) => x.pv > 300 && x.v > 0).map((x) => ({ ...x, g: x.v - x.pv }));
         const up = [...sv].sort((a, b) => b.g - a.g)[0], dn = [...sv].sort((a, b) => a.g - b.g)[0];
         if (up && up.g > 0) L.push(['🚀', `<b>${esc(up.name)}</b> أكثر خدمة نمت: +${sar(up.g)} ر.س عن ${SD_PREV[lens]}`, 'good', 'svc']);

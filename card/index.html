@@ -24,7 +24,7 @@
 .vip{background:linear-gradient(140deg,#E3C890,#A8834C);color:#3F1D17;font-weight:700;font-size:11px;padding:3px 10px;border-radius:999px}
 h1{position:relative;z-index:1;margin:22px 0 4px;font-size:26px;font-weight:500;color:#fff}
 .sub{position:relative;z-index:1;margin:0;color:#D9C6B7;font-size:14px}
-.stamps{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:12px;margin:24px 0 18px}
+.stamps{position:relative;z-index:1;display:grid;grid-template-columns:repeat(var(--n,6),minmax(0,1fr));gap:10px;margin:24px 0 18px}
 .stamps i{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;border:1.5px dashed rgba(243,235,223,.35);max-width:60px;width:100%;justify-self:center}
 .stamps i b{font-size:13px;font-weight:500;color:rgba(243,235,223,.45)}
 .stamps i.on{border:0;background:var(--cream);animation:stamp .55s cubic-bezier(.3,1.6,.5,1) both}
@@ -73,7 +73,7 @@ h1{position:relative;z-index:1;margin:22px 0 4px;font-size:26px;font-weight:500;
     <div class="card">
       <div class="top"><img src="../home/assets/Beautfresh-brown.svg" alt="">${c.vip ? '<span class="vip">VIP</span>' : '<span>بطاقة الولاء</span>'}</div>
       <h1>هلا ${esc(c.name)} 🤍</h1><p class="sub">${c.since ? `معنا من ${dd(c.since)}` : 'نورتي بيوتفريش'}</p>
-      ${c.active ? `<div class="stamps">${Array.from({ length: c.stamps_total }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="animation-delay:${300 + i * 90}ms">${i < n ? '<img src="../home/assets/rosette-1.svg" alt="">' : `<b>${i + 1}</b>`}</i>`).join('')}</div>
+      ${c.active ? `<div class="stamps" style="--n:${c.stamps_total > 6 ? Math.ceil(c.stamps_total / 2) : c.stamps_total}">${Array.from({ length: c.stamps_total }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="animation-delay:${300 + i * 90}ms">${i < n ? '<img src="../home/assets/rosette-1.svg" alt="">' : `<b>${i + 1}</b>`}</i>`).join('')}</div>
       ${full ? `<div class="full">مبروك! وصلتي لمكافأتك: ${esc(c.reward)}. نستناك 🤍</div>` : `<div class="left">باقي لك <b>${leftTxt}</b> وتوصلين لـ <b>${esc(c.reward)}</b></div>`}` : '<p class="sub" style="margin-top:18px">شكرًا إنك من عائلة بيوتفريش.</p>'}
     </div>
     <div class="stats"><div><b>${c.visits}</b><span>زيارة</span></div><div><b>${c.redeemed}</b><span>مكافأة استلمتيها</span></div><div><b>${c.last ? dd(c.last) : '—'}</b><span>آخر زيارة</span></div></div>

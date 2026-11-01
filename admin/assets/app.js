@@ -510,11 +510,42 @@
         </a>
         ${hl === 'd' && !fr.closed_days && D(tk).getDay() !== 5 ? `<a class="pulse-cta" href="#/closing">آخر الدوام لا تنسون إقفال اليوم ←</a>` : ''}
       </div>`;
+    // ورديتي: لأي حساب مربوط بملف في الفريق
+    let myShift = '';
+    const me = await q(sb.from('team_members').select('*').eq('profile_id', S.profile.id).maybeSingle()).catch(() => null);
+    if (me) {
+      const wdN = D(tk).getDay();
+      const [sh, lv, gds, rds, lists, litems, runs, myBk] = await Promise.all([
+        q(sb.from('team_shifts').select('*').eq('member_id', me.id)).catch(() => []),
+        q(sb.from('team_leaves').select('*').eq('member_id', me.id).gte('to_day', tk).order('from_day')).catch(() => []),
+        q(sb.from('guides').select('id,title,version')).catch(() => []),
+        q(sb.from('guide_reads').select('*').eq('profile_id', S.profile.id)).catch(() => []),
+        q(sb.from('ops_lists').select('*').order('sort')).catch(() => []),
+        q(sb.from('ops_list_items').select('id,list_id')).catch(() => []),
+        q(sb.from('ops_runs').select('*').eq('day', tk)).catch(() => []),
+        q(sb.from('home_bookings').select('id,customer_name,starts_at,district_name,status').eq('staff_id', S.profile.id).gte('starts_at', new Date(tk + 'T00:00:00+03:00').toISOString()).lt('starts_at', new Date(tk + 'T23:59:59+03:00').toISOString()).neq('status', 'cancelled').order('starts_at')).catch(() => []),
+      ]);
+      if (!alive()) return;
+      const todayS = sh.find((x) => x.weekday === wdN); const offToday = lv.find((l) => l.status === 'approved' && l.from_day <= tk && l.to_day >= tk);
+      const nextS = !todayS ? [1, 2, 3, 4, 5, 6, 7].map((i) => lensShift('d', D(tk), i)).find((d) => sh.some((x) => x.weekday === d.getDay())) : null;
+      const unsigned = gds.filter((g) => !rds.some((r) => r.guide_id === g.id && r.version === g.version));
+      const daily = lists.filter((l) => l.kind !== 'weekly').map((l) => { const n = litems.filter((i) => i.list_id === l.id).length; const d = Object.keys(runs.find((r) => r.list_id === l.id)?.done || {}).length; return [l, d, n]; });
+      const pend = lv.filter((l) => l.status === 'pending');
+      myShift = `<div class="myshift" style="--c:${me.color}">
+        <div class="ms-top"><span class="tm-av sm">${esc(initial(me.name))}</span><div class="grow"><span class="sh-eyebrow">ورديتي</span><b>${offToday ? 'إجازة اليوم 🤍' : todayS ? `اليوم ${h12(todayS.starts)} – ${h12(todayS.ends)}` : 'ما عندك دوام اليوم'}</b>${!todayS && nextS ? `<span>دوامك الجاي ${WDAYS[nextS.getDay()]} ${h12(sh.find((x) => x.weekday === nextS.getDay()).starts)}</span>` : ''}</div></div>
+        ${todayS && !offToday ? `<div class="ms-lists">${daily.map(([l, d, n]) => `<a href="#/ops" class="${d === n && n ? 'done' : ''}"><span>${esc(l.name)}</span><b class="num">${d}/${n}</b></a>`).join('')}</div>` : ''}
+        ${myBk.length ? `<div class="ms-bk"><span>حجوزاتك المنزلية اليوم</span>${myBk.map((b) => `<a href="#/booking/${b.id}"><b class="num">${rTime(b.starts_at)}</b> ${esc(b.customer_name)}${b.district_name ? ` · ${esc(b.district_name)}` : ''}</a>`).join('')}</div>` : ''}
+        ${unsigned.length ? `<a class="ms-row" href="#/ops?t=manual">📖 ${unsigned.length === 1 ? `دليل «${esc(unsigned[0].title)}» بانتظار توقيعك` : `${unsigned.length} أدلة بانتظار توقيعك`}</a>` : ''}
+        ${pend.length ? `<a class="ms-row" href="#/member/${me.id}">⏳ طلب إجازتك ${dShort(pend[0].from_day)} بانتظار الاعتماد</a>` : ''}
+        <div class="ms-acts"><button class="btn sm" id="ms-issue">${I.wrench} بلّغ عن عطل</button><button class="btn sm" id="ms-leave">${I.cal} طلب إجازة</button></div>
+      </div>`;
+    }
     const alertsHtml = alerts.length ? `<div class="section-title"><h2>يحتاج انتباهك</h2></div><div class="alerts">${alerts.map(([c, ic, t, sub, h]) => `<a class="alert ${c}" href="${h}"><span class="al-ic">${ic}</span><div><b>${t}</b><span>${sub}</span></div></a>`).join('')}</div>` : '';
     const hourNow = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }));
     const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
+      ${myShift}
       ${pulse}
       ${alertsHtml}
       <a class="bk-card" href="#/bookings${bk.pending ? '?t=pending' : '?t=today'}">
@@ -554,6 +585,8 @@
       <div class="section-title"><h2>${isManager() ? 'آخر الحركات' : 'آخر حركاتك'}</h2><a href="#/movements" class="small">السجل الكامل</a></div>
       <div class="list">${moves.length ? moves.map(moveRow).join('') : '<div class="empty">لا توجد حركات بعد</div>'}</div>`;
     renderPushCard($('#push-home'), { compact: true });
+    $('#ms-issue')?.addEventListener('click', async () => issueForm(await q(sb.from('assets').select('id,name,category,location').order('name')).catch(() => []), null));
+    $('#ms-leave')?.addEventListener('click', async () => leaveForm(await teamData()));
     const expLink = $('a[href="#expiring"]', view);
     expLink.addEventListener('click', (e) => { e.preventDefault(); $('#expiring').scrollIntoView({ behavior: 'smooth' }); });
   }
@@ -1490,11 +1523,13 @@
       <div id="push-box"></div>
       ${groups.map((g) => `<div class="svc-cat-h">${g}</div><div class="more-grid">${links.filter((l) => l.group === g).map((l) => `<a class="mtile" href="${l.href}"><span class="ic">${l.icon}</span><b>${l.label}</b></a>`).join('')}</div>`).join('')}
       <div class="list mt">
+        ${isManager() ? `<button class="row" id="m-exp"><span class="ic" style="color:var(--accent)">${I.invoice}</span><div class="grow title">تصدير البيانات إلى Excel</div></button>` : ''}
         <a class="row" href="install.html"><span class="ic" style="color:var(--accent)">${I.home}</span><div class="grow title">ثبّت التطبيق على الجوال</div></a>
         <button class="row" id="m-pw"><span class="ic" style="color:var(--accent)">${I.key}</span><div class="grow title">تغيير كلمة المرور</div></button>
         <button class="row" id="m-out"><span class="ic" style="color:var(--danger)">${I.logout}</span><div class="grow title" style="color:var(--danger)">تسجيل الخروج</div></button>
       </div>`;
     $('#m-pw').onclick = changePassword;
+    $('#m-exp')?.addEventListener('click', exportForm);
     $('#m-out').onclick = () => sb.auth.signOut();
     renderPushCard($('#push-box'));
   }
@@ -3566,6 +3601,55 @@
     });
   }
 
+
+  /* ======================= تصدير البيانات ======================= */
+  let xlsxReady = null;
+  const loadXLSX = () => xlsxReady || (xlsxReady = new Promise((res, rej) => { const s = document.createElement('script'); s.src = '../vendor/xlsx.mini.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }));
+  function exportForm() {
+    const tk = todayR(), y = D(tk).getFullYear();
+    const P = [['m', 'هذا الشهر', monthKey(D(tk)), tk], ['pm', 'الشهر الماضي', monthKey(lensShift('m', D(tk), -1)), dk(new Date(D(tk).getFullYear(), D(tk).getMonth(), 0, 12))], ['y', `سنة ${y}`, `${y}-01-01`, tk], ['all', 'كل البيانات', '2000-01-01', '2100-01-01']];
+    let sel = 'm';
+    modal(`<h3>تصدير البيانات</h3><p class="muted" style="margin-top:-6px">ملف Excel واحد، كل قسم في ورقة، جاهز للمحاسب أو للأرشيف.</p>
+      <div class="field"><label>الفترة</label><div class="chips wrap" id="ex-p">${P.map(([k, l]) => `<button type="button" class="chip ${k === sel ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <p class="muted small">يشمل: الإقفال اليومي، المصروفات، الحجوزات المنزلية، العميلات وزياراتهن، فواتير الشراء، حركات المخزون، الأصناف، قسائم الهدايا.</p>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="ex-go">تنزيل الملف</button></div>`, (el, close) => {
+      $$('#ex-p .chip', el).forEach((b) => b.onclick = () => { sel = b.dataset.k; $$('#ex-p .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $('#ex-go', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const [, label, from, to] = P.find((x) => x[0] === sel);
+        try {
+          await loadXLSX();
+          const rng = (qy, col) => qy.gte(col, from).lte(col, to);
+          const tsTo = to + 'T23:59:59+03:00', tsFrom = from + 'T00:00:00+03:00';
+          const [daily, exps, bks, cls, vis, invs, moves, gifts] = await Promise.all([
+            q(rng(sb.from('fin_daily').select('*'), 'day').order('day')),
+            q(rng(sb.from('fin_expenses').select('*'), 'day').order('day')),
+            q(sb.from('home_bookings').select('code,customer_name,phone,district_name,starts_at,status,payment_status,total').gte('starts_at', tsFrom).lte('starts_at', tsTo).order('starts_at')),
+            q(sb.from('clients_overview').select('name,phone,birthday,source,segment,visits,spend,first_visit,last_visit,stamps').limit(10000)),
+            q(rng(sb.from('client_visits').select('day,channel,services,amount,clients(name,phone)'), 'day').order('day').limit(20000)),
+            q(rng(sb.from('purchase_invoices').select('*'), 'invoice_date').order('invoice_date')).catch(() => []),
+            q(sb.from('stock_movements').select('item_id,movement_type,qty,reason,created_at').gte('created_at', tsFrom).lte('created_at', tsTo).order('created_at').limit(20000)).catch(() => []),
+            q(sb.from('gift_vouchers').select('code,value_text,amount,to_name,from_name,issued_on,expires_on,redeemed_on,paid')).catch(() => []),
+          ]);
+          const itemName = (id) => S.items.find((i) => i.id === id)?.name || id;
+          const sheets = [
+            ['الإقفال اليومي', daily.map((d) => ({ 'اليوم': d.day, 'كاش': +d.cash, 'شبكة': +d.card, 'تحويل': +d.transfer, 'رابط دفع': +d.online, 'تابي وتمارا': +d.bnpl, 'أخرى': +d.other, 'الإجمالي': +d.total, 'عدد العميلات': d.clients, 'أظافر': d.nails, 'شعر': d.hair, 'مكياج': d.makeup, 'رموش وحواجب': d.lashes, 'منتجات': d.products, 'ملاحظة': d.note }))],
+            ['المصروفات', exps.map((x) => ({ 'اليوم': x.day, 'التصنيف': EXP_CAT[x.category] || x.category, 'المبلغ': +x.amount, 'الجهة': x.vendor, 'طريقة الدفع': x.method, 'ملاحظة': x.note }))],
+            ['الحجوزات المنزلية', bks.map((b) => ({ 'الرقم': b.code, 'العميلة': b.customer_name, 'الجوال': b.phone, 'الحي': b.district_name, 'الموعد': new Date(b.starts_at).toLocaleString('en-GB', { timeZone: 'Asia/Riyadh' }), 'الحالة': BK_STATUS[b.status], 'الدفع': b.payment_status === 'paid' ? 'مدفوع' : b.payment_status === 'refunded' ? 'مسترجع' : 'غير مدفوع', 'الإجمالي': b.total != null ? +b.total : null }))],
+            ['العميلات', cls.map((c) => ({ 'الاسم': c.name, 'الجوال': c.phone, 'الميلاد': c.birthday, 'عرفتنا من': SRC[c.source], 'الشريحة': SEG[c.segment]?.[0], 'الزيارات': c.visits, 'الصرف': +c.spend, 'أول زيارة': c.first_visit, 'آخر زيارة': c.last_visit, 'الأختام': c.stamps }))],
+            ['الزيارات', vis.map((v) => ({ 'اليوم': v.day, 'العميلة': v.clients?.name, 'الجوال': v.clients?.phone, 'المكان': v.channel === 'home' ? 'هوم' : 'الصالون', 'الخدمات': v.services, 'المبلغ': v.amount != null ? +v.amount : null }))],
+            ['فواتير الشراء', invs.map((i) => ({ 'رقم الفاتورة': i.invoice_no || i.id, 'التاريخ': i.invoice_date, 'المورد': supName(i.supplier_id), 'الإجمالي': i.total_amount != null ? +i.total_amount : null, 'الحالة': i.status === 'approved' ? 'معتمدة' : 'مسودة' }))],
+            ['حركات المخزون', moves.map((m) => ({ 'الوقت': new Date(m.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Riyadh' }), 'الصنف': itemName(m.item_id), 'النوع': m.movement_type, 'الكمية': +m.qty, 'السبب': m.reason }))],
+            ['الأصناف', S.items.map((i) => ({ 'الصنف': i.name, 'الوحدة': i.unit, 'الرصيد': +i.qty_on_hand, 'الحد الأدنى': +i.min_qty, 'نشط': i.is_active ? 'نعم' : 'لا' }))],
+            ['قسائم الهدايا', gifts.map((g) => ({ 'الرقم': g.code, 'الهدية': g.value_text, 'القيمة': g.amount != null ? +g.amount : null, 'إلى': g.to_name, 'من': g.from_name, 'الإصدار': g.issued_on, 'الانتهاء': g.expires_on, 'استُخدمت': g.redeemed_on, 'مدفوعة': g.paid ? 'نعم' : 'لا' }))],
+          ];
+          const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+          sheets.forEach(([n, rows]) => { const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ '': 'ما فيه بيانات في هالفترة' }]); const keys = Object.keys(rows[0] || { '': '' }); ws['!cols'] = keys.map((k) => ({ wch: Math.min(40, Math.max(10, k.length + 4, ...rows.slice(0, 200).map((r) => String(r[k] ?? '').length + 2))) })); XLSX.utils.book_append_sheet(wb, ws, n); });
+          XLSX.writeFile(wb, `بيوتفريش - ${label} - ${tk}.xlsx`);
+          toast('نزل الملف'); close();
+        } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
   /* ======================= finance ======================= */
   const EXP_CAT = { rent: 'إيجار', salaries: 'رواتب', commissions: 'عمولات', utilities: 'كهرباء وماء', telecom: 'إنترنت واتصالات', marketing: 'تسويق وإعلانات', maintenance: 'صيانة', government: 'رسوم حكومية وتراخيص', subscriptions: 'اشتراكات وأنظمة', hospitality: 'ضيافة', transport: 'مشاوير وتوصيل', supplies_other: 'مستلزمات خارج المخزون', other: 'أخرى' };
   const PAY_KEYS = [['cash', 'كاش'], ['card', 'شبكة'], ['transfer', 'تحويل'], ['online', 'رابط دفع'], ['bnpl', 'تابي وتمارا'], ['other', 'أخرى']];

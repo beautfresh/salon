@@ -4301,13 +4301,12 @@
       const lmRate = Number(P.last_month.collected) / (new Date(s.getFullYear(), s.getMonth(), 0).getDate() || 30);
       const rate = elapsed >= 7 ? mtd / elapsed : (mtd / elapsed + lmRate) / 2;
       const fc = Math.round(mtd + rate * Math.max(0, days - elapsed));
-      const vsLm = sdChip(mtd, P.lm_same.collected, { tip: `الشهر الماضي لنفس اليوم: ${sar(P.lm_same.collected)} ر.س` });
-      if (!T) return `<div class="sd-fc"><span>المتوقع لنهاية الشهر</span><b class="num">${sar(fc)} ر.س</b>${vsLm ? `<em>${vsLm} عن نفس الوقت الشهر الماضي</em>` : ''}<button class="tgt-empty sm" id="tgt-set">${I.plus} حطّوا هدف للشهر</button></div>`;
+      if (!T) return `<div class="sd-fc"><span>المتوقع لنهاية الشهر</span><b class="num">${sar(fc)} ر.س</b>${Number(P.rest_month.v) ? `<em>ومحجوز لباقي الشهر ${sar(P.rest_month.v)} ر.س</em>` : ''}<button class="tgt-empty sm" id="tgt-set">${I.plus} حطّوا هدف للشهر</button></div>`;
       const pc = Math.min(100, (mtd / T) * 100), left = Math.max(0, T - mtd), dl = Math.max(1, days - P.day_of_month + 1);
       const msg = mtd >= T ? 'وصلتوا للهدف 🤍' : fc >= T ? `على هالمعدل بتوصلون الهدف وزيادة ${sar(fc - T)} ر.س` : `باقي ${sar(left)} ر.س، يعني ${sar(left / dl)} باليوم`;
       return `<div class="tgt"><div class="tgt-top"><span>هدف الشهر <b class="num">${sar(T)}</b></span><button class="tgt-edit" id="tgt-set" aria-label="تعديل الهدف">${I.edit}</button><b class="num">${Math.round(pc)}٪</b></div>
         <div class="tgt-track"><i style="width:${pc}%"></i><s style="inset-inline-start:${Math.min(100, (fc / T) * 100)}%" data-tip="المتوقع لنهاية الشهر ${sar(fc)} ر.س"></s></div>
-        <div class="tgt-msg">${msg} · المتوقع ${sar(fc)} ر.س ${vsLm ? `· ${vsLm} عن نفس الوقت الشهر الماضي` : ''}</div></div>`;
+        <div class="tgt-msg">${msg} · المتوقع ${sar(fc)} ر.س</div></div>`;
     })();
 
     /* ---------- لمحات ذكية ---------- */

@@ -792,3 +792,11 @@ ol.steps li::before { content: counter(st); width: 26px; height: 26px; flex: non
 .gr-bar .btn { white-space: nowrap; } .gr-bar > b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 @media (max-width: 520px) { .gr-bar > b { display: none; } }
 .au-i .btn { white-space: nowrap; flex: none; padding: 6px 12px; }
+
+/* ---------- assets ---------- */
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+@media (max-width: 520px) { .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.acard { display: flex; flex-direction: column; gap: 3px; padding: 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); color: inherit; text-decoration: none; transition: transform .25s; animation: viewIn .4s both; }
+.acard:hover { transform: translateY(-2px); } .acard.issue { border-color: var(--warn); } .acard.out { border-color: var(--danger); opacity: .85; }
+.ac-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; } .ac-e { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); font-size: 20px; }
+.acard b { font-size: 14.5px; } .ac-m { font-size: 12px; color: var(--muted); min-height: 16px; } .ac-v { margin-top: 6px; font-size: 12px; color: var(--ink-2); } .ac-v .num { font-weight: 600; }

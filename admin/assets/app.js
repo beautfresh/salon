@@ -117,6 +117,7 @@
 
   /* ======================= icons ======================= */
   const I = {
+    wrench: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-3-3 8-8-1.3-1.3a4 4 0 0 0-5-5L13 5z"/><path d="M3 21l6-6"/></svg>',
     shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
     mega: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12"/></svg>',
@@ -282,6 +283,7 @@
     L.push({ href: '#/clients', label: 'العميلات', icon: I.heart, key: 'clients' });
     L.push({ href: '#/rules', label: 'قواعد بيوتفريش', icon: I.shield, key: 'rules' });
     L.push({ href: '#/ops', label: 'التشغيل', icon: I.check, key: 'ops' });
+    L.push({ href: '#/assets', label: 'الأصول والصيانة', icon: I.wrench, key: 'assets' });
     L.push({ href: '#/team', label: 'الفريق', icon: I.users, key: 'team' });
     L.push({ href: '#/marketing', label: 'التسويق', icon: I.mega, key: 'marketing' });
     if (isManager()) L.push({ href: '#/finance', label: 'المالية', icon: I.coin, key: 'finance' });
@@ -360,6 +362,8 @@
     rules: { title: 'قواعد بيوتفريش', nav: 'rules', fn: pageRules },
     ops: { title: 'التشغيل', nav: 'ops', fn: pageOps },
     svc: { title: 'بطاقة الخدمة', nav: 'ops', fn: pageSvc },
+    assets: { title: 'الأصول والصيانة', nav: 'assets', fn: pageAssets },
+    asset: { title: 'الأصل', nav: 'assets', fn: pageAsset },
     team: { title: 'الفريق', nav: 'team', fn: pageTeam },
     member: { title: 'ملف الموظفة', nav: 'team', fn: pageMember },
     marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
@@ -499,6 +503,10 @@
     const alerts = [];
     if (isManager() && yc === null && D(yday).getDay() !== 5) alerts.push(['warn', I.coin, 'أمس ما انقفل', 'سجّلوا مبيعاته عشان تكتمل الأرقام', `#/closing?d=${yday}`]);
     if (isManager()) { try { const rc = JSON.parse(localStorage.getItem('bf-rules') || 'null'); if (rc && rc.risk) alerts.unshift(['danger', I.shield, `${rc.risk === 1 ? 'قاعدة وحدة' : rc.risk + ' قواعد'} في خطر`, `صحة بيوتفريش ${rc.score}٪`, '#/rules']); else if (!rc) alerts.push(['', I.shield, 'افحصوا صحة بيوتفريش', 'قواعد تنفحص على بيانات الصالون', '#/rules']); } catch {} }
+    const [mIss, mPl] = await Promise.all([q(sb.from('maint_issues').select('id,title,created_at').eq('status', 'open')).catch(() => []), q(sb.from('maint_plans').select('*')).catch(() => [])]);
+    const mLate = mPl.filter((p) => planSt(p) === 'bad').length;
+    if (mIss.length) alerts.push([mIss.some((i) => (Date.now() - new Date(i.created_at)) / 86400000 > 3) ? 'danger' : 'warn', I.wrench, mIss.length === 1 ? `عطل مفتوح: ${esc(mIss[0].title.slice(0, 40))}` : `${mIss.length} أعطال مفتوحة`, 'تابعوا إصلاحها', '#/assets?t=maint']);
+    if (mLate) alerts.push(['warn', I.wrench, `${mLate === 1 ? 'مهمة صيانة' : mLate + ' مهام صيانة'} فات موعدها`, 'الأصول والصيانة', '#/assets?t=maint']);
     if (tlv) alerts.push(['warn', I.users, tlv === 1 ? 'طلب إجازة بانتظار اعتمادك' : `${tlv} طلبات إجازة بانتظار اعتمادك`, 'اعتمدوها أو ردّوا عليها', '#/team?t=leaves']);
     tpv.forEach((p) => { const m = tms.find((x) => x.id === p.member_id && x.active); if (!m) return; docState(p).forEach((d) => alerts.push([d.cls, I.key, docTxt(d), esc(m.name), `#/member/${m.id}`])); });
     if (oc.count) alerts.push(['danger', I.heart, `${oc.count === 1 ? 'شكوى مفتوحة' : oc.count + ' شكاوى مفتوحة'}`, 'ردّوا عليها وسجّلوا الحل', '#/feedback?t=open']);
@@ -2966,6 +2974,12 @@
       ev: (c) => { const p = c.leaves.filter((l) => l.status === 'pending'); const old = p.filter((l) => (Date.now() - new Date(l.created_at)) / 86400000 > 3); return old.length ? R('risk', `${old.length} طلبات من أكثر من ٣ أيام.`, '#/team?t=leaves') : p.length ? R('need', `${p.length} طلبات حديثة بانتظاركم.`, '#/team?t=leaves') : R('ok', 'ما فيه طلبات معلقة.'); } },
     { code: 'TEAM-05', dom: 'team', basis: 'prac', title: 'كل يوم دوام فيه فريق', why: 'يوم بدون مناوبة يعني حجوزات بدون أحد يخدمها.',
       ev: (c) => { if (!c.shifts.length) return R('need', 'ما انرتبت المناوبات.', '#/team?t=shifts'); const empty = [0, 1, 2, 3, 4, 5, 6].filter((d) => !c.closedWd.includes(d) && !c.shifts.some((s) => s.weekday === d)); return empty.length ? R('need', `ما فيه أحد يوم: ${empty.map((d) => WDAYS[d]).join('، ')}.`, '#/team?t=shifts') : R('ok', 'كل أيام الدوام مغطاة.'); } },
+    { code: 'OPS-07', dom: 'ops', basis: 'prac', title: 'لا عطل مفتوح أكثر من ٣ أيام', why: 'العطل المتروك يتكرر ويكبر، والعميلة تلاحظ الكرسي اللي ما يرتفع قبل ما تلاحظ أي شي ثاني.',
+      ev: (c) => { const o = c.issues.filter((i) => i.status === 'open'); const old = o.filter((i) => (Date.now() - new Date(i.created_at)) / 86400000 > 3); return old.length ? R('risk', `${old.length} أعطال مفتوحة من أكثر من ٣ أيام: ${old.slice(0, 2).map((i) => i.title).join('، ')}.`, '#/assets?t=maint') : o.length ? R('need', `${o.length} أعطال حديثة مفتوحة.`, '#/assets?t=maint') : R('ok', 'ما فيه أعطال متروكة.'); } },
+    { code: 'OPS-08', dom: 'ops', basis: 'prac', title: 'الصيانة الوقائية في موعدها', why: 'تنظيف فلتر المكيف أو تشحيم الكرسي في وقته أرخص بكثير من إصلاحه بعد ما يخرب، وأهون من إيقاف محطة يوم زحمة.',
+      ev: (c) => { if (!c.plans.length) return R('need', 'ما فيه جدول صيانة. سجّلوا الأصول.', '#/assets'); const late = c.plans.filter((p) => planSt(p) === 'bad'); return late.length ? R(late.length > 2 ? 'risk' : 'need', `${late.length} مهام فات موعدها: ${late.slice(0, 2).map((p) => p.task).join('، ')}.`, '#/assets?t=maint') : R('ok', 'الصيانة كلها في موعدها.'); } },
+    { code: 'FIN-07', dom: 'fin', basis: 'prac', title: 'الاشتراكات تنراجع كل ٣ أشهر', why: 'الاشتراك اللي ما يُراجع يصير مصروف ثابت ما أحد ينتبه له. المراجعة تسأل: نستخدمه؟ فيه أرخص؟',
+      ev: (c) => { const a = c.subs.filter((s) => s.active); if (!a.length) return R('na', 'ما فيه اشتراكات مسجلة.'); const st = a.filter((s) => !s.last_review || until(s.last_review) < -90); const low = a.filter((s) => s.usage === 'low'); return st.length || low.length ? R('need', [st.length ? `${st.length} ما انراجعت` : '', low.length ? `${low.length} استخدامها قليل` : ''].filter(Boolean).join(' · ') + '.', '#/assets?t=subs') : R('ok', 'الاشتراكات كلها مراجعة.'); } },
     // المخزون
     { code: 'INV-01', dom: 'inv', basis: 'prac', title: 'لا صنف أساسي ناقص', why: 'العميلة ما يهمها ليش، يهمها إن لونها مو موجود اليوم.',
       ev: (c) => { const l = S.items.filter((i) => i.is_active && isLow(i)); const out = l.filter((i) => Number(i.qty_on_hand) <= 0); return out.length ? R('risk', `نفد: ${out.slice(0, 3).map((i) => i.name).join('، ')}${out.length > 3 ? '…' : ''}.`, '#/shopping') : l.length ? R('need', `${l.length} أصناف تحت الحد الأدنى.`, '#/shopping') : R('ok', 'كل الأصناف فوق حدها.'); } },
@@ -2990,9 +3004,10 @@
       sel('rules_state'), q(sb.rpc('get_expiring', { p_days: CFG.expiryWarningDays })).catch(() => []), loyalty().catch(() => null),
       q(sb.from('home_settings').select('closed_weekdays').eq('id', 1).maybeSingle()).catch(() => null),
     ]);
+    const [issues, plans, subs] = await Promise.all([sel('maint_issues', 'status,created_at,title'), sel('maint_plans'), isManager() ? sel('subscriptions') : []]);
     const cost = new Map(costs.map((c) => [c.item_id, Number(c.avg_cost ?? c.last_cost ?? 0)]));
     const svcMargin = (s) => { const mat = slinks.filter((l) => l.service_id === s.id).reduce((a, l) => a + Number(l.qty) * (cost.get(l.item_id) || 0), 0); return s.price ? ((s.price - mat) / s.price) * 100 : 0; };
-    return { orules, members, tpriv: new Map(tpv.map((p) => [p.member_id, p])), shifts, leaves, lists, litems, runs, sops, services, slinks, svcMargin, fdays, target, expCount, fb, clients, seasons, campaigns, posts, guides, reads, audits, states: new Map(states.map((s) => [s.code, s])), expiring, loyalty: L, closedWd: hs?.closed_weekdays || [] };
+    return { orules, members, tpriv: new Map(tpv.map((p) => [p.member_id, p])), shifts, leaves, lists, litems, runs, sops, services, slinks, svcMargin, fdays, target, expCount, fb, clients, seasons, campaigns, posts, guides, reads, audits, states: new Map(states.map((s) => [s.code, s])), expiring, loyalty: L, closedWd: hs?.closed_weekdays || [], issues, plans, subs };
   }
 
   function evalRules(c) {
@@ -3131,6 +3146,200 @@
         try { if (g) await q(sb.from('guides').update(r).eq('id', g.id)); else await q(sb.from('guides').insert(r)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
       });
       $('#g-del', el)?.addEventListener('click', async () => { close(); if (await confirmBox('حذف الدليل', 'ينحذف الدليل وتوقيعاته.', 'حذف', true)) { try { await q(sb.from('guides').delete().eq('id', g.id)); route(); } catch (err) { toast(errMsg(err), true); } } });
+    });
+  }
+
+  /* ======================= الأصول والصيانة ======================= */
+  const ACAT = { chair: ['كراسي ومحطات', '💺', 7], nails: ['أجهزة الأظافر', '💅', 4], hair: ['أدوات الشعر', '💇‍♀️', 3], dryer: ['استشوار ومكاوي', '🌬️', 2], ac: ['مكيفات', '❄️', 8], sterilizer: ['أجهزة التعقيم', '🧼', 5], furniture: ['أثاث وديكور', '🛋️', 8], electronics: ['أجهزة وإلكترونيات', '💻', 4], safety: ['السلامة', '🧯', 5], other: ['أخرى', '✦', 5] };
+  const PLAN_TPL = { ac: [['تنظيف الفلاتر', 14], ['صيانة شاملة وغسيل', 90]], chair: [['فحص المضخة والتشحيم', 90], ['تنظيف وتعقيم الجلد', 7]], sterilizer: [['تنظيف الجهاز وفحص الحرارة', 30]], dryer: [['تنظيف فلتر الهواء وفحص السلك', 30]], nails: [['تنظيف وتعقيم الرؤوس وفحص المحرك', 30]], hair: [['تعقيم وفحص الحواف', 30]], safety: [['فحص بصري', 30]], electronics: [['فحص وتحديث', 90]] };
+  const SUBCAT = { system: 'أنظمة وبرامج', marketing: 'تسويق وإعلانات', telecom: 'إنترنت واتصالات', design: 'تصميم ومحتوى', insurance: 'تأمين', other: 'أخرى' };
+  const CYC = { monthly: ['شهري', 1], quarterly: ['كل ٣ أشهر', 3], yearly: ['سنوي', 12] };
+  const planDue = (p) => (p.last_done ? dk(lensShift('d', D(p.last_done), p.every_days)) : null);
+  const planSt = (p) => { const d = planDue(p); if (!d) return 'unknown'; const u = until(d); return u < 0 ? 'bad' : u <= Math.max(2, Math.round(p.every_days * 0.15)) ? 'warn' : 'ok'; };
+  const bookValue = (a) => { if (!a.cost) return 0; if (!a.purchase_date || !a.life_years) return Number(a.cost) * (a.qty || 1); const yrs = (D(todayR()) - D(a.purchase_date)) / (365.25 * 86400000); return Math.max(0, Number(a.cost) * (a.qty || 1) * (1 - yrs / a.life_years)); };
+  const monthlyOf = (s) => Number(s.amount) / CYC[s.cycle][1];
+
+  async function assetsData() {
+    const [assets, plans, issues, subs] = await Promise.all([
+      q(sb.from('assets').select('*').order('category').order('name')), q(sb.from('maint_plans').select('*')),
+      q(sb.from('maint_issues').select('*').order('created_at', { ascending: false }).limit(300)), isManager() ? q(sb.from('subscriptions').select('*').order('renews_on', { nullsFirst: false })) : [],
+    ]);
+    return { assets, plans, issues, subs };
+  }
+
+  async function pageAssets(view, _a, params, alive) {
+    const tab = params.get('t') || (isManager() ? 'assets' : 'maint');
+    const A = await assetsData();
+    if (!alive()) return;
+    const open = A.issues.filter((i) => i.status === 'open');
+    const due = A.plans.filter((p) => ['bad', 'warn', 'unknown'].includes(planSt(p)));
+    const tabs = [...(isManager() ? [['assets', 'الأصول']] : []), ['maint', `الصيانة${open.length + A.plans.filter((p) => planSt(p) === 'bad').length ? ` <i class="dotn">${open.length + A.plans.filter((p) => planSt(p) === 'bad').length}</i>` : ''}`], ...(isManager() ? [['subs', 'الاشتراكات']] : [])];
+    const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/assets?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
+    if (tab === 'subs' && isManager()) return assetsSubs(view, A, head);
+    if (tab === 'maint' || !isManager()) return assetsMaint(view, A, head, open, due);
+    const val = A.assets.reduce((s, a) => s + bookValue(a), 0), cost = A.assets.reduce((s, a) => s + Number(a.cost || 0) * (a.qty || 1), 0);
+    const warr = A.assets.filter((a) => a.warranty_until && until(a.warranty_until) >= 0 && until(a.warranty_until) <= 60);
+    view.innerHTML = `${head}
+      <div class="seg-tiles">
+        <div class="seg-tile on"><b class="num">${sar(val)}</b><span>قيمة الأصول اليوم</span></div>
+        <div class="seg-tile"><b class="num">${sar(cost)}</b><span>تكلفة الشراء</span></div>
+        <div class="seg-tile ${open.length ? 'warn' : 'ok'}"><b class="num">${A.assets.filter((a) => a.status !== 'ok').length}</b><span>فيها عطل</span></div>
+        <div class="seg-tile"><b class="num">${A.assets.reduce((s, a) => s + (a.qty || 1), 0)}</b><span>قطعة مسجلة</span></div>
+      </div>
+      ${warr.length ? `<div class="notice info mt">ضمان ${warr.map((a) => esc(a.name)).join('، ')} ينتهي قريب. إذا فيه ملاحظة، استفيدوا منه قبل ما يخلص.</div>` : ''}
+      <div class="actions" style="margin:14px 0"><button class="btn primary" id="as-new">${I.plus} أصل</button><button class="btn" id="is-new">${I.plus} بلّغ عن عطل</button></div>
+      ${Object.entries(ACAT).filter(([k]) => A.assets.some((a) => a.category === k)).map(([k, [l, e]]) => `<div class="svc-cat-h">${e} ${l}</div><div class="asset-grid">${A.assets.filter((a) => a.category === k).map((a) => { const ps = A.plans.filter((p) => p.asset_id === a.id); const worst = ps.map(planSt).includes('bad') ? 'bad' : ps.map(planSt).includes('warn') ? 'warn' : ''; return `
+        <a class="acard ${a.status}" href="#/asset/${a.id}"><div class="ac-top"><span class="ac-e">${e}</span>${a.status !== 'ok' ? `<span class="badge ${a.status === 'out' ? 'danger' : 'warn'}">${a.status === 'out' ? 'متوقف' : 'فيه عطل'}</span>` : worst ? `<span class="badge ${worst === 'bad' ? 'danger' : 'warn'}">${worst === 'bad' ? 'صيانة متأخرة' : 'صيانة قريبة'}</span>` : ''}</div>
+          <b>${esc(a.name)}${a.qty > 1 ? ` <span class="muted small">×${a.qty}</span>` : ''}</b><span class="ac-m">${esc([a.model, a.location].filter(Boolean).join(' · '))}</span>
+          ${a.cost ? `<span class="ac-v"><span class="num">${sar(bookValue(a))}</span> ر.س اليوم</span>` : ''}</a>`; }).join('')}</div>`).join('') || '<div class="list"><div class="empty">سجّلوا أجهزة الصالون وكراسيه ومكيفاته. كل أصل يجي معه جدول صيانة جاهز حسب نوعه.</div></div>'}`;
+    $('#as-new').onclick = () => assetForm(null, (id) => { location.hash = `#/asset/${id}`; });
+    $('#is-new').onclick = () => issueForm(A.assets, null);
+  }
+
+  function assetsMaint(view, A, head, open, due) {
+    const name = (id) => A.assets.find((a) => a.id === id)?.name || '';
+    const sorted = [...A.plans].sort((a, b) => (planDue(a) || '0000') < (planDue(b) || '0000') ? -1 : 1);
+    const fixed = A.issues.filter((i) => i.status === 'fixed').slice(0, 15);
+    const yearCost = A.issues.filter((i) => i.status === 'fixed' && i.fixed_at && i.fixed_at.slice(0, 4) === todayR().slice(0, 4)).reduce((s, i) => s + Number(i.cost || 0), 0);
+    view.innerHTML = `${head}
+      <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="is-new">${I.plus} بلّغ عن عطل</button></div>
+      <div class="section-title"><h2>أعطال مفتوحة</h2><span class="muted small">${open.length}</span></div>
+      <div class="list">${open.length ? open.map((i) => { const age = Math.floor((Date.now() - new Date(i.created_at)) / 86400000); return `<div class="row rule ${age > 3 ? 'bad' : 'warn'}"><span class="rdot"></span><div class="grow"><div class="title" style="white-space:normal">${esc(i.title)}</div><div class="meta">${esc(name(i.asset_id))}${i.asset_id ? ' · ' : ''}${age === 0 ? 'اليوم' : `من ${daysTxt(age)}`} · ${esc(firstName(personName(i.reported_by)))}</div></div>${isManager() ? `<button class="btn sm primary" data-fix="${i.id}">تصلّح</button>` : ''}</div>`; }).join('') : '<div class="empty">ما فيه أعطال مفتوحة 🤍</div>'}</div>
+      <div class="section-title"><h2>الصيانة الوقائية</h2></div>
+      <div class="list">${sorted.length ? sorted.map((p) => { const st = planSt(p), d = planDue(p), u = d ? until(d) : null; return `<div class="row rule ${st}"><span class="rdot"></span><div class="grow"><div class="title" style="white-space:normal">${esc(p.task)}</div><div class="meta">${esc(name(p.asset_id))} · كل ${daysTxt(p.every_days)}${d ? ` · ${u < 0 ? `متأخرة ${daysTxt(-u)}` : u === 0 ? 'اليوم' : `بعد ${daysTxt(u)}`}` : ' · ما انسجّلت آخر مرة'}${p.vendor ? ' · ' + esc(p.vendor) : ''}</div></div><button class="btn sm ${st === 'ok' ? '' : 'primary'}" data-pd="${p.id}">تمّت اليوم</button></div>`; }).join('') : '<div class="empty">الجدول يتكوّن لحاله لما تضيفون الأصول.</div>'}</div>
+      ${fixed.length ? `<details class="rfold"><summary>أعطال تصلّحت (${fixed.length})${isManager() && yearCost ? ` · كلفت هالسنة ${sar(yearCost)} ر.س` : ''}</summary><div class="list">${fixed.map((i) => `<div class="row"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(name(i.asset_id))} · ${i.fixed_at ? dShort(i.fixed_at.slice(0, 10)) : ''}${i.vendor ? ' · ' + esc(i.vendor) : ''}${i.note ? ' · ' + esc(i.note) : ''}</div></div>${i.cost ? `<b class="num">${sar(i.cost)}</b>` : ''}</div>`).join('')}</div></details>` : ''}`;
+    $('#is-new').onclick = () => issueForm(A.assets, null);
+    $$('[data-pd]', view).forEach((b) => b.onclick = () => busy(b, async () => { try { await q(sb.from('maint_plans').update({ last_done: todayR() }).eq('id', Number(b.dataset.pd))); toast('تم التسجيل'); route(); } catch (err) { toast(errMsg(err), true); } }));
+    $$('[data-fix]', view).forEach((b) => b.onclick = () => fixForm(A.issues.find((i) => i.id === Number(b.dataset.fix))));
+  }
+
+  function assetsSubs(view, A, head) {
+    const act = A.subs.filter((s) => s.active);
+    const mon = act.reduce((a, s) => a + monthlyOf(s), 0);
+    const stale = act.filter((s) => !s.last_review || until(s.last_review) < -90);
+    view.innerHTML = `${head}
+      <div class="seg-tiles">
+        <div class="seg-tile on"><b class="num">${sar(mon)}</b><span>بالشهر</span></div>
+        <div class="seg-tile"><b class="num">${sar(mon * 12)}</b><span>بالسنة</span></div>
+        <div class="seg-tile ${stale.length ? 'warn' : 'ok'}"><b class="num">${stale.length}</b><span>تحتاج مراجعة</span></div>
+        <div class="seg-tile ${act.filter((s) => s.usage === 'low').length ? 'warn' : ''}"><b class="num">${act.filter((s) => s.usage === 'low').length}</b><span>استخدامها قليل</span></div>
+      </div>
+      <p class="muted small" style="margin:10px 2px">كل ٣ أشهر راجعوا الاشتراكات: نستخدمه فعلًا؟ فيه أرخص؟ الاشتراك اللي ما يُراجع يصير مصروف ثابت ما أحد ينتبه له.</p>
+      <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="sb-new">${I.plus} اشتراك</button></div>
+      <div class="list">${A.subs.map((s) => { const u = s.renews_on ? until(s.renews_on) : null; const rv = !s.last_review || until(s.last_review) < -90; return `<button class="row ${s.active ? '' : 'dim'}" data-sb="${s.id}"><div class="grow"><div class="title">${esc(s.name)} ${s.usage === 'low' ? '<span class="badge warn">استخدامه قليل</span>' : ''}${rv && s.active ? '<span class="badge">يحتاج مراجعة</span>' : ''}</div><div class="meta">${SUBCAT[s.category]} · ${CYC[s.cycle][0]}${u != null ? ` · يتجدد ${u < 0 ? 'فات موعده' : u === 0 ? 'اليوم' : `بعد ${daysTxt(u)}`}` : ''}</div></div><div class="end"><b class="num">${sar(s.amount)}</b> <span class="muted small">ر.س</span>${s.cycle !== 'monthly' ? `<div class="meta">${sar(monthlyOf(s))} بالشهر</div>` : ''}</div></button>`; }).join('') || '<div class="empty">سجّلوا اشتراكات الصالون: ركاز، الإنترنت، الإعلانات، برامج التصميم…</div>'}</div>`;
+    $('#sb-new').onclick = () => subForm(null);
+    $$('[data-sb]', view).forEach((b) => b.onclick = () => subForm(A.subs.find((s) => s.id === Number(b.dataset.sb))));
+  }
+
+  async function pageAsset(view, args, _p, alive) {
+    const id = Number(args[0]);
+    const A = await assetsData();
+    if (!alive()) return;
+    const a = A.assets.find((x) => x.id === id);
+    if (!a) { view.innerHTML = '<div class="notice danger">ما لقينا الأصل</div>'; return; }
+    setTitle(a.name);
+    const ps = A.plans.filter((p) => p.asset_id === id), is = A.issues.filter((i) => i.asset_id === id);
+    const fixCost = is.reduce((s, i) => s + Number(i.cost || 0), 0);
+    const age = a.purchase_date ? (D(todayR()) - D(a.purchase_date)) / (365.25 * 86400000) : null;
+    view.innerHTML = `
+      <div class="svc-hero"><span class="sh-eyebrow">${ACAT[a.category][1]} ${ACAT[a.category][0]}${a.location ? ' · ' + esc(a.location) : ''}</span><h2>${esc(a.name)}${a.qty > 1 ? ` ×${a.qty}` : ''}</h2>
+        <div class="svc-nums"><div><b class="num">${a.cost ? sar(bookValue(a)) : '—'}</b><span>قيمته اليوم</span></div><div><b class="num">${a.cost ? sar(Number(a.cost) * a.qty) : '—'}</b><span>تكلفة الشراء</span></div><div><b>${age != null ? (age < 1 ? `${Math.round(age * 12)} شهر` : `${age.toFixed(1)} سنة`) : '—'}</b><span>عمره</span></div><div><b class="num">${sar(fixCost)}</b><span>كلفة الإصلاحات</span></div></div>
+        ${a.cost && fixCost > Number(a.cost) * 0.5 ? '<div class="sh-msg" style="background:#F3EBDF;color:#5A2A22">الإصلاحات تعدّت نص سعره. فكروا بالاستبدال.</div>' : ''}
+        ${a.warranty_until ? `<div class="sh-msg">الضمان ${until(a.warranty_until) < 0 ? 'انتهى' : `ساري لين ${dShort(a.warranty_until)} ${D(a.warranty_until).getFullYear()}`}</div>` : ''}
+        <div class="actions" style="margin-top:12px">${isManager() ? `<button class="btn on-oud sm" id="a-ed">${I.edit} تعديل</button>` : ''}<button class="btn on-oud ghost sm" id="a-is">بلّغ عن عطل</button></div></div>
+      ${a.model || a.notes ? `<div class="card note-card mt">${esc([a.model, a.notes].filter(Boolean).join('\n'))}</div>` : ''}
+      <div class="section-title"><h2>جدول الصيانة</h2>${isManager() ? `<button class="btn sm" id="pl-new">${I.plus} مهمة</button>` : ''}</div>
+      <div class="list">${ps.map((p) => { const st = planSt(p), d = planDue(p); return `<div class="row rule ${st}"><span class="rdot"></span><div class="grow"><div class="title">${esc(p.task)}</div><div class="meta">كل ${daysTxt(p.every_days)}${p.last_done ? ` · آخر مرة ${dShort(p.last_done)}` : ''}${d ? ` · الجاية ${dShort(d)}` : ''}</div></div><button class="btn sm ${st === 'ok' ? '' : 'primary'}" data-pd="${p.id}">تمّت اليوم</button>${isManager() ? `<button class="x-btn" data-pdel="${p.id}">×</button>` : ''}</div>`; }).join('') || '<div class="empty">ما فيه مهام صيانة</div>'}</div>
+      <div class="section-title"><h2>سجل الأعطال</h2></div>
+      <div class="list">${is.map((i) => `<div class="row"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${dShort(i.created_at.slice(0, 10))}${i.vendor ? ' · ' + esc(i.vendor) : ''}${i.note ? ' · ' + esc(i.note) : ''}</div></div><span class="badge ${i.status === 'open' ? 'warn' : 'ok'}">${i.status === 'open' ? 'مفتوح' : 'تصلّح'}</span>${i.cost ? ` <b class="num">${sar(i.cost)}</b>` : ''}</div>`).join('') || '<div class="empty">ما فيه أعطال</div>'}</div>`;
+    $('#a-ed')?.addEventListener('click', () => assetForm(a, () => route()));
+    $('#a-is').onclick = () => issueForm(A.assets, a.id);
+    $('#pl-new')?.addEventListener('click', () => modal(`<h3>مهمة صيانة</h3><div class="field"><label>المهمة</label><input class="input" id="pl-t" maxlength="120"></div><div class="grid2"><div class="field"><label>كل (يوم)</label><input class="input num" type="number" id="pl-e" min="1" value="30"></div><div class="field"><label>الجهة</label><input class="input" id="pl-v" maxlength="80"></div></div><div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="pl-s">حفظ</button></div>`, (el, close) => {
+      $('#pl-s', el).onclick = (e) => busy(e.currentTarget, async () => { try { await q(sb.from('maint_plans').insert({ asset_id: a.id, task: $('#pl-t', el).value.trim(), every_days: Number($('#pl-e', el).value) || 30, vendor: $('#pl-v', el).value.trim() || null })); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+    }));
+    $$('[data-pd]', view).forEach((b) => b.onclick = () => busy(b, async () => { try { await q(sb.from('maint_plans').update({ last_done: todayR() }).eq('id', Number(b.dataset.pd))); toast('تم التسجيل'); route(); } catch (err) { toast(errMsg(err), true); } }));
+    $$('[data-pdel]', view).forEach((b) => b.onclick = () => busy(b, async () => { try { await q(sb.from('maint_plans').delete().eq('id', Number(b.dataset.pdel))); route(); } catch (err) { toast(errMsg(err), true); } }));
+  }
+
+  function assetForm(a, done) {
+    let cat = a?.category || 'chair';
+    modal(`
+      <h3>${a ? 'تعديل الأصل' : 'أصل جديد'}</h3>
+      <div class="field"><label>النوع</label><div class="chips wrap" id="af-c">${Object.entries(ACAT).map(([k, [l, e]]) => `<button type="button" class="chip ${k === cat ? 'on' : ''}" data-k="${k}">${e} ${l}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>الاسم</label><input class="input" id="af-n" maxlength="80" value="${esc(a?.name || '')}" placeholder="مثلًا: كرسي غسيل"></div><div class="field"><label>العدد</label><input class="input num" type="number" min="1" id="af-q" value="${a?.qty || 1}"></div></div>
+      <div class="grid2"><div class="field"><label>الماركة والموديل</label><input class="input" id="af-m" maxlength="80" value="${esc(a?.model || '')}"></div><div class="field"><label>المكان</label><input class="input" id="af-l" maxlength="60" value="${esc(a?.location || '')}" placeholder="محطة ١، غرفة العرايس…"></div></div>
+      <div class="grid2"><div class="field"><label>تاريخ الشراء</label><input class="input" type="date" id="af-d" value="${a?.purchase_date || ''}"></div><div class="field"><label>سعر القطعة</label><input class="input num" type="number" min="0" id="af-p" value="${a?.cost ?? ''}"></div></div>
+      <div class="grid2"><div class="field"><label>عمره المتوقع (سنة)</label><input class="input num" type="number" min="0.5" step="0.5" id="af-y" value="${a?.life_years ?? ACAT[cat][2]}"></div><div class="field"><label>الضمان لين</label><input class="input" type="date" id="af-w" value="${a?.warranty_until || ''}"></div></div>
+      <div class="field"><label>ملاحظات</label><input class="input" id="af-no" maxlength="500" value="${esc(a?.notes || '')}"></div>
+      ${!a ? '<label class="check" style="margin-bottom:12px"><input type="checkbox" id="af-pl" checked> أضف جدول الصيانة الجاهز لهالنوع</label>' : ''}
+      <div class="actions end">${a ? '<button class="btn danger" id="af-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="af-s">حفظ</button></div>`, (el, close) => {
+      $$('#af-c .chip', el).forEach((b) => b.onclick = () => { cat = b.dataset.k; $$('#af-c .chip', el).forEach((x) => x.classList.toggle('on', x === b)); if (!a) $('#af-y', el).value = ACAT[cat][2]; });
+      $('#af-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const v = (id) => $(id, el).value; const row = { name: v('#af-n').trim(), category: cat, qty: Number(v('#af-q')) || 1, model: v('#af-m').trim() || null, location: v('#af-l').trim() || null, purchase_date: v('#af-d') || null, cost: v('#af-p') === '' ? null : Number(v('#af-p')), life_years: v('#af-y') === '' ? null : Number(v('#af-y')), warranty_until: v('#af-w') || null, notes: v('#af-no').trim() || null };
+        if (row.name.length < 2) return toast('اكتبوا اسم الأصل', true);
+        try {
+          let id = a?.id;
+          if (a) await q(sb.from('assets').update(row).eq('id', a.id));
+          else { id = (await q(sb.from('assets').insert(row).select('id').single())).id; if ($('#af-pl', el)?.checked && PLAN_TPL[cat]) await q(sb.from('maint_plans').insert(PLAN_TPL[cat].map(([task, every_days]) => ({ asset_id: id, task, every_days, last_done: todayR() })))); }
+          toast('تم الحفظ'); close(); done && done(id);
+        } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#af-del', el)?.addEventListener('click', async () => { close(); if (await confirmBox('حذف الأصل', 'ينحذف مع جدول صيانته وسجل أعطاله.', 'حذف', true)) { try { await q(sb.from('assets').delete().eq('id', a.id)); location.hash = '#/assets'; } catch (err) { toast(errMsg(err), true); } } });
+    });
+  }
+
+  function issueForm(assets, assetId) {
+    modal(`
+      <h3>بلّغ عن عطل</h3>
+      <div class="field"><label>وش الجهاز؟</label><select class="input" id="if-a"><option value="">— شي ثاني —</option>${assets.map((a) => `<option value="${a.id}" ${a.id === assetId ? 'selected' : ''}>${ACAT[a.category][1]} ${esc(a.name)}${a.location ? ' · ' + esc(a.location) : ''}</option>`).join('')}</select></div>
+      <div class="field"><label>وش المشكلة؟</label><textarea class="input" id="if-t" rows="3" maxlength="160" placeholder="مثلًا: الكرسي ما يرتفع، المكيف يسرّب ماي"></textarea></div>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="if-s">إرسال</button></div>`, (el, close) => {
+      $('#if-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const t = $('#if-t', el).value.trim(); if (t.length < 2) return toast('اكتبوا المشكلة', true);
+        try { await q(sb.from('maint_issues').insert({ asset_id: $('#if-a', el).value ? Number($('#if-a', el).value) : null, title: t })); toast('وصل البلاغ للإدارة'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  function fixForm(i) {
+    modal(`
+      <h3>تصلّح العطل</h3><p class="muted" style="margin-top:-6px">${esc(i.title)}</p>
+      <div class="grid2"><div class="field"><label>التكلفة</label><input class="input num" type="number" min="0" id="fx-c"></div><div class="field"><label>مين صلّحه</label><input class="input" id="fx-v" maxlength="80"></div></div>
+      <div class="field"><label>ملاحظة</label><input class="input" id="fx-n" maxlength="300"></div>
+      <label class="check" style="margin-bottom:12px"><input type="checkbox" id="fx-e" checked> سجّل التكلفة في المصروفات (صيانة)</label>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="fx-s">حفظ</button></div>`, (el, close) => {
+      $('#fx-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const c = $('#fx-c', el).value === '' ? null : Number($('#fx-c', el).value);
+        try {
+          await q(sb.from('maint_issues').update({ status: 'fixed', fixed_at: new Date().toISOString(), cost: c, vendor: $('#fx-v', el).value.trim() || null, note: $('#fx-n', el).value.trim() || null }).eq('id', i.id));
+          if (c > 0 && $('#fx-e', el).checked) await q(sb.from('fin_expenses').insert({ day: todayR(), category: 'maintenance', amount: c, vendor: $('#fx-v', el).value.trim() || null, note: i.title.slice(0, 300) }));
+          toast('تم 🤍'); close(); route();
+        } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  function subForm(s) {
+    let cat = s?.category || 'system', cyc = s?.cycle || 'monthly', usage = s?.usage || 'high';
+    const ch = (id, obj, cur) => `<div class="chips wrap" id="${id}">${Object.entries(obj).map(([k, l]) => `<button type="button" class="chip ${k === cur ? 'on' : ''}" data-k="${k}">${Array.isArray(l) ? l[0] : l}</button>`).join('')}</div>`;
+    modal(`
+      <h3>${s ? esc(s.name) : 'اشتراك جديد'}</h3>
+      <div class="grid2"><div class="field"><label>الاسم</label><input class="input" id="sf2-n" maxlength="80" value="${esc(s?.name || '')}" placeholder="ركاز، الإنترنت…"></div><div class="field"><label>المبلغ</label><input class="input num" type="number" min="0" id="sf2-a" value="${s?.amount ?? ''}"></div></div>
+      <div class="field"><label>التصنيف</label>${ch('sf2-c', SUBCAT, cat)}</div>
+      <div class="field"><label>الدفع</label>${ch('sf2-y', CYC, cyc)}</div>
+      <div class="grid2"><div class="field"><label>يتجدد في</label><input class="input" type="date" id="sf2-r" value="${s?.renews_on || ''}"></div><div class="field"><label>استخدامنا له</label>${ch('sf2-u', { high: 'نستخدمه', low: 'قليل' }, usage)}</div></div>
+      <label class="check" style="margin-bottom:12px"><input type="checkbox" id="sf2-rv" ${s ? '' : 'checked'}> راجعناه اليوم</label>
+      ${s ? `<label class="check" style="margin-bottom:12px"><input type="checkbox" id="sf2-act" ${s.active ? 'checked' : ''}> الاشتراك شغال</label>` : ''}
+      <div class="actions end">${s ? '<button class="btn danger" id="sf2-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="sf2-s">حفظ</button></div>`, (el, close) => {
+      const pick = (id, set) => $$(`#${id} .chip`, el).forEach((b) => b.onclick = () => { set(b.dataset.k); $$(`#${id} .chip`, el).forEach((x) => x.classList.toggle('on', x === b)); });
+      pick('sf2-c', (v) => { cat = v; }); pick('sf2-y', (v) => { cyc = v; }); pick('sf2-u', (v) => { usage = v; });
+      $('#sf2-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { name: $('#sf2-n', el).value.trim(), amount: Number($('#sf2-a', el).value) || 0, category: cat, cycle: cyc, usage, renews_on: $('#sf2-r', el).value || null, active: s ? $('#sf2-act', el).checked : true };
+        if ($('#sf2-rv', el).checked) row.last_review = todayR();
+        if (row.name.length < 2) return toast('اكتبوا الاسم', true);
+        try { if (s) await q(sb.from('subscriptions').update(row).eq('id', s.id)); else await q(sb.from('subscriptions').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#sf2-del', el)?.addEventListener('click', async () => { try { await q(sb.from('subscriptions').delete().eq('id', s.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
     });
   }
 

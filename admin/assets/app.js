@@ -366,6 +366,7 @@
     users: { title: 'المستخدمين', nav: 'users', fn: pageUsers, admin: true },
     catalog: { title: 'الفئات والموردين', nav: 'catalog', fn: pageCatalog, admin: true },
     tour: { title: 'جولة في بيوتفريش', nav: 'home', fn: pageTour },
+    naqla: { title: 'نقلة بيوتفريش', nav: 'home', fn: pageNaqla },
     kit: { title: 'عُدّة بيوتفريش', nav: 'kit', fn: pageKit },
     more: { title: 'الإعدادات', nav: 'more', fn: pageMore },
   };
@@ -548,6 +549,7 @@
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
       <a class="tour-banner" href="#/tour"><div class="tb-txt"><span>جديد في بيوتفريش ✦</span><b>جولة في كل المميزات</b><small>٢٢ ميزة، وحدة وحدة، في خمس دقايق</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-3.svg" alt=""></a>
+      ${isManager() ? `<a class="tour-banner nq" href="#/naqla"><div class="tb-txt"><span>قبل وبعد ✦</span><b>نقلة بيوتفريش</b><small>الحجز من ركاز إلى موقعنا: المقارنة كاملة</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-1.svg" alt=""></a>` : ''}
       ${myShift}
       ${pulse}
       ${alertsHtml}
@@ -1526,6 +1528,7 @@
       <div id="push-box"></div>
       ${groups.map((g) => `<div class="svc-cat-h">${g}</div><div class="more-grid">${links.filter((l) => l.group === g).map((l) => `<a class="mtile" href="${l.href}"><span class="ic">${l.icon}</span><b>${l.label}</b></a>`).join('')}</div>`).join('')}
       <div class="list mt">
+        ${isManager() ? `<a class="row" href="#/naqla"><span class="ic" style="color:var(--accent)">✦</span><div class="grow title">نقلة بيوتفريش · عرض قبل وبعد</div></a>` : ''}
         ${isManager() ? `<button class="row" id="m-exp"><span class="ic" style="color:var(--accent)">${I.invoice}</span><div class="grow title">تصدير البيانات إلى Excel</div></button>` : ''}
         <a class="row" href="install.html"><span class="ic" style="color:var(--accent)">${I.home}</span><div class="grow title">ثبّت التطبيق على الجوال</div></a>
         <button class="row" id="m-pw"><span class="ic" style="color:var(--accent)">${I.key}</span><div class="grow title">تغيير كلمة المرور</div></button>
@@ -3727,6 +3730,10 @@
   ];
   const SILENT = [['🔔', 'إشعارات فورية', 'حجز جديد، عطل، طلب إجازة، توصل لجوالاتكم'], ['☀️', 'صباح بيوتفريش', '٩:١٥ الصبح: الميلاد والشكاوى والأعطال والوثائق وحجوزات اليوم'], ['🌙', 'تذكير الإقفال', '٩:٤٥ الليل إذا اليوم ما انقفل'], ['📈', 'أسبوع بيوتفريش', 'كل سبت: المبيعات ومقارنتها وأفضل يوم والعميلات الجدد'], ['📊', 'تصدير Excel', 'كل البيانات بملف واحد للمحاسب أو الأرشيف'], ['🔐', 'صلاحيات وأمان', 'الموظفة تشوف شغلها، والمالية والرواتب للإدارة بس'], ['📱', 'تطبيق على الجوال', 'يتثبت على الشاشة الرئيسية ويفتح بسرعة'], ['🖨️', 'كل شي يطبع', 'التقارير والأدلة والنماذج والقسائم بهوية الصالون']];
   const START = [['#/kit', 'عبّوا بطاقة المنشأة', 'الروابط وأوقات الدوام، عشان تتعبّى الرسائل والنماذج'], ['#/team', 'أضيفوا الفريق ورتبوا المناوبات', 'واربطوا حساب كل موظفة بملفها'], ['#/rules?t=docs', 'سجّلوا تواريخ التراخيص', 'وجاوبوا على أسئلة القواعد الخمسة'], ['#/ops?t=services', 'أضيفوا خدمات الصالون', 'بأسعارها ومنتجاتها'], ['#/finance', 'حطّوا هدف الشهر', 'وابدؤوا الإقفال اليومي من الليلة'], ['#/clients', 'غيّروا مكافأة الولاء', 'لشي محدد مثل «مانيكير هدية»']];
+
+  function pageNaqla(view) {
+    view.innerHTML = `<div class="naqla"><iframe src="naqla/index.html?v=2" title="نقلة بيوتفريش" allow="fullscreen"></iframe><a class="nq-x" href="#/home" aria-label="إغلاق">×</a></div>`;
+  }
 
   function pageTour(view) {
     let i = 0;

@@ -1026,3 +1026,10 @@ ol.steps li::before { content: counter(st); width: 26px; height: 26px; flex: non
 .tr-ics { display: flex; gap: 3px; align-items: center; } .tr-ics i { display: block; width: 4px; border-radius: 1px; background: #2B1A16; } .tr-ics i:nth-child(1) { height: 5px; } .tr-ics i:nth-child(2) { height: 7px; } .tr-ics i:nth-child(3) { width: 16px; height: 8px; border-radius: 2.5px; margin-inline-start: 3px; }
 .tr-screen img { height: auto; aspect-ratio: 600 / 1299; object-fit: cover; object-position: top; }
 @media (max-width: 860px) { .tr-phone { width: min(46vw, 190px); padding: 6px; border-radius: 32px; box-shadow: 0 0 0 1px rgba(243,235,223,.18), 0 0 0 4px #1A0C09, 0 30px 50px -30px rgba(0,0,0,.85); } .tr-screen { border-radius: 27px; } .tr-sb { height: 20px; padding: 0 14px; font-size: 8px; } .tr-isl { width: 48px; height: 13px; top: 4px; } .tr-ics i:nth-child(3) { width: 11px; height: 6px; } .tr-screen img { max-height: 46vh; } }
+
+/* naqla presentation */
+.tour-banner.nq { background: linear-gradient(120deg, #3A1C16, #6A3229); color: #F3EBDF; }
+.tour-banner.nq span:first-child { color: #E3C690; } .tour-banner.nq small { color: #E8DFD1; } .tour-banner.nq .tb-play { background: #C9A46A; color: #140D0B; }
+.naqla { position: fixed; inset: 0; z-index: 95; background: #140D0B; }
+.naqla iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.nq-x { position: absolute; z-index: 2; top: calc(14px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; line-height: 1; text-decoration: none; color: #F3EBDF; background: rgba(42, 28, 24, .85); border: 1px solid rgba(255,255,255,.15); backdrop-filter: blur(6px); }

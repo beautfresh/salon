@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>نقلة بيوتفريش</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px)}
+/* One dark, warm stage (oud at night, gold light). Every "before" is shown on a cold rust card; every "after" glows in gold. Phones carry the story; text stays short. */
+:root{
+  --night:#140D0B; --stage:#1E1411; --panel:#2A1C18; --line:#3E2B25;
+  --cream:#F3EBDF; --sand:#E8DFD1; --mute:#B8A397; --gold:#C9A46A; --gold2:#E3C690; --oud:#5A2A22;
+  --rust:#A03A26; --rustbg:#2B1712; --ok:#9BD3A6;
+  --f:'Tajawal',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--night);color:var(--cream);font-family:var(--f);font-size:17px;line-height:1.7;direction:rtl;overflow-x:hidden}
+img{max-width:100%;display:block}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;line-height:1.2;text-wrap:balance}
+.num{font-variant-numeric:tabular-nums}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--gold);font-weight:700;font-size:14px;letter-spacing:.04em}
+.eyebrow::before{content:"";width:16px;height:16px;background:var(--gold);-webkit-mask:url(img/rosette.svg) center/contain no-repeat;mask:url(img/rosette.svg) center/contain no-repeat}
+.h2{font-size:clamp(30px,5vw,52px);font-weight:900;letter-spacing:-.01em}
+.h2 em{font-style:normal;color:var(--gold)}
+.lead{color:var(--mute);font-size:clamp(16px,2vw,19px);max-width:56ch;margin:12px 0 0}
+section{padding-block:clamp(70px,10vw,120px) 0}
+.reveal{transition:opacity .9s ease,transform .9s cubic-bezier(.2,.8,.2,1)}
+.js .reveal.pre{opacity:.001;transform:translateY(40px)}
+@media (prefers-reduced-motion:reduce){.reveal{transition:none}.js .reveal.pre{opacity:1;transform:none}*{animation:none!important}}
+
+/* phone */
+.phone{position:relative;width:var(--w,280px);aspect-ratio:624/1350;border-radius:calc(var(--w,280px)*.15);padding:calc(var(--w,280px)*.035);background:linear-gradient(145deg,#3a2a26,#0d0807 40%,#2a1d1a);box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 40px 80px -30px rgba(0,0,0,.85),0 0 0 1px #000;flex:none}
+.phone .scr{position:relative;width:100%;height:100%;border-radius:calc(var(--w,280px)*.12);overflow:hidden;background:#000}
+.phone .scr img{width:100%;height:100%;object-fit:cover;object-position:top}
+.phone::after{content:"";position:absolute;top:calc(var(--w,280px)*.065);left:50%;transform:translateX(-50%);width:28%;height:calc(var(--w,280px)*.075);border-radius:99px;background:#000;z-index:3}
+.phone::before{content:"";position:absolute;right:-3px;top:22%;width:3px;height:12%;border-radius:2px;background:#2a1d1a}
+.phone.old .scr::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 70%,rgba(20,13,11,.25))}
+.phone.new{box-shadow:0 0 0 1px rgba(201,164,106,.35) inset,0 40px 90px -30px rgba(201,164,106,.35),0 0 0 1px #000}
+.badge{position:absolute;top:-14px;inset-inline-start:50%;transform:translateX(50%);z-index:5;font-size:13px;font-weight:800;padding:4px 14px;border-radius:99px;white-space:nowrap}
+.badge.o{background:var(--rust);color:#fff}.badge.n{background:var(--gold);color:var(--night)}
+
+/* hero */
+.hero{position:relative;min-height:auto;padding-block:clamp(40px,8vw,90px) 40px;overflow:hidden}
+.hero .bgros{position:absolute;width:min(900px,140vw);aspect-ratio:1;left:50%;top:50%;transform:translate(-50%,-45%);background:var(--gold);opacity:.05;-webkit-mask:url(img/rosette.svg) center/contain no-repeat;mask:url(img/rosette.svg) center/contain no-repeat;animation:spin 140s linear infinite;pointer-events:none}
+@keyframes spin{to{transform:translate(-50%,-45%) rotate(360deg)}}
+.hgrid{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;position:relative}
+.logo{width:150px;aspect-ratio:2656/1287;background:var(--cream);-webkit-mask:url(img/logo.svg) center/contain no-repeat;mask:url(img/logo.svg) center/contain no-repeat;margin-bottom:22px}
+.hero h1{font-size:clamp(40px,7.4vw,84px);font-weight:900;letter-spacing:-.02em;line-height:1.08}
+.hero h1 span{display:block;color:var(--gold)}
+.hero .lead{font-size:clamp(17px,2.2vw,21px)}
+.hphones{position:relative;display:flex;justify-content:center;align-items:center;padding:30px 0}
+.hphones .phone{position:relative}
+.hphones .old{--w:clamp(170px,19vw,235px);transform:rotate(6deg) translateY(16px);margin-inline-end:-60px;filter:saturate(.75) brightness(.78);animation:inOld 1.2s .2s cubic-bezier(.2,.8,.2,1) both;order:2}
+.hphones .new{--w:clamp(210px,23vw,285px);transform:rotate(-4deg);animation:inNew 1.2s .45s cubic-bezier(.2,.8,.2,1) both;z-index:2;order:1}
+@keyframes inOld{from{opacity:0;transform:rotate(14deg) translateY(60px)}}
+@keyframes inNew{from{opacity:0;transform:rotate(-10deg) translateY(60px)}}
+.cue{margin-top:28px;display:inline-flex;gap:10px;align-items:center;color:var(--mute);font-size:14px}
+.cue i{width:22px;height:34px;border:2px solid var(--line);border-radius:12px;position:relative}
+.cue i::after{content:"";position:absolute;top:6px;left:50%;width:4px;height:7px;margin-left:-2px;border-radius:2px;background:var(--gold);animation:wheel 1.8s infinite}
+@keyframes wheel{0%{transform:translateY(0);opacity:1}80%{transform:translateY(10px);opacity:0}100%{opacity:0}}
+@media(max-width:820px){.hgrid{grid-template-columns:minmax(0,1fr)}.hphones .old{--w:46vw;margin-inline-end:-18vw}.hphones .new{--w:54vw}}
+
+/* score band */
+.band{margin-top:30px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border-radius:28px;overflow:hidden;border:1px solid var(--line)}
+.stat{background:var(--stage);padding:22px 20px;display:grid;gap:6px;align-content:start}
+.stat .ft{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.stat s{color:var(--rust);font-size:22px;font-weight:700;text-decoration-thickness:2px;text-decoration-color:var(--rust)}
+.stat b{font-size:clamp(34px,4.4vw,48px);font-weight:900;color:var(--gold2);line-height:1}
+.stat small{color:var(--mute);font-size:14px;line-height:1.5}
+@media(max-width:820px){.band{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* compare duo */
+.duo{margin-top:44px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+@media(max-width:820px){.duo{grid-template-columns:minmax(0,1fr)}}
+.side{border-radius:32px;padding:36px 22px 26px;display:grid;justify-items:center;gap:20px;position:relative;min-width:0}
+.side.o{background:var(--rustbg);border:1px solid #4a2219}
+.side.n{background:linear-gradient(180deg,#2a1c18,#1e1411);border:1px solid rgba(201,164,106,.35)}
+.side .phone{--w:min(270px,72vw)}
+.shotwrap{position:relative}
+.twin{display:flex;gap:14px;justify-content:center;width:100%}
+.twin .phone{--w:min(200px,38vw)}
+.pin{position:absolute;z-index:6;width:30px;height:30px;margin:-15px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:14px;background:var(--rust);color:#fff;box-shadow:0 0 0 4px rgba(160,58,38,.35);animation:pulse 2.4s infinite}
+.n .pin{background:var(--gold);color:var(--night);box-shadow:0 0 0 4px rgba(201,164,106,.3)}
+@keyframes pulse{50%{box-shadow:0 0 0 10px rgba(160,58,38,0)}}
+.notes{list-style:none;margin:0;padding:0;display:grid;gap:10px;width:100%;max-width:440px;counter-reset:k}
+.notes li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;font-size:15.5px;line-height:1.6}
+.notes li::before{counter-increment:k;content:counter(k,arabic-indic);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:13px;margin-top:1px}
+.o .notes li::before{background:var(--rust);color:#fff}
+.n .notes li::before{background:var(--gold);color:var(--night)}
+.o .notes li{color:#E5C2B8}
+
+/* IG bio */
+.bio{width:100%;height:100%;overflow:hidden;grid-template-columns:minmax(0,1fr);background:#fff;color:#111;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;direction:ltr;text-align:left;padding:18% 7% 0;display:grid;align-content:start;gap:10px;font-size:13px}
+.bio .row{display:flex;align-items:center;gap:14px}
+.bio .av{width:66px;height:66px;border-radius:50%;background:#F3EBDF;display:grid;place-items:center;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #E8DFD1}
+.bio .av i{width:48px;height:24px;background:#5A2A22;-webkit-mask:url(img/logo.svg) center/contain no-repeat;mask:url(img/logo.svg) center/contain no-repeat}
+.bio .cnt{display:flex;gap:14px;text-align:center;font-size:11px;color:#555}.bio .cnt b{display:block;font-size:14px;color:#111}
+.bio .nm{font-weight:700;font-size:14px}
+.bio .tx{direction:rtl;text-align:right;color:#333;line-height:1.5}
+.bio .lk{display:flex;gap:6px;align-items:center;color:#00376B;font-weight:600;white-space:nowrap;overflow:hidden;position:relative;padding:4px 6px;margin:-4px -6px;border-radius:8px}
+.bio .lk span{overflow:hidden;text-overflow:ellipsis}
+.bio .lk svg{flex:none}
+.o .bio .lk{animation:flagO 3s 1s infinite}
+.n .bio .lk{animation:flagN 3s 1s infinite}
+@keyframes flagO{30%,60%{background:rgba(160,58,38,.16)}}
+@keyframes flagN{30%,60%{background:rgba(201,164,106,.3)}}
+.bio .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}.bio .btns span{background:#EFEFEF;border-radius:8px;text-align:center;padding:6px;font-weight:600;font-size:12px}
+.bio .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin:10px -8% 0}.bio .grid i{aspect-ratio:1;background:#E8DFD1}.bio .grid i:nth-child(3n+2){background:#D9C9B4}.bio .grid i:nth-child(4n){background:#5A2A22}
+.url{font-family:ui-monospace,Menlo,Consolas,monospace;direction:ltr;font-size:14px;border-radius:14px;padding:10px 14px;word-break:break-all;width:100%;max-width:440px;text-align:left}
+.o .url{background:#1f0f0b;border:1px dashed #6b2a1d;color:#E5C2B8}.o .url mark{background:none;color:#FF8A70;font-weight:700}
+.n .url{background:#140d0b;border:1px dashed rgba(201,164,106,.5);color:var(--gold2);font-size:20px;text-align:center}
+
+/* race */
+.race{margin-top:44px;background:var(--stage);border:1px solid var(--line);border-radius:36px;padding:34px 20px 26px}
+.lanes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media(max-width:700px){.lanes{gap:10px}.race{padding:26px 10px 20px}}
+.lane{display:grid;justify-items:center;gap:14px;min-width:0}
+.lane .phone{--w:min(270px,40vw)}
+.lane .scr img{position:absolute;inset:0;opacity:0;transition:opacity .45s ease,transform .6s cubic-bezier(.2,.8,.2,1);transform:scale(1.03)}
+.lane .scr img.on{opacity:1;transform:none}
+.lane h3{font-size:clamp(16px,2.4vw,22px);font-weight:800;display:flex;gap:8px;align-items:center}
+.lane.o h3{color:#E5C2B8}.lane.n h3{color:var(--gold2)}
+.meter{width:100%;max-width:300px;display:flex;gap:4px}
+.meter i{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden;position:relative}
+.meter i::after{content:"";position:absolute;inset:0;transform:scaleX(0);transform-origin:right;transition:transform .5s}
+.o .meter i::after{background:var(--rust)}.n .meter i::after{background:var(--gold)}
+.meter i.on::after{transform:none}
+.cap{min-height:3.4em;text-align:center;font-size:clamp(13px,1.8vw,16px);color:var(--mute);max-width:300px;line-height:1.55}
+.cap b{display:block;color:var(--cream);font-size:clamp(14px,2vw,17px)}
+.count{font-size:13px;color:var(--mute)}
+.count b{font-size:20px;color:var(--cream)}
+.over{position:absolute;inset:0;z-index:4;display:grid;place-items:center;align-content:center;gap:8px;text-align:center;padding:20px;background:rgba(20,13,11,.72);backdrop-filter:blur(3px);opacity:0;transition:opacity .5s;pointer-events:none}
+.over.on{opacity:1}
+.over b{font-size:clamp(18px,3vw,26px);font-weight:900}
+.over small{color:var(--mute);font-size:13px;line-height:1.5}
+.n .over b{color:var(--gold2)}.o .over b{color:#FF9C85}
+.over .sp{width:34px;height:34px;border-radius:50%;border:3px solid #6b2a1d;border-top-color:#FF8A70;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.over .ok{width:58px;height:58px;border-radius:50%;background:var(--gold);display:grid;place-items:center}
+.racebar{display:flex;justify-content:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:16px;font-weight:800;border-radius:99px;padding:12px 26px;border:0;cursor:pointer;display:inline-flex;gap:8px;align-items:center;transition:transform .15s}
+.btn:active{transform:scale(.96)}
+.btn.g{background:var(--gold);color:var(--night)}
+.btn.l{background:transparent;color:var(--cream);border:1px solid var(--line)}
+.btn:focus-visible{outline:3px solid var(--gold2);outline-offset:3px}
+
+/* try */
+.try{margin-top:44px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:50px;align-items:center}
+@media(max-width:820px){.try{grid-template-columns:minmax(0,1fr);justify-items:center;gap:26px}}
+.live{--w:min(340px,86vw);aspect-ratio:auto;height:calc(var(--w)*2.163)}
+.live .scr{background:#F3EBDF}
+.live iframe{border:0;width:100%;height:100%;display:block}
+.tips{display:grid;gap:14px}
+.tip{display:grid;grid-template-columns:46px minmax(0,1fr);gap:14px;align-items:start;background:var(--stage);border:1px solid var(--line);border-radius:22px;padding:16px}
+.tip i{width:46px;height:46px;border-radius:14px;background:rgba(201,164,106,.14);display:grid;place-items:center;font-style:normal;font-size:20px;color:var(--gold2);font-weight:900}
+.tip b{display:block;font-size:17px}
+.tip span{color:var(--mute);font-size:15px}
+.fine{font-size:13px;color:var(--mute);margin-top:6px}
+
+/* scorecard */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:34px}
+.tab{font-family:inherit;font-size:15px;font-weight:700;border-radius:99px;padding:9px 18px;border:1px solid var(--line);background:transparent;color:var(--mute);cursor:pointer;transition:all .25s}
+.tab.on{background:var(--cream);color:var(--night);border-color:var(--cream)}
+.tab:focus-visible{outline:3px solid var(--gold2);outline-offset:2px}
+.rows{margin-top:18px;display:grid;gap:10px}
+.rw{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,1fr) 120px;gap:0;border-radius:22px;overflow:hidden;border:1px solid var(--line);animation:rowIn .5s both}
+@keyframes rowIn{from{opacity:0;transform:translateY(12px)}}
+.rw>*{padding:16px 18px;min-width:0}
+.rw .k{background:var(--panel);font-weight:800;color:var(--sand);display:flex;align-items:center}
+.rw .b{background:var(--rustbg);color:#E5C2B8;display:flex;gap:10px;align-items:flex-start}
+.rw .a{background:var(--stage);color:var(--cream);display:flex;gap:10px;align-items:flex-start}
+.rw .b::before{content:"✕";color:#FF8A70;font-weight:900;flex:none}
+.rw .a::before{content:"✓";color:var(--gold2);font-weight:900;flex:none}
+.rw .s{background:var(--stage);display:flex;align-items:center;justify-content:center;border-inline-start:1px solid var(--line)}
+.chip{font-size:12.5px;font-weight:800;border-radius:99px;padding:4px 12px;white-space:nowrap}
+.c-ok{background:rgba(155,211,166,.14);color:var(--ok)}.c-pr{background:rgba(201,164,106,.16);color:var(--gold2)}.c-wt{background:rgba(185,180,218,.14);color:#C9C4EA}.c-sm{background:rgba(255,255,255,.07);color:var(--mute)}
+@media(max-width:820px){.rw{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.rw .k{grid-column:1/-1;justify-content:space-between}.rw .s{display:none}.rw .k .chip{display:inline-block}}
+@media(min-width:821px){.rw .k .chip{display:none}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:14px;color:var(--mute);align-items:center}
+
+/* admin strip */
+.strip{margin-top:44px;display:flex;gap:26px;overflow-x:auto;padding:20px 4px 30px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.strip figure{margin:0;display:grid;gap:14px;justify-items:center;flex:none}
+.strip .phone{--w:230px}
+.strip figcaption{text-align:center;max-width:230px}
+.strip figcaption b{display:block;font-size:17px}.strip figcaption span{font-size:14px;color:var(--mute)}
+
+
+/* flow / no-account */
+.flow{margin-top:60px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;position:relative}
+.flow::before{content:"";position:absolute;top:0;right:10%;left:10%;height:2px;background:linear-gradient(to left,var(--gold),rgba(201,164,106,.15))}
+.fs{position:relative;display:grid;gap:6px;justify-items:start;background:var(--stage);border:1px solid var(--line);border-radius:24px;padding:18px;padding-top:0}
+.fs i{width:54px;height:54px;margin-top:-27px;border-radius:50%;background:var(--gold);color:var(--night);display:grid;place-items:center;font-style:normal;font-weight:900;font-size:20px;transform:translateY(0);box-shadow:0 0 0 8px var(--night)}
+.fs b{font-size:18px;margin-top:6px}.fs span{color:var(--mute);font-size:15px}
+.vs{margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.vb,.va{border-radius:24px;padding:20px;display:grid;gap:8px;justify-items:start}
+.vb{background:var(--rustbg);border:1px solid #4a2219}.va{background:var(--stage);border:1px solid rgba(201,164,106,.35)}
+.vb b,.va b{font-size:19px}.vb span{color:#E5C2B8;font-size:15px}.va span{color:var(--mute);font-size:15px}
+.vb u{text-decoration-color:#FF8A70;text-underline-offset:5px}.va u{text-decoration-color:var(--gold);text-underline-offset:5px}
+.c-rs{background:rgba(160,58,38,.25);color:#FF9C85}
+.guard{margin-top:14px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:24px;overflow:hidden}
+.guard div{background:var(--stage);padding:16px 18px;display:grid;gap:4px}
+.guard b{font-size:16px;display:flex;gap:8px;align-items:center}.guard b::before{content:"✓";color:var(--gold2)}
+.guard span{color:var(--mute);font-size:14px}
+@media(max-width:820px){.flow{grid-template-columns:minmax(0,1fr)}.flow::before{display:none}.fs{grid-template-columns:54px minmax(0,1fr);padding:16px;column-gap:14px;align-items:center}.fs i{grid-row:span 2;box-shadow:none}.fs b{margin:0}.vs{grid-template-columns:minmax(0,1fr)}.guard{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+/* payment */
+.pay2{margin-top:40px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:40px;align-items:center}
+.pay2 .phone{--w:min(270px,70vw)}
+.pstages{display:grid;gap:12px}
+.ps{background:var(--stage);border:1px solid var(--line);border-radius:24px;padding:18px 20px;display:grid;gap:6px;justify-items:start}
+.ps b{font-size:19px}.ps span{color:var(--mute);font-size:15px}
+.money{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px;font-size:14px}
+.money span{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:6px 14px}
+.money span.g{background:rgba(201,164,106,.16);border-color:rgba(201,164,106,.4);color:var(--gold2);font-weight:700}
+.money i{font-style:normal;color:var(--gold)}
+@media(max-width:820px){.pay2{grid-template-columns:minmax(0,1fr);justify-items:center}}
+.strip.gift .phone{--w:220px}
+
+/* stays */
+.stay{margin-top:40px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:820px){.stay{grid-template-columns:minmax(0,1fr)}}
+.st{background:var(--stage);border:1px solid var(--line);border-radius:26px;padding:22px;display:grid;gap:8px}
+.st b{font-size:19px}.st p{margin:0;color:var(--mute);font-size:15px}
+.st .tg{justify-self:start}
+
+/* roadmap */
+.road{margin-top:40px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;position:relative}
+.road::before{content:"";position:absolute;top:21px;right:12%;left:12%;height:2px;background:linear-gradient(to left,var(--gold) 0 40%,var(--line) 40%)}
+.stp{display:grid;justify-items:center;text-align:center;gap:10px;padding:0 10px;position:relative}
+.stp i{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;background:var(--panel);border:2px solid var(--line);color:var(--mute)}
+.stp.d i{background:var(--gold);border-color:var(--gold);color:var(--night)}
+.stp.c i{border-color:var(--gold);color:var(--gold2);animation:pulse2 2s infinite}
+@keyframes pulse2{50%{box-shadow:0 0 0 8px rgba(201,164,106,.15)}}
+.stp b{font-size:16px}.stp span{font-size:14px;color:var(--mute)}
+@media(max-width:820px){.road{grid-template-columns:minmax(0,1fr);gap:18px}.road::before{display:none}.stp{grid-template-columns:44px minmax(0,1fr);justify-items:start;text-align:right;align-items:center;column-gap:14px}.stp i{grid-row:span 2}}
+
+.end{margin-top:clamp(80px,10vw,120px);padding-block:60px 50px;text-align:center;border-top:1px solid var(--line);position:relative;overflow:hidden}
+.end .logo{margin:0 auto 18px;width:190px}
+.end h2{font-size:clamp(28px,4.6vw,46px);font-weight:900}
+.end p{color:var(--mute);margin:10px auto 0;max-width:52ch}
+.src{font-size:13px;color:#7d6a61;margin-top:30px}
+</style>
+
+<div class="hero"><span class="bgros" aria-hidden="true"></span>
+<div class="wrap hgrid">
+  <div>
+    <div class="logo" role="img" aria-label="بيوتفريش"></div>
+    <span class="eyebrow">نقلة بيوتفريش</span>
+    <h1>بيوتفريش تستاهل <span>بيت يشبهها.</span></h1>
+    <p class="lead">اليوم العميلة تحجز من صفحة مستأجرة على ركاز. هنا المقارنة كاملة بين التجربة الحالية والتجربة الجديدة على beautfresh.com، بلقطات حقيقية من الجوال.</p>
+    <div class="cue"><i></i>انزلوا تحت</div>
+  </div>
+  <div class="hphones" aria-hidden="true">
+    <div class="phone old"><span class="badge o">اليوم</span><div class="scr"><img src="img/r-list.webp" alt=""></div></div>
+    <div class="phone new"><span class="badge n">الجديد</span><div class="scr"><img src="img/n-start.webp" alt=""></div></div>
+  </div>
+</div>
+<div class="wrap"><div class="band reveal">
+  <div class="stat"><div class="ft"><s class="num">٨</s><b class="num">٣</b></div><small>شاشات حتى تأكيد الحجز</small></div>
+  <div class="stat"><div class="ft"><s>إلزامي</s><b>بدون</b></div><small>تسجيل دخول برمز تحقق</small></div>
+  <div class="stat"><div class="ft"><s>بلا ترتيب</s><b class="num">١٥</b></div><small>قسم مرتب لـ٨٨ خدمة</small></div>
+  <div class="stat"><div class="ft"><s class="num">٧٨</s><b class="num">١٤</b></div><small>حرف في رابط البايو</small></div>
+</div></div>
+</div>
+
+<!-- 1 Link -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">١ · الباب</span><h2 class="h2">أول شي تشوفه العميلة: <em>الرابط</em></h2>
+  <p class="lead">رابط البايو هو باب الصالون. اليوم يبدأ باسم منصة ثانية ويجرّ وراه ذيل تتبّع، والجديد اسم الصالون وبس.</p></div>
+  <div class="duo">
+    <div class="side o reveal"><span class="badge o">اليوم</span>
+      <div class="phone old"><div class="scr"><div class="bio">
+        <div class="row"><span class="av"><i></i></span><div class="cnt"><div><b>—</b>منشورات</div><div><b>—</b>متابعون</div><div><b>—</b>يتابع</div></div></div>
+        <div class="nm">Beautfresh · بيوتفريش</div><div class="tx">صالون عناية وجمال · الأحساء</div>
+        <div class="lk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span>rekaz.io/beautfresh/ar?utm_source=ig&amp;utm_medium=social&amp;utm_content=link_in_bio</span></div>
+        <div class="btns"><span>متابعة</span><span>مراسلة</span></div><div class="grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div></div></div>
+      <div class="url"><mark>rekaz.io</mark>/beautfresh/ar<mark>?utm_source=ig&amp;utm_medium=social&amp;utm_content=link_in_bio</mark></div>
+      <ul class="notes"><li>أول كلمة في الرابط اسم ركاز، مو اسم الصالون.</li><li>ذيل التتبّع يطلع للعميلة، والإنستقرام يقصّه بنقاط.</li></ul>
+    </div>
+    <div class="side n reveal"><span class="badge n">الجديد</span>
+      <div class="phone new"><div class="scr"><div class="bio">
+        <div class="row"><span class="av"><i></i></span><div class="cnt"><div><b>—</b>منشورات</div><div><b>—</b>متابعون</div><div><b>—</b>يتابع</div></div></div>
+        <div class="nm">Beautfresh · بيوتفريش</div><div class="tx">صالون عناية وجمال · الأحساء</div>
+        <div class="lk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span>beautfresh.com</span></div>
+        <div class="btns"><span>متابعة</span><span>مراسلة</span></div><div class="grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div></div></div>
+      <div class="url">beautfresh.com</div>
+      <ul class="notes"><li>رابط قصير باسم الصالون، ينحفظ وينقال بالصوت.</li><li>صفحة وحدة توديها للصالون، أو الخدمات المنزلية، أو الإهداء.</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- 2 First impression -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">٢ · أول انطباع</span><h2 class="h2">نفس الصالون، <em>انطباعين مختلفين</em></h2>
+  <p class="lead">لقطات من جوال، من صفحة الصالون على ركاز اليوم، وجنبها الصفحة الجديدة.</p></div>
+  <div class="duo">
+    <div class="side o reveal"><span class="badge o">ركاز اليوم</span>
+      <div class="shotwrap"><div class="phone old"><div class="scr"><img src="img/r-home.webp" alt="صفحة بيوتفريش الرئيسية على ركاز" loading="lazy"></div></div>
+        <span class="pin" style="top:28%;right:50%">١</span><span class="pin" style="top:12%;right:30%">٢</span></div>
+      <ol class="notes"><li>الاسم مكتوب «بيوتيفريش» بياء زايدة، والصحيح «بيوتفريش».</li><li>لون برتقالي محمر وخلفية رمادية، ما تشبه ألوان الهوية.</li></ol>
+    </div>
+    <div class="side n reveal"><span class="badge n">الجديد</span>
+      <div class="shotwrap"><div class="phone new"><div class="scr"><img src="img/n-land.webp" alt="صفحة بيوتفريش الجديدة" loading="lazy"></div></div>
+        <span class="pin" style="top:22%;right:50%">١</span><span class="pin" style="top:64%;right:28%">٢</span></div>
+      <ol class="notes"><li>الشعار الحقيقي بخطه وحجمه، والاسم صحيح في كل مكان.</li><li>ألوان العود والرمل والذهبي، وطريقين واضحين: في الصالون، أو في البيت.</li></ol>
+    </div>
+  </div>
+  <div class="duo">
+    <div class="side o reveal"><span class="badge o">ركاز اليوم</span>
+      <div class="twin"><div class="shotwrap"><div class="phone old"><div class="scr"><img src="img/r-cats.webp" alt="أقسام الخدمات على ركاز" loading="lazy"></div></div>
+        <span class="pin" style="top:27%;right:24%">١</span></div>
+      <div class="shotwrap"><div class="phone old"><div class="scr"><img src="img/r-test.webp" alt="بطاقة باقة تست" loading="lazy"></div></div>
+        <span class="pin" style="top:40%;right:70%">٢</span><span class="pin" style="top:26%;right:28%">٣</span></div></div>
+      <ol class="notes"><li>اسم القسم مكتوب فوق الشعار، والنص يتداخل وما ينقرا.</li><li>«باقة تست» بوصف «تست» ظاهرة للعميلات بسعر ١٠٠ ريال.</li><li>كل الخدمات بنفس أيقونة المقص، من البروتين إلى الرموش.</li></ol>
+    </div>
+    <div class="side n reveal"><span class="badge n">الجديد</span>
+      <div class="twin"><div class="shotwrap"><div class="phone new"><div class="scr"><img src="img/n-start.webp" alt="قائمة الخدمات الجديدة" loading="lazy"></div></div>
+        <span class="pin" style="top:46%;right:50%">١</span></div>
+      <div class="shotwrap"><div class="phone new"><div class="scr"><img src="img/n-sheet.webp" alt="اختيار طول الشعر" loading="lazy"></div></div>
+        <span class="pin" style="top:62%;right:50%">٢</span></div></div>
+      <ol class="notes"><li>«الأكثر طلبًا» فوق، وكل قسم له أيقونته، والبحث يلقى الخدمة بكلمة.</li><li>الخدمات اللي سعرها حسب الطول تفتح اختيار واضح: قصير، متوسط، طويل، طويل جدًا.</li><li>ولا عنصر تجريبي يطلع للعميلة.</li></ol>
+    </div>
+  </div>
+</section>
+
+<!-- 3 Race -->
+<section class="wrap" id="race-sec">
+  <div class="reveal"><span class="eyebrow">٣ · الحجز</span><h2 class="h2">نفس الحجز، <em>جنب بعض</em></h2>
+  <p class="lead">نحجز خدمة على الطريقتين في نفس اللحظة. على اليمين خطوات ركاز كما مشيناها اليوم، وعلى اليسار الحجز الجديد.</p></div>
+  <div class="race reveal" id="race">
+    <div class="lanes">
+      <div class="lane o"><h3>ركاز اليوم</h3>
+        <div class="phone old"><div class="scr" id="ro"></div></div>
+        <div class="meter" id="mo"></div><div class="count">شاشة <b class="num" id="co">١</b> من ٨</div><div class="cap" id="po"></div></div>
+      <div class="lane n"><h3>بيوتفريش</h3>
+        <div class="phone new"><div class="scr" id="rn"></div></div>
+        <div class="meter" id="mn"></div><div class="count">شاشة <b class="num" id="cn">١</b> من ٣</div><div class="cap" id="pn"></div></div>
+    </div>
+    <div class="racebar"><button class="btn g" id="play">▶ شغّلوا المقارنة</button></div>
+  </div>
+</section>
+
+<!-- 4 Try -->
+<section class="wrap">
+  <div class="try">
+    <div class="phone new live reveal"><div class="scr"><iframe src="book.html" title="جرّبوا الحجز الجديد" loading="lazy"></iframe></div></div>
+    <div class="reveal"><span class="eyebrow">٤ · جرّبوه بأيديكم</span><h2 class="h2">الجوال هذا <em>يشتغل</em></h2>
+      <p class="lead">اضغطوا على أي خدمة، واختاروا وقت، واكتبوا اسم. فيه كل خدمات الصالون وأسعارها الحالية.</p>
+      <div class="tips" style="margin-top:24px">
+        <div class="tip"><i>١</i><div><b>بدون حساب وبدون رمز</b><span>الاسم والجوال فقط، والتأكيد يوصل على الواتساب.</span></div></div>
+        <div class="tip"><i>٢</i><div><b>أقرب موعد بضغطة</b><span>يطلع حسب ورديات الموظفات ومدة الخدمات المختارة.</span></div></div>
+        <div class="tip"><i>٣</i><div><b>أكثر من خدمة في حجز واحد</b><span>والمدة والمبلغ ينحسبون تحت أول بأول.</span></div></div>
+        <div class="tip"><i>٤</i><div><b>العميلة الراجعة</b><span>«نرجع لنفس الطلّة؟» وتحجز آخر خدمة بضغطة.</span></div></div>
+      </div>
+      <p class="fine">نموذج للعرض، ما يسجّل حجز حقيقي. المواعيد وأسماء الموظفات فيه للتوضيح.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 No account -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">٥ · بدون حساب</span><h2 class="h2">بدون حساب؟ <em>إيه، وبأمان.</em></h2>
+  <p class="lead">جوال العميلة هو هويتها. بدل ما نخليها تسجّل وتنتظر رمز قبل الحجز، ناخذ رقمها ونأكد معها على الواتساب اللي تفتحه كل يوم.</p></div>
+  <div class="flow reveal">
+    <div class="fs"><i>١</i><b>تكتب اسمها وجوالها</b><span>ثواني، بدون كلمة سر وبدون رمز.</span></div>
+    <div class="fs"><i>٢</i><b>النظام يعرفها من رقمها</b><span>إذا عندها ملف ينربط الحجز بزياراتها وأختامها، وإذا جديدة ينفتح لها ملف.</span></div>
+    <div class="fs"><i>٣</i><b>يوصلها تأكيد على الواتساب</b><span>فيه الموعد، ورابط تعدّل منه أو تلغي.</span></div>
+    <div class="fs"><i>٤</i><b>يطلع في لوحة الصالون</b><span>باسمها، مع الخدمة والموظفة والمدة.</span></div>
+  </div>
+  <div class="vs reveal">
+    <div class="vb"><span class="chip c-rs">ركاز</span><b>يتأكد من الرقم <u>قبل</u> الحجز</b><span>رقم الجوال، وانتظار رسالة الرمز، وإدخاله. وهنا تطلع ناس كثير من الصفحة.</span></div>
+    <div class="va"><span class="chip c-pr">بيوتفريش</span><b>يتأكد من الرقم <u>بعد</u> الحجز</b><span>الحجز يخلص أول، والتأكيد يوصلها على الواتساب. نفس الأمان، بدون ما نوقفها في النص.</span></div>
+  </div>
+  <div class="guard reveal">
+    <div><b>رقم سعودي صحيح فقط</b><span>يبدأ بـ٠٥ ومن ١٠ أرقام.</span></div>
+    <div><b>حد للحجوزات المفتوحة</b><span>نفس الرقم ما يقدر يحجز أكثر من حجزين قادمين.</span></div>
+    <div><b>عربون للخدمات الطويلة</b><span>مثل البروتين والتنعيم، لما يتفعّل الدفع أونلاين.</span></div>
+    <div><b>الحجز اللي ما ينأكد</b><span>يطلع تنبيه للاستقبال يتصلون عليها قبل الموعد.</span></div>
+  </div>
+  <p class="fine reveal">رسالة الواتساب في البداية ترسلها الاستقبال بضغطة وحدة من اللوحة، والنص جاهز. لما يتفعّل واتساب الأعمال تصير الرسالة تلقائية.</p>
+</section>
+
+<!-- 6 Payment -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">٦ · الدفع</span><h2 class="h2">شلون <em>يدفعون؟</em></h2>
+  <p class="lead">الفلوس تبقى على ركاز، عشان الكاشير والفاتورة الإلكترونية يمشون مثل اليوم بالضبط. موقعنا يرتّب الموعد، وركاز يقبض ويفوتر.</p></div>
+  <div class="pay2">
+    <div class="pp reveal"><div class="phone new"><div class="scr"><img src="img/n-det.webp" alt="خيارات الدفع في صفحة الحجز" loading="lazy"></div></div></div>
+    <div class="pstages">
+      <div class="ps reveal"><span class="chip c-ok">من أول يوم</span><b>تحجز من موقعنا، وتدفع في الصالون</b><span>بعد الخدمة من كاشير ركاز: كاش أو مدى أو Apple Pay على الجهاز. والفاتورة الإلكترونية تطلع من ركاز مثل اليوم.</span></div>
+      <div class="ps reveal"><span class="chip c-wt">لما يفعّل ركاز الدفع أونلاين</span><b>عربون أو دفع كامل وقت الحجز</b><span>زر «ادفعي أونلاين» في صفحة الحجز يفتح صفحة دفع ركاز. المبلغ يدخل حساب الصالون في ركاز والفاتورة تطلع منه، والباقي يندفع في الصالون.</span></div>
+      <div class="ps reveal"><span class="chip c-sm">خطة بديلة</span><b>إذا ركاز ما يدعم الدفع من برّا</b><span>نربط بوابة دفع سعودية للعربون بس، والباقي والفاتورة تبقى على ركاز.</span></div>
+      <div class="money reveal"><span>العميلة</span><i>←</i><span>صفحة الحجز</span><i>←</i><span class="g">ركاز يقبض ويفوتر</span><i>←</i><span>حساب الصالون</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 Gift -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">٧ · الإهداء</span><h2 class="h2">شي ما كان موجود: <em>أهديها بيوتفريش</em></h2>
+  <p class="lead">في ركاز ما فيه إهداء. في موقعنا قسم كامل: وحدة تهدي أختها أو أمها قسيمة باسمها، تتصمم قدامها، وتوصلها على جوالها.</p></div>
+  <div class="strip gift reveal">
+    <figure><div class="phone new"><div class="scr"><img src="img/g-land.webp" alt=""></div></div><figcaption><b>من الصفحة الرئيسية</b><span>الطريق الثالث جنب الصالون والبيت</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/g-1.webp" alt=""></div></div><figcaption><b>القيمة والمناسبة</b><span>٢٠٠ إلى ١٠٠٠ ريال أو مبلغ تختاره، وثلاث تصاميم</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/g-2.webp" alt=""></div></div><figcaption><b>لمين الهدية</b><span>اسمها وجوالها وكلمة منها، والقسيمة تتكتب قدامها</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/g-3.webp" alt=""></div></div><figcaption><b>الدفع</b><span>أونلاين «قريبًا»، ولين ذاك تكمّل الطلب على الواتساب</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/a-voucher.webp" alt=""></div></div><figcaption><b>في لوحة الإدارة</b><span>القسيمة برقمها، وتنصرف من رصيدها زيارة بعد زيارة</span></figcaption></figure>
+  </div>
+</section>
+
+<!-- 5 Scorecard -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">٨ · الصورة الكاملة</span><h2 class="h2">وين كنا، <em>ووين بنصير</em></h2></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="rows" id="rows"></div>
+  <div class="legend"><span class="chip c-ok">جاهز</span>شغّال الحين <span class="chip c-pr">نموذج جاهز</span>يشتغل، والربط جاري <span class="chip c-wt">بانتظار ركاز</span>يحتاج تفعيل منهم <span class="chip c-sm">يبقى كما هو</span></div>
+</section>
+
+<!-- 6 Admin -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">٩ · ورا الكواليس</span><h2 class="h2">كل حجز يدخل على <em>لوحة الصالون</em></h2>
+  <p class="lead">لوحة إدارة بيوتفريش شغّالة الحين. لما ينربط الحجز، كل موعد ينعكس على ملف العميلة والمالية والفريق.</p></div>
+  <div class="strip reveal">
+    <figure><div class="phone new"><div class="scr"><img src="img/a-home.webp" alt=""></div></div><figcaption><b>لوحة الصباح</b><span>وضع اليوم في نظرة وحدة</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/a-booking.webp" alt=""></div></div><figcaption><b>الحجوزات</b><span>كل حجز وحالته</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/a-client.webp" alt=""></div></div><figcaption><b>ملف العميلة</b><span>زياراتها وأختامها وآراؤها</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/a-finance.webp" alt=""></div></div><figcaption><b>المالية</b><span>اليوم والأسبوع والشهر والهدف</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/a-card.webp" alt=""></div></div><figcaption><b>بطاقة الولاء</b><span>أختام رقمية لكل عميلة</span></figcaption></figure>
+  </div>
+</section>
+
+<!-- 7 Stays -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">١٠ · ركاز ما يروح</span><h2 class="h2">ركاز يتفرّغ <em>للفلوس</em></h2>
+  <p class="lead">ركاز ممتاز في الكاشير والفواتير الإلكترونية، ويبقى عليها. اللي ينتقل هو واجهة العميلة وإدارة الحجوزات.</p></div>
+  <div class="stay">
+    <div class="st reveal"><span class="chip c-sm tg">يبقى كما هو</span><b>الكاشير</b><p>الدفع في الصالون من نقطة بيع ركاز.</p></div>
+    <div class="st reveal"><span class="chip c-sm tg">يبقى كما هو</span><b>الفاتورة الإلكترونية</b><p>تصدر من ركاز ومتوافقة مع هيئة الزكاة والضريبة.</p></div>
+    <div class="st reveal"><span class="chip c-wt tg">بانتظار ركاز</span><b>الدفع أونلاين</b><p>إذا فعّلوه، ينربط بزر الدفع في صفحة الحجز.</p></div>
+  </div>
+</section>
+
+<!-- 8 Road -->
+<section class="wrap">
+  <div class="reveal"><span class="eyebrow">١١ · الخطوات الجاية</span><h2 class="h2">من هنا <em>إلى الإطلاق</em></h2></div>
+  <div class="road reveal">
+    <div class="stp d"><i>✓</i><b>الموقع والهوية</b><span>الصفحة، الخدمات المنزلية، الإهداء، ولوحة الإدارة</span></div>
+    <div class="stp c"><i>٢</i><b>ربط الحجز</b><span>الصفحة الجديدة تكتب في لوحة الصالون مباشرة</span></div>
+    <div class="stp"><i>٣</i><b>الدفع مع ركاز</b><span>تفعيل الدفع أونلاين والفاتورة</span></div>
+    <div class="stp"><i>٤</i><b>تغيير الرابط</b><span>beautfresh.com في البايو</span></div>
+  </div>
+</section>
+
+<div class="wrap end">
+  <div class="logo" role="img" aria-label="بيوتفريش"></div>
+  <h2><span dir="ltr">The Fresh Version of You.</span><br>حتى في الحجز.</h2>
+  <p>لقطات «ركاز اليوم» من صفحة الصالون العامة على ركاز في ١ نوفمبر ٢٠٢٦. الحجز التجريبي وقف عند رمز التحقق، وما انرسل أي حجز.</p>
+</div>
+
+<script>
+document.documentElement.classList.add('js');
+const A=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+/* reveal */
+(function(){
+  const els=[...document.querySelectorAll('.reveal')];
+  if(!('IntersectionObserver' in window)||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.remove('pre');io.unobserve(e.target)}}),{rootMargin:'0px 0px -8% 0px'});
+  els.forEach(el=>{const r=el.getBoundingClientRect();if(r.top>innerHeight){el.classList.add('pre');io.observe(el)}});
+})();
+/* race */
+(function(){
+  const O=[['r-home','الرابط يفتح الصفحة الرئيسية','لازم تنزل وتدوّر على زر الحجز'],['r-cats','الأقسام','النص فوق الشعار، وكل الأقسام بنفس الصورة'],['r-list','قائمة الخدمات','أيقونة مقص وحدة لكل الخدمات'],['r-svc','صفحة الخدمة','المدة والسعر بخط فاتح ما ينقرا'],['r-date','الموعد','شريط أيام وقائمة أوقات طويلة'],['r-cart','سلة المشتريات','وكأنها تشتري منتج'],['r-otp','تسجيل دخول','رقم الجوال، وبعدين انتظار رمز التحقق'],['r-otp','وباقي…','شاشة «معلومات»، وبعدها «الدفع»']];
+  const N=[['n-start','الخدمات',''],['n-sheet','الخدمات','تختار الطول، والسعر واضح'],['n-sel','الخدمات','خدمتين، والمبلغ والمدة تحت'],['n-time','الوقت','أقرب موعد جاهز'],['n-det','بياناتك','الاسم والجوال فقط'],['n-done','تم','وتأكيد على الواتساب']];
+  const NS=[1,1,1,2,3,3];
+  const ro=document.getElementById('ro'),rn=document.getElementById('rn');
+  const mk=(el,arr)=>arr.map((f,i)=>{const im=new Image();im.src='img/'+f[0]+'.webp';im.alt=f[1];im.loading=i<2?'eager':'lazy';if(i===0)im.classList.add('on');el.appendChild(im);return im});
+  const io=mk(ro,O),in_=mk(rn,N);
+  const ovO=document.createElement('div');ovO.className='over';ovO.innerHTML='<span class="sp"></span><b>بانتظار رمز التحقق</b><small>وبعده: «معلومات»، ثم «الدفع»<br>والدفع أونلاين مو مفعّل</small>';ro.appendChild(ovO);
+  const ovN=document.createElement('div');ovN.className='over';ovN.innerHTML='<span class="ok"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#140D0B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span><b>انحجز الموعد</b><small>٣ شاشات، بدون حساب</small>';rn.appendChild(ovN);
+  const mo=document.getElementById('mo'),mn=document.getElementById('mn');
+  mo.innerHTML='<i></i>'.repeat(8);mn.innerHTML='<i></i>'.repeat(3);
+  const po=document.getElementById('po'),pn=document.getElementById('pn'),co=document.getElementById('co'),cn=document.getElementById('cn');
+  function show(t){
+    const oi=Math.min(t,O.length-1),ni=Math.min(t,N.length-1);
+    io.forEach((im,i)=>im.classList.toggle('on',i===oi));in_.forEach((im,i)=>im.classList.toggle('on',i===ni));
+    [...mo.children].forEach((x,i)=>x.classList.toggle('on',i<=oi));
+    [...mn.children].forEach((x,i)=>x.classList.toggle('on',i<NS[ni]));
+    co.textContent=A(oi+1);cn.textContent=A(NS[ni]);
+    po.innerHTML='<b>'+O[oi][1]+'</b>'+O[oi][2];pn.innerHTML='<b>'+N[ni][1]+'</b>'+(N[ni][2]||'كل الخدمات مرتبة، والأكثر طلبًا فوق');
+    ovN.classList.toggle('on',t>=N.length);ovO.classList.toggle('on',t>=O.length);
+  }
+  let timer=null,t=0;
+  const btn=document.getElementById('play');
+  function run(){clearInterval(timer);t=0;show(0);btn.textContent='⏸ جاري…';btn.disabled=true;
+    timer=setInterval(()=>{t++;show(t);if(t>=O.length){clearInterval(timer);btn.disabled=false;btn.textContent='↺ عيدوها'}},2000);}
+  btn.onclick=run;show(0);
+  if('IntersectionObserver' in window&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    const ob=new IntersectionObserver(es=>{if(es[0].isIntersecting){run();ob.disconnect()}},{threshold:.55});ob.observe(document.getElementById('race'));
+  }
+})();
+/* scorecard */
+(function(){
+  const D={
+   'الواجهة':[
+    ['الرابط','rekaz.io/beautfresh/ar مع ذيل تتبّع','beautfresh.com','ok'],
+    ['اسم العلامة','«بيوتيفريش» بالخطأ في العنوان والتذييل','«بيوتفريش» كما في الشعار','ok'],
+    ['الألوان والخط','قالب ركاز العام بلون برتقالي محمر','ألوان بيوتفريش وزخارفها وخط تجوال','ok'],
+    ['الخدمات المنزلية','غير موجودة','صفحة خاصة بشعارها وهويتها','ok'],
+    ['شكل الخدمات','أيقونة مقص وحدة لكل الخدمات','أيقونة لكل قسم، و«الأكثر طلبًا» فوق','pr'],
+    ['ترتيب القائمة','قرابة ٩٠ بطاقة، خدمات بلا قسم، و«باقة تست» ظاهرة','٨٨ خدمة في ١٥ قسم مرتب، وبحث بكلمة','pr']],
+   'الحجز':[
+    ['الدخول','رقم جوال ورمز تحقق قبل التأكيد','الاسم والجوال فقط','pr'],
+    ['عدد الشاشات','٨ شاشات','٣ شاشات','pr'],
+    ['الموعد','شريط أيام وقائمة أوقات','«أقرب موعد» بضغطة، والتقويم لمن تبي يوم معيّن','pr'],
+    ['السعر حسب الطول','يظهر بعد الدخول في الخدمة','خيارات واضحة: قصير، متوسط، طويل','pr'],
+    ['أكثر من خدمة','عبر سلة مشتريات','في نفس الشاشة، والمدة تنجمع','pr'],
+    ['العميلة الراجعة','تبدأ من الصفر','«نرجع لنفس الطلّة؟» بضغطة','pr'],
+    ['بعد الحجز','حسب إعدادات ركاز','تأكيد واتساب وتذكير قبل الموعد بيوم','pr']],
+   'الدفع':[
+    ['الدفع أونلاين','غير مفعّل','عربون أو دفع كامل، يظهر «قريبًا» لين يتفعّل','wt'],
+    ['الفاتورة الإلكترونية','من ركاز','تبقى من ركاز','sm'],
+    ['الكاشير','نقطة بيع ركاز','نقطة بيع ركاز','sm']],
+   'بعد الزيارة':[
+    ['بطاقة الولاء','لا توجد','بطاقة أختام رقمية برابط خاص لكل عميلة','ok'],
+    ['الإهداء','لا يوجد','صفحة إهداء بقسيمة باسم المُهدى لها','ok'],
+    ['رأي العميلة','نجوم داخل ركاز','رأي يوصل للإدارة ومربوط بملف العميلة','ok']],
+   'الإدارة':[
+    ['ملف العميلة','داخل ركاز','زياراتها وأختامها وآراؤها في مكان واحد','ok'],
+    ['المالية والفريق والمخزون','خارج ركاز','لوحة بيوتفريش: المالية، الورديات، المخزون، التقارير','ok'],
+    ['تقويم الحجوزات','لوحة ركاز','تقويم يومي لكل موظفة: وصلت، خلصت، ما حضرت','pr'],
+    ['ملكية البيانات','على منصة خارجية','قاعدة بيانات بيوتفريش الخاصة','ok']]};
+  const L={ok:['c-ok','جاهز'],pr:['c-pr','نموذج جاهز'],wt:['c-wt','بانتظار ركاز'],sm:['c-sm','يبقى كما هو']};
+  const tabs=document.getElementById('tabs'),rows=document.getElementById('rows');
+  const keys=Object.keys(D);let cur=keys[1];
+  function draw(){
+    tabs.innerHTML=keys.map(k=>'<button class="tab'+(k===cur?' on':'')+'" role="tab" aria-selected="'+(k===cur)+'" data-k="'+k+'">'+k+'</button>').join('');
+    rows.innerHTML=D[cur].map((r,i)=>'<div class="rw" style="animation-delay:'+(i*60)+'ms"><div class="k">'+r[0]+'<span class="chip '+L[r[3]][0]+'">'+L[r[3]][1]+'</span></div><div class="b">'+r[1]+'</div><div class="a">'+r[2]+'</div><div class="s"><span class="chip '+L[r[3]][0]+'">'+L[r[3]][1]+'</span></div></div>').join('');
+    tabs.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{cur=b.dataset.k;draw()});
+  }
+  draw();
+})();
+</script>
+
+</html>

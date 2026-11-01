@@ -16,7 +16,7 @@ let cfg: { client_id: string; client_secret: string } | null = null;
 let token: { v: string; exp: number } | null = null;
 async function getToken(): Promise<string> {
   if (token && token.exp > Date.now() + 60_000) return token.v;
-  if (!cfg) { const { data } = await db.rpc('rekaz_sync_config'); cfg = data; }
+  if (!cfg) cfg = { client_id: Deno.env.get('REKAZ_CLIENT_ID') ?? '', client_secret: Deno.env.get('REKAZ_CLIENT_SECRET') ?? '' };
   if (!cfg?.client_id || !cfg?.client_secret) throw new Error('rekaz_not_connected');
   const r = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'client_credentials', client_id: cfg.client_id, client_secret: cfg.client_secret }) });

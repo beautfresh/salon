@@ -96,6 +96,8 @@ Deno.serve(async (req) => {
   const { data: cfg, error } = await db.rpc('rekaz_sync_config');
   if (error || !cfg?.sync_secret) return json({ error: 'config_unavailable' }, 500);
   if (req.headers.get('x-sync-secret') !== cfg.sync_secret) return json({ error: 'forbidden' }, 403);
+  cfg.client_id = Deno.env.get('REKAZ_CLIENT_ID') || cfg.client_id;
+  cfg.client_secret = Deno.env.get('REKAZ_CLIENT_SECRET') || cfg.client_secret;
   if (!cfg.client_id || !cfg.client_secret) return json({ error: 'rekaz_credentials_missing' }, 400);
   let mode = 'quick';
   try { mode = (await req.json())?.mode === 'full' ? 'full' : 'quick'; } catch (_) { /* default */ }

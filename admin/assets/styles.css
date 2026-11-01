@@ -1102,7 +1102,7 @@ ol.steps li::before { content: counter(st); width: 26px; height: 26px; flex: non
 .sd-pulse-g em { display: block; font-style: normal; font-size: 11.5px; color: var(--ink-2); }
 @media (max-width: 640px) { .sd-pulse-g { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .sd-cum { position: relative; height: 120px; margin: 16px 0 26px; }
-.sd-cum svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+.sd-cum svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sd-cum polyline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .sd-cum polyline.t { stroke: var(--accent); stroke-width: 2.5; }
 .sd-cum polyline.w { stroke: #C4A88F; stroke-dasharray: 4 4; }

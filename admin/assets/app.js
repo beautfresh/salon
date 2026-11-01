@@ -4415,9 +4415,9 @@
       const k = pulse.k, kw = pulse.kw, H = pulse.hours;
       const nowH = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', hour12: false })) % 24;
       const h0 = 9, h1 = 24, mx = Math.max(1, ...H.map((x) => Math.max(Number(x.t), Number(x.w))));
-      const X = (h) => ((h + 1 - h0) / (h1 - h0)) * 100, Y = (v) => 96 - (Number(v) / mx) * 88;
-      const lineT = H.filter((x) => x.h >= h0 - 1 && x.h <= nowH).map((x) => `${X(x.h)},${Y(x.t)}`).join(' ');
-      const lineW = H.filter((x) => x.h >= h0 - 1).map((x) => `${X(x.h)},${Y(x.w)}`).join(' ');
+      const X = (h) => ((h + 1 - h0) / (h1 - h0)) * 100, XM = (h) => 100 - X(h), Y = (v) => 96 - (Number(v) / mx) * 88;
+      const lineT = H.filter((x) => x.h >= h0 - 1 && x.h <= nowH).map((x) => `${XM(x.h)},${Y(x.t)}`).join(' ');
+      const lineW = H.filter((x) => x.h >= h0 - 1).map((x) => `${XM(x.h)},${Y(x.w)}`).join(' ');
       box.innerHTML = `
         <div class="card sd-pulse">
           <div class="sd-pulse-h"><h3><i class="sd-dot"></i>اليوم لحظة بلحظة</h3><span class="muted small">يتحدث كل دقيقة</span></div>
@@ -4425,7 +4425,7 @@
             <div><span>المحصّل اليوم</span><b class="num">${sar(k.collected)}</b><em>${sdChip(k.collected, kw.collected, { tip: `نفس اليوم الأسبوع الماضي: ${sar(kw.collected)} ر.س` })} عن ${WDAYS[new Date().getDay()]} الماضي</em></div>
             <div><span>حجوزات اليوم</span><b class="num">${sdN(k.bookings)}</b><em>${sdN(k.clients)} عميلة${k.cancelled ? ` · ${k.cancelled} إلغاء` : ''}</em></div>
             <div><span>باقي اليوم</span><b class="num">${sdN(pulse.left_today.n)}</b><em>موعد بقيمة ${sar(pulse.left_today.v)} ر.س</em></div>
-            <div><span>الأسبوع الجاي</span><b class="num">${sar(pulse.next7.v)}</b><em>${sdN(pulse.next7.n)} حجز ${sdChip(pulse.next7.v, pulse.next7_ly.v, { tip: `آخر ٧ أيام انقدم: ${sar(pulse.next7_ly.v)} ر.س` })}</em></div>
+            <div data-tip="الحجوزات المؤكدة والمعلقة للسبعة أيام الجاية (يزيد كل ما حجزوا أكثر)"><span>محجوز للأسبوع الجاي</span><b class="num">${sar(pulse.next7.v)}</b><em>${sdN(pulse.next7.n)} حجز</em></div>
           </div>
           <div class="sd-cum">
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">

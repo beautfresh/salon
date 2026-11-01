@@ -43,8 +43,9 @@
     if (error) throw error;
     return data;
   }
-  const money = (v) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 })} ر.س`;
-  const dur = (m) => { m = Number(m); if (m < 60) return `${m} دقيقة`; const h = Math.floor(m / 60), r = m % 60; const hs = h === 1 ? 'ساعة' : h === 2 ? 'ساعتان' : `${h} ساعات`; return r ? `${hs} و${r} د` : hs; };
+  const AR = (s) => String(s).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
+  const money = (v) => `${AR(Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 }))} ر.س`;
+  const dur = (m) => { m = Number(m); if (m < 60) return `${AR(m)} دقيقة`; const h = Math.floor(m / 60), r = m % 60; const hs = h === 1 ? 'ساعة' : h === 2 ? 'ساعتين' : `${AR(h)} ساعات`; return r ? `${hs} و${AR(r)} دقيقة` : hs; };
   const t12 = (hm) => { const [h, m] = hm.split(':').map(Number); const p = h < 12 ? 'ص' : 'م'; const hh = h % 12 || 12; return `${hh}:${String(m).padStart(2, '0')} ${p}`; };
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const riyadhToday = () => { const s = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).slice(0, 10); const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };

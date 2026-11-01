@@ -4238,7 +4238,7 @@
   /* ======================= لوحة المبيعات ======================= */
   const SD_LENSES = [['d', 'اليوم'], ['w', 'الأسبوع'], ['m', 'الشهر'], ['q', 'الربع'], ['y', 'السنة'], ['c', 'فترة مخصصة']];
   const SD_TABS = [['sales', 'المبيعات'], ['svc', 'الخدمات'], ['team', 'الأخصائيات'], ['clients', 'العميلات'], ['time', 'أوقات الذروة'], ['profit', 'الربح الصافي']];
-  const SD_GRP = { hair: 'الشعر', nails: 'الأظافر', face: 'خدمات الوجه', lashes: 'الرموش والحواجب', makeup: 'المكياج', other: 'أخرى' };
+  const SD_GRP = { hair: 'الشعر', nails: 'الأظافر', face: 'خدمات الوجه', lashes: 'الرموش والحواجب', makeup: 'المكياج', other: 'الباقات والعروض' };
   const SD_METH = { point_of_sales: 'شبكة (مدى وفيزا)', cash: 'كاش', bank_transfer: 'تحويل بنكي', buy_now_pay_later: 'تابي وتمارا', online: 'دفع إلكتروني', other: 'أخرى' };
   const SD_SRC = { internal: 'من الاستقبال', website: 'من الموقع (العميلة حجزت بنفسها)' };
   const SD_PREV = { d: 'أمس', w: 'الأسبوع الماضي', m: 'الشهر الماضي', q: 'الربع الماضي', y: 'السنة الماضية', c: 'الفترة اللي قبلها' };
@@ -4474,7 +4474,7 @@
   function sdTabSales(r, P, o) {
     const K = r.k, methods = r.methods.map((x) => ({ l: SD_METH[x.m] || esc(x.m), v: x.v, sub: `${sdN(x.n)} عملية` }));
     const src = r.sources.map((x) => ({ l: SD_SRC[x.s] || esc(x.s), v: x.v, sub: `${sdN(x.n)} طلب` }));
-    const L = r.lead || {}, lead = [['نفس اليوم', L.same], ['قبلها بيوم أو يومين', L.d1_2], ['من ٣ لـ٧ أيام', L.d3_7], ['قبل أكثر من أسبوع', L.d8]].map(([l, v]) => ({ l, v: Number(v || 0) }));
+    const L = r.lead || {}, lead = [['نفس اليوم', L.same], ['قبلها بيوم أو يومين', L.d1_2], ['من 3 إلى 7 أيام', L.d3_7], ['قبل أكثر من أسبوع', L.d8]].map(([l, v]) => ({ l, v: Number(v || 0) }));
     const days = r.series.filter((x) => x.k <= todayR());
     const best = [...days].sort((a, b) => b.c - a.c)[0];
     const avgDay = days.length ? days.reduce((a, x) => a + Number(x.c), 0) / days.length : 0;
@@ -4491,9 +4491,9 @@
       <div class="fin-grid">
         <div><div class="section-title"><h2>طرق الدفع</h2></div><div class="card">${methods.length ? sdBars(methods) : '<div class="empty">ما فيه مدفوعات في هالفترة</div>'}</div></div>
         <div><div class="section-title"><h2>من وين جات الطلبات</h2></div><div class="card">${src.length ? sdBars(src) : '<div class="empty">ما فيه طلبات</div>'}</div></div>
-        <div><div class="section-title"><h2>متى يحجزون قبل موعدهم</h2></div><div class="card">${sdBars(lead, { count: true })}${L.avg != null ? `<p class="muted small" style="margin:10px 0 0">بالمتوسط تحجز العميلة قبل موعدها بـ ${Number(L.avg).toLocaleString('en-US', { maximumFractionDigits: 1 })} يوم</p>` : ''}</div></div>
+        <div><div class="section-title"><h2>حجوزات الموقع: كم قبل يحجزون؟</h2></div><div class="card">${sdBars(lead, { count: true })}${L.avg != null ? `<p class="muted small" style="margin:10px 0 0">العميلة اللي تحجز من الموقع تحجز بالمتوسط قبل موعدها بـ ${Number(L.avg).toLocaleString('en-US', { maximumFractionDigits: 1 })} يوم</p>` : ''}</div></div>
         <div><div class="section-title"><h2>تفصيل الفلوس</h2></div><div class="card sd-money">
-          ${[['إجمالي المبيعات (شامل الضريبة)', K.sales], ['− الخصومات', K.discount, 1], ['− ضريبة القيمة المضافة', K.tax, 1], ['صافي المبيعات', K.net_sales, 0, 1], ['المدفوعات المستلمة', K.paid], ['− المسترجع', K.refunds, 1], ['صافي المحصّل', K.collected, 0, 1]].map(([l, v, m, b]) => `<div class="${b ? 'b' : ''} ${m ? 'm' : ''}"><span>${l}</span><b class="num">${sar(v)}</b></div>`).join('')}
+          ${[['صافي المبيعات (قبل الضريبة)', K.net_sales], ['− الخصومات', K.discount, 1], ['+ ضريبة القيمة المضافة', K.tax, 1], ['إجمالي المبيعات', K.sales, 0, 1], ['المدفوعات المستلمة', K.paid], ['− المسترجع', K.refunds, 1], ['صافي المحصّل', K.collected, 0, 1]].map(([l, v, m, b]) => `<div class="${b ? 'b' : ''} ${m ? 'm' : ''}"><span>${l}</span><b class="num">${sar(v)}</b></div>`).join('')}
           <p class="muted small">المبيعات تنحسب بتاريخ الطلب، والمحصّل بتاريخ الدفع، فطبيعي يختلفون شوي (نفس طريقة ركاز بالضبط).</p>
         </div></div>
       </div>`;
@@ -4536,7 +4536,7 @@
         const lost = x.all ? Math.round(((x.cx + x.ns) / x.all) * 100) : 0;
         return `<div class="card sd-prov">
           <div class="sd-prov-h"><span class="avatar">${esc(initial(x.name))}</span><div><b>${esc(x.name)}</b><small>${i === 0 ? '👑 الأعلى دخل' : `المركز ${i + 1}`}</small></div><div class="sd-prov-v"><b class="num">${sar(x.v)}</b><small>ر.س ${sdChip(x.v, x.pv, { tip: `${SD_PREV[o.lens]}: ${sar(x.pv)} ر.س` })}</small></div></div>
-          <div class="sd-mini lg" data-tip="${sdShare(x.v, tot)}٪ من دخل الأخصائيات"><i style="width:${(Number(x.v) / mx) * 100}%"></i></div>
+          <div class="sd-mini big" data-tip="${sdShare(x.v, tot)}٪ من دخل الأخصائيات"><i style="width:${(Number(x.v) / mx) * 100}%"></i></div>
           <div class="sd-prov-g">
             <div data-tip="الحجوزات المؤكدة"><span>حجوزات</span><b class="num">${sdN(x.n)}</b></div>
             <div data-tip="عميلات مختلفات"><span>عميلات</span><b class="num">${sdN(x.cl)}</b></div>
@@ -4631,17 +4631,17 @@
 
   function sdTabProfit(r, P, o) {
     const K = r.k, exp = Number(r.expenses?.total || 0), pur = Number(r.purchases || 0);
-    const rev = Number(K.net_sales) + Number(K.home), net = rev - exp - pur, margin = rev ? Math.round((net / rev) * 100) : 0;
+    const rev = Number(K.net_sales) - Number(K.discount) + Number(K.home), net = rev - exp - pur, margin = rev ? Math.round((net / rev) * 100) : 0;
     const cats = Object.entries(r.expenses?.cats || {}).map(([k, v]) => ({ l: EXP_CAT[k] || k, v })).sort((a, b) => b.v - a.v);
     const lost = Number(K.cancelled_value) + Number(K.noshow_value);
     const camps = r.campaigns || [];
     return `
       ${!exp && !pur ? `<div class="sd-cta static"><b>هنا تطلع لك الصورة الكاملة: كم دخل، كم صرفتوا، وكم صافي الربح الحقيقي</b><span>المبيعات جاهزة من ركاز. باقي بس تسجلين المصروفات (إيجار، رواتب، فواتير…) وفواتير المواد من المخزون، وكل شي ينحسب لحاله.</span><div class="actions"><button class="btn primary" id="sd-exp">${I.plus} سجّلي مصروف</button><a class="btn" href="#/invoices">فواتير المواد</a></div></div>` : ''}
       <div class="card sd-pl">
-        <div><span>صافي المبيعات (بدون ضريبة)</span><b class="num">${sar(rev)}</b></div>
+        <div><span data-tip="المبيعات بعد الخصم وبدون الضريبة (الضريبة مو لكم، تروح للزكاة والضريبة)">المبيعات بدون ضريبة وبعد الخصم</span><b class="num">${sar(rev)}</b></div>
         <div class="m"><span>− مشتريات المواد</span><b class="num">${sar(pur)}</b></div>
         <div class="m"><span>− المصروفات</span><b class="num">${sar(exp)}</b></div>
-        <div class="b ${net < 0 ? 'neg' : ''}"><span>صافي الربح</span><b class="num">${sar(net)} <small>ر.س</small></b></div>
+        <div class="b ${net < 0 ? 'neg' : ''}"><span>${exp || pur ? 'صافي الربح' : 'الربح قبل المصروفات'}</span><b class="num">${sar(net)} <small>ر.س</small></b></div>
         ${exp || pur ? `<div class="sd-margin"><span>هامش الربح</span><div class="fbar-track"><i style="width:${Math.max(0, Math.min(100, margin))}%"></i></div><b class="num">${margin}٪</b></div>` : ''}
         ${(exp || pur) && r.partners.length ? `<div class="sd-partners">${r.partners.map((p) => `<div><span>${esc(p.name)} (${Number(p.pct)}٪)</span><b class="num">${sar((net * Number(p.pct)) / 100)}</b></div>`).join('')}</div>` : ''}
       </div>

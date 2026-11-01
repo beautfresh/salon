@@ -12,11 +12,22 @@ language sql immutable set search_path = '' as $$ select (d::timestamp at time z
 -- كل خدمة في ركاز ← قسمها عندنا
 create or replace function private.rk_prod_cat() returns table (product_id text, cat_id bigint, cat text, grp text)
 language sql stable set search_path = '' as $$
-  select distinct on (p.id) p.id, c.id, c.name, coalesce(c.role, c.grp)
-  from public.rekaz_products p
-  join public.salon_services s on s.rekaz_slug = p.raw->>'slug'
-  join public.salon_svc_cats c on c.id = s.cat_id
-  order by p.id, s.id
+  with m as (
+    select distinct on (p.id) p.id, s.cat_id cid
+    from public.rekaz_products p
+    join public.salon_services s on s.rekaz_slug = p.raw->>'slug'
+    order by p.id, s.id),
+  x as (
+    select p.id, coalesce(m.cid, case
+      when p.name ~* '(صبغ|هايلايت|لولايت|بلياج|اومبري|color)' then 6
+      when p.name ~* '(قص|استشوار|تسريح|سشوار)' then 7
+      when p.name ~* '(شعر|hair)' then 1
+      when p.name ~* '(اظفر|أظافر|ظفر|nail|مناكير|مانيكير|بدكير|جيل)' then 8
+      when p.name ~* '(رموش|حواجب|lash|brow)' then 14
+      when p.name ~* '(مكياج|makeup)' then 15 end) cid
+    from public.rekaz_products p left join m on m.id = p.id)
+  select x.id, c.id, coalesce(c.name, 'الباقات والعروض'), coalesce(c.role, c.grp, 'other')
+  from x left join public.salon_svc_cats c on c.id = x.cid
 $$;
 
 -- مؤشرات فترة [d0, d1)
@@ -185,7 +196,7 @@ begin
         'd3_7', count(*) filter (where dd >= 3 and dd < 8), 'd8', count(*) filter (where dd >= 8),
         'avg', round(avg(dd), 1)) from (
         select (rr.lt::date - (o.created_at at time zone 'Asia/Riyadh')::date) dd from rr join public.rekaz_orders o on o.id = rr.order_id
-        where rr.status = 'confirmed') z),
+        where rr.status = 'confirmed' and o.source = 'website') z),
     'top_clients', coalesce((select jsonb_agg(jsonb_build_object('id', customer_id, 'name', name, 'phone', phone, 'visits', visits, 'v', v, 'last', last, 'fav', fav)) from cust), '[]'::jsonb),
     'reviews', (select jsonb_build_object('n', count(*), 'avg', round(avg(rating), 2),
         'dist', jsonb_build_object('5', count(*) filter (where rating = 5), '4', count(*) filter (where rating = 4), '3', count(*) filter (where rating = 3),

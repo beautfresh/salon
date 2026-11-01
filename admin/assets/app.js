@@ -117,6 +117,7 @@
 
   /* ======================= icons ======================= */
   const I = {
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
     mega: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12"/></svg>',
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
@@ -279,6 +280,7 @@
       { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
     ];
     L.push({ href: '#/clients', label: 'العميلات', icon: I.heart, key: 'clients' });
+    L.push({ href: '#/rules', label: 'قواعد بيوتفريش', icon: I.shield, key: 'rules' });
     L.push({ href: '#/ops', label: 'التشغيل', icon: I.check, key: 'ops' });
     L.push({ href: '#/team', label: 'الفريق', icon: I.users, key: 'team' });
     L.push({ href: '#/marketing', label: 'التسويق', icon: I.mega, key: 'marketing' });
@@ -355,6 +357,7 @@
     clients: { title: 'العميلات', nav: 'clients', fn: pageClients },
     client: { title: 'ملف العميلة', nav: 'clients', fn: pageClient },
     feedback: { title: 'الآراء والملاحظات', nav: 'clients', fn: pageFeedback },
+    rules: { title: 'قواعد بيوتفريش', nav: 'rules', fn: pageRules },
     ops: { title: 'التشغيل', nav: 'ops', fn: pageOps },
     svc: { title: 'بطاقة الخدمة', nav: 'ops', fn: pageSvc },
     team: { title: 'الفريق', nav: 'team', fn: pageTeam },
@@ -495,6 +498,7 @@
     const away = cl.filter((c) => c.segment === 'away').length;
     const alerts = [];
     if (isManager() && yc === null && D(yday).getDay() !== 5) alerts.push(['warn', I.coin, 'أمس ما انقفل', 'سجّلوا مبيعاته عشان تكتمل الأرقام', `#/closing?d=${yday}`]);
+    if (isManager()) { try { const rc = JSON.parse(localStorage.getItem('bf-rules') || 'null'); if (rc && rc.risk) alerts.unshift(['danger', I.shield, `${rc.risk === 1 ? 'قاعدة وحدة' : rc.risk + ' قواعد'} في خطر`, `صحة بيوتفريش ${rc.score}٪`, '#/rules']); else if (!rc) alerts.push(['', I.shield, 'افحصوا صحة بيوتفريش', 'قواعد تنفحص على بيانات الصالون', '#/rules']); } catch {} }
     if (tlv) alerts.push(['warn', I.users, tlv === 1 ? 'طلب إجازة بانتظار اعتمادك' : `${tlv} طلبات إجازة بانتظار اعتمادك`, 'اعتمدوها أو ردّوا عليها', '#/team?t=leaves']);
     tpv.forEach((p) => { const m = tms.find((x) => x.id === p.member_id && x.active); if (!m) return; docState(p).forEach((d) => alerts.push([d.cls, I.key, docTxt(d), esc(m.name), `#/member/${m.id}`])); });
     if (oc.count) alerts.push(['danger', I.heart, `${oc.count === 1 ? 'شكوى مفتوحة' : oc.count + ' شكاوى مفتوحة'}`, 'ردّوا عليها وسجّلوا الحل', '#/feedback?t=open']);
@@ -2584,11 +2588,11 @@
 
   async function pageOps(view, _a, params, alive) {
     const tab = params.get('t') || 'today';
-    const tabs = [['today', 'القوائم'], ['services', 'الخدمات'], ['manual', 'الدليل'], ['rules', 'القواعد']];
+    const tabs = [['today', 'القوائم'], ['services', 'الخدمات'], ['manual', 'الأدلة والإجراءات']];
     const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/ops?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
     if (tab === 'services') return opsServices(view, alive, head);
     if (tab === 'manual') return opsManual(view, alive, head);
-    if (tab === 'rules') return opsRules(view, alive, head);
+    if (tab === 'rules') { location.hash = '#/rules?t=docs'; return; }
     return opsToday(view, alive, head);
   }
 
@@ -2598,8 +2602,9 @@
     const [lists, items, runs] = await Promise.all([
       q(sb.from('ops_lists').select('*').order('sort')),
       q(sb.from('ops_list_items').select('*').order('sort')),
-      q(sb.from('ops_runs').select('*').gte('day', dk(lensShift('d', D(ws), -7)))),
+      q(sb.from('ops_runs').select('*').gte('day', dk(lensShift('d', D(tk), -14)))),
     ]);
+    const audits = isManager() ? await q(sb.from('ops_audits').select('*').gte('day', dk(lensShift('d', D(tk), -45)))).catch(() => []) : [];
     if (!alive()) return;
     const dayOf = (l) => (l.kind === 'weekly' ? ws : tk);
     const runOf = (l) => runs.find((r) => r.list_id === l.id && r.day === dayOf(l))?.done || {};
@@ -2617,8 +2622,26 @@
         ${isManager() ? `<button class="ck-edit" data-edit="${l.id}">تعديل البنود</button>` : ''}
       </div>`;
     };
-    view.innerHTML = `${head}<div class="ck-grid">${order.map(card).join('')}</div>
+    let auditHtml = '';
+    if (isManager()) {
+      const daily = lists.filter((l) => l.kind !== 'weekly');
+      const pct = (l, from, to) => { let a = 0, n = 0; const its = items.filter((i) => i.list_id === l.id).length; for (let i = from; i < to; i++) { const d = dk(lensShift('d', D(tk), -i)); const r = runs.find((x) => x.list_id === l.id && x.day === d); n += its; a += r ? Object.keys(r.done).length : 0; } return n ? Math.round((a / n) * 100) : 0; };
+      const now7 = daily.map((l) => [l, pct(l, 1, 8), pct(l, 8, 15)]);
+      const avg = now7.length ? Math.round(now7.reduce((a, x) => a + x[1], 0) / now7.length) : 0, avgP = now7.length ? Math.round(now7.reduce((a, x) => a + x[2], 0) / now7.length) : 0;
+      const ticked = []; daily.forEach((l) => { const r = runs.find((x) => x.list_id === l.id && x.day === tk); if (r) Object.keys(r.done).forEach((k) => { const it = items.find((i) => i.id === Number(k)); if (it) ticked.push([l, it]); }); });
+      let seed = Number(tk.replace(/-/g, '')); const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+      const pick = ticked.map((x) => [rnd(), x]).sort((a, b) => a[0] - b[0]).slice(0, 3).map((x) => x[1]);
+      const honest = audits.length ? Math.round((audits.filter((a) => a.match).length / audits.length) * 100) : null;
+      auditHtml = `<div class="audit">
+        <div class="au-top"><div><span class="sh-eyebrow">هل يُطبَّق؟</span><h3>القوائم تُطبَّق في ${avg}٪ من البنود</h3><span class="muted small">آخر ٧ أيام · الأسبوع اللي قبله ${avgP}٪ ${avg > avgP ? '▲' : avg < avgP ? '▼' : ''}</span></div>${honest != null ? `<div class="au-h">${ring(honest, `<b class="num">${honest}</b><small>٪</small>`)}<span>صدق التأشير</span></div>` : ''}</div>
+        <div class="au-lists">${now7.map(([l, a]) => `<div><span>${esc(l.name)}</span><div class="fbar-track"><i style="width:${Math.max(2, a)}%"></i></div><b class="num">${a}٪</b></div>`).join('')}</div>
+        <div class="au-pick"><b>تفقّد اليوم</b><span class="muted small">ثلاث بنود أشّرها الفريق، اختارها النظام عشوائيًا. شوفوها بعينكم.</span>
+          ${pick.length ? pick.map(([l, it]) => { const a = audits.find((x) => x.day === tk && x.item_id === it.id); return `<div class="au-i"><div class="grow"><div>${esc(it.body)}</div><span class="muted small">${esc(l.name)} · أشّرها ${esc(firstName(personName(runs.find((x) => x.list_id === l.id && x.day === tk).done[it.id]?.by)))}</span></div>${a ? `<span class="badge ${a.match ? 'ok' : 'danger'}">${a.match ? 'يطابق' : 'ما يطابق'}</span>` : `<button class="btn sm" data-au="${l.id}:${it.id}:1">يطابق</button><button class="btn sm" data-au="${l.id}:${it.id}:0">ما يطابق</button>`}</div>`; }).join('') : '<p class="muted small" style="margin:8px 0 0">لما يأشّر الفريق على قوائم اليوم، تطلع هنا البنود للتفقّد.</p>'}
+        </div></div>`;
+    }
+    view.innerHTML = `${head}${auditHtml}<div class="ck-grid">${order.map(card).join('')}</div>
       <p class="muted small mt">البنود اللي عليها نقطة أساسية. كل تأشيرة تنحفظ باسم اللي سوّتها ووقتها.</p>`;
+    $$('[data-au]', view).forEach((b) => b.onclick = () => busy(b, async () => { const [l, i, m] = b.dataset.au.split(':').map(Number); try { await q(sb.from('ops_audits').upsert({ day: tk, list_id: l, item_id: i, match: m === 1 }, { onConflict: 'day,item_id' })); toast(m ? 'تمام 🤍' : 'انسجّل. تكلموا مع الفريق عنه'); route(); } catch (err) { toast(errMsg(err), true); } }));
     const bind = (root) => {
       $$('.ck-i', root).forEach((b) => b.addEventListener('click', async () => {
         const ck = b.closest('.ck'); const lid = Number(ck.dataset.l); const l = lists.find((x) => x.id === lid); const on = !b.classList.contains('on');
@@ -2738,12 +2761,24 @@
   }
 
   async function opsManual(view, alive, head) {
-    const rows = await q(sb.from('ops_sops').select('*').order('sort').order('id'));
+    const [rows, guides, reads] = await Promise.all([q(sb.from('ops_sops').select('*').order('sort').order('id')), q(sb.from('guides').select('*').order('sort').order('id')), q(sb.from('guide_reads').select('*'))]);
     if (!alive()) return;
+    const team = [...S.profiles.values()].filter((p) => p.is_active);
+    const signedBy = (g) => team.filter((p) => reads.some((r) => r.guide_id === g.id && r.profile_id === p.id && r.version === g.version));
+    const mineOk = (g) => reads.some((r) => r.guide_id === g.id && r.profile_id === S.profile.id && r.version === g.version);
+    const unsigned = guides.filter((g) => !mineOk(g)).length;
     view.innerHTML = `${head}
+      <div class="section-title"><h2>أدلة بيوتفريش</h2>${isManager() ? `<button class="btn sm" id="g-new">${I.plus} دليل</button>` : ''}</div>
+      ${unsigned ? `<div class="notice info">${unsigned === 1 ? 'دليل بانتظار توقيعك' : unsigned + ' أدلة بانتظار توقيعك'}. التوقيع في آخر كل دليل.</div>` : ''}
+      <div class="gshelf">${guides.map((g, i) => { const sb_ = signedBy(g); return `<button class="gcover" data-g="${g.id}" style="--d:${i * 70}ms"><span class="gc-n num">${AR_NUM(i + 1)}</span><img src="../home/assets/rosette-${(i % 4) + 1}.svg" alt=""><b>${esc(g.title)}</b><span class="gc-aud">${esc(g.audience || '')}</span>
+        <span class="gc-meta">${parseGuide(g.body).filter((c) => c.title).length} فصول · الإصدار ${AR_NUM(g.version)}</span>
+        <span class="gc-sign ${mineOk(g) ? 'ok' : ''}">${mineOk(g) ? '✓ موقّع' : 'بانتظار توقيعك'}${isManager() ? ` · ${sb_.length}/${team.length} من الفريق` : ''}</span></button>`; }).join('') || '<div class="empty">ما فيه أدلة</div>'}</div>
+      <div class="section-title"><h2>الإجراءات السريعة</h2></div>
       ${isManager() ? `<div class="actions" style="margin-bottom:14px"><button class="btn primary" id="sop-new">${I.plus} إجراء</button></div>` : ''}
       <div class="sop-grid">${rows.map((r, i) => `<button class="sop" data-s="${r.id}" style="--d:${i * 50}ms"><span class="sop-n num">${String(i + 1).padStart(2, '0')}</span><span class="sop-cat">${SOP_CAT[r.category]}</span><b>${esc(r.title)}</b><span class="sop-c">${steps(r.steps).length} خطوات</span></button>`).join('') || '<div class="empty">ما فيه إجراءات</div>'}</div>`;
     $('#sop-new')?.addEventListener('click', () => sopForm(null));
+    $('#g-new')?.addEventListener('click', () => guideForm(null));
+    $$('[data-g]', view).forEach((b) => b.onclick = () => openGuide(guides.find((x) => x.id === Number(b.dataset.g)), reads, () => route()));
     $$('[data-s]', view).forEach((b) => b.onclick = () => {
       const r = rows.find((x) => x.id === Number(b.dataset.s));
       modal(`<span class="sop-cat">${SOP_CAT[r.category]}</span><h3 style="margin-top:6px">${esc(r.title)}</h3><ol class="steps">${steps(r.steps).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
@@ -2788,7 +2823,7 @@
     const cnt = (k) => all.filter((s) => s === k).length;
     const SL = { ok: 'سليم', warn: 'قرب موعده', bad: 'متأخر', unknown: 'ما انسجّل' };
     view.innerHTML = `${head}
-      <div class="rules-hero">${ring(score, `<b class="num">${score}</b><small>٪</small>`)}<div><span class="sh-eyebrow">صحة الصالون</span><h2>${score >= 90 ? 'كل شي تمام' : score >= 70 ? 'أموركم طيبة، فيه شي يحتاج متابعة' : 'فيه أشياء تحتاج تتحدّث'}</h2>
+      <div class="rules-hero">${ring(score, `<b class="num">${score}</b><small>٪</small>`)}<div><span class="sh-eyebrow">التراخيص والفحوصات</span><h2>${score >= 90 ? 'كل شي تمام' : score >= 70 ? 'أموركم طيبة، فيه شي يحتاج متابعة' : 'فيه أشياء تحتاج تتحدّث'}</h2>
         <div class="rh-c"><span class="ok">${cnt('ok')} سليم</span><span class="warn">${cnt('warn')} قرب</span><span class="bad">${cnt('bad')} متأخر</span>${cnt('unknown') ? `<span>${cnt('unknown')} ما انسجّل</span>` : ''}</div></div></div>
       <div class="section-title"><h2>التراخيص والوثائق</h2></div>
       <div class="list">${st.filter((x) => x.r.kind === 'expiry').map(ruleRow).join('')}</div>
@@ -2824,6 +2859,278 @@
         try { if (r) await q(sb.from('ops_rules').update(row).eq('id', r.id)); else await q(sb.from('ops_rules').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
       });
       $('#ru-del', el)?.addEventListener('click', async () => { try { await q(sb.from('ops_rules').delete().eq('id', r.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+    });
+  }
+
+  /* ======================= قواعد بيوتفريش ======================= */
+  const RDOM = { law: 'النظام والتراخيص', safe: 'السلامة والصحة', ops: 'التشغيل', fin: 'المالية والمبيعات', cli: 'العميلات', mkt: 'التسويق', team: 'الفريق ونظام العمل', inv: 'المخزون' };
+  const BASIS = { law: 'نظام', reg: 'اشتراط رقابي', sci: 'مرجع علمي', prac: 'ممارسة مجربة' };
+  const RST = { risk: ['خطر', 'danger'], need: ['تحتاجكم', 'warn'], ok: ['سليم', 'ok'], na: ['ما ينطبق', ''] };
+  const R = (st, msg, link) => ({ st, msg, link });
+  const findRule = (c, word) => c.orules.find((r) => r.name.includes(word));
+  const ruleCheck = (c, word, label, link = '#/rules?t=docs') => {
+    const r = findRule(c, word); if (!r) return R('na', `ما فيه بند «${label}» في التراخيص والفحوصات.`);
+    const s = ruleState(r);
+    if (s.st === 'unknown') return R('need', `ما انسجّل ${r.kind === 'expiry' ? 'تاريخ انتهاء' : 'آخر موعد'} ${r.name}.`, link);
+    if (s.st === 'bad') return R('risk', `${r.name}: ${r.kind === 'expiry' ? 'منتهي' : 'فات موعده'} من ${daysTxt(-s.u)}.`, link);
+    if (s.st === 'warn') return R('need', `${r.name}: باقي ${daysTxt(s.u)}.`, link);
+    return R('ok', `${r.name}: الموعد الجاي ${dShort(s.due)}.`);
+  };
+  const RULES = [
+    // النظام والتراخيص
+    { code: 'LAW-01', dom: 'law', basis: 'law', title: 'لا ترخيص ولا وثيقة منتهية', why: 'السجل التجاري، ورخصة البلدية، وشهادة السلامة من الدفاع المدني لازم تكون سارية طول الوقت. الانتهاء يعرّض الصالون لمخالفة أو إغلاق، ويوقف تجديد الأشياء المرتبطة فيه.',
+      ev: (c) => { const ex = c.orules.filter((r) => r.kind === 'expiry'); if (!ex.length) return R('need', 'ما انسجّلت أي وثيقة.', '#/rules?t=docs'); const bad = ex.filter((r) => ruleState(r).st === 'bad'); const unk = ex.filter((r) => ruleState(r).st === 'unknown'); const warn = ex.filter((r) => ruleState(r).st === 'warn'); if (bad.length) return R('risk', `منتهية: ${bad.map((r) => r.name).join('، ')}.`, '#/rules?t=docs'); if (unk.length) return R('need', `ما انسجّل تاريخ: ${unk.map((r) => r.name).join('، ')}.`, '#/rules?t=docs'); if (warn.length) return R('need', `قرب انتهاؤها: ${warn.map((r) => r.name).join('، ')}.`, '#/rules?t=docs'); return R('ok', `${ex.length} وثائق كلها سارية.`); } },
+    { code: 'LAW-02', dom: 'law', basis: 'reg', title: 'شهادة صحية سارية لكل عاملة', why: 'اشتراطات البلدية للصالونات تطلب شهادة صحية سارية لكل من تتعامل مع العميلات. التفتيش يسأل عنها أول شي.',
+      ev: (c) => { const m = c.members.filter((x) => x.active); if (!m.length) return R('na', 'ما فيه فريق مسجل.'); const miss = m.filter((x) => !c.tpriv.get(x.id)?.health_card_expiry); const bad = m.filter((x) => { const d = c.tpriv.get(x.id)?.health_card_expiry; return d && until(d) < 0; }); const soon = m.filter((x) => { const d = c.tpriv.get(x.id)?.health_card_expiry; return d && until(d) >= 0 && until(d) <= 30; }); if (bad.length) return R('risk', `منتهية: ${bad.map((x) => firstName(x.name)).join('، ')}.`, '#/team'); if (miss.length) return R('need', `ما انسجّلت لـ: ${miss.map((x) => firstName(x.name)).join('، ')}.`, '#/team'); if (soon.length) return R('need', `تنتهي خلال شهر: ${soon.map((x) => firstName(x.name)).join('، ')}.`, '#/team'); return R('ok', 'شهادات الفريق كلها سارية.'); } },
+    { code: 'LAW-03', dom: 'law', basis: 'law', title: 'إقامات الفريق سارية', why: 'تشغيل عاملة إقامتها منتهية مخالفة على المنشأة. التجديد يبدأ قبل الانتهاء بوقت كافي.',
+      ev: (c) => { const m = c.members.filter((x) => x.active && c.tpriv.get(x.id)?.iqama_expiry); if (!m.length) return R('na', 'ما انسجّلت تواريخ إقامات.'); const bad = m.filter((x) => until(c.tpriv.get(x.id).iqama_expiry) < 0); const soon = m.filter((x) => { const u = until(c.tpriv.get(x.id).iqama_expiry); return u >= 0 && u <= 45; }); if (bad.length) return R('risk', `منتهية: ${bad.map((x) => firstName(x.name)).join('، ')}.`, '#/team'); if (soon.length) return R('need', `قرب انتهاؤها: ${soon.map((x) => firstName(x.name)).join('، ')}.`, '#/team'); return R('ok', 'الإقامات كلها سارية.'); } },
+    { code: 'LAW-04', dom: 'law', basis: 'law', title: 'السعر المعلن شامل الضريبة', why: 'إذا كانت المنشأة مسجلة في ضريبة القيمة المضافة، فالسعر اللي تشوفه العميلة في المنيو والإعلان لازم يكون شامل الضريبة، ما تنضاف عليه عند الدفع.',
+      ask: { q: 'هل الصالون مسجل في ضريبة القيمة المضافة؟', opts: [['yes', 'مسجل'], ['no', 'غير مسجل']] },
+      ev: (c, a) => (a === 'no' ? R('na', 'الصالون غير مسجل في الضريبة.') : a === 'yes' ? R('ok', 'تأكدوا إن المنيو وموقع الحجز يعرضون السعر شامل الضريبة.') : R('need', 'جاوبوا على السؤال عشان نضبط القاعدة.')) },
+    { code: 'LAW-05', dom: 'law', basis: 'law', title: 'لا تخفيض بلا ترخيص', why: 'إعلان التخفيض يحتاج ترخيص مسبق من وزارة التجارة، ويُكتب السعر قبل التخفيض وبعده. الخصم بدون ترخيص مخالفة حتى لو كان صادق.',
+      ev: (c) => { const d = c.campaigns.filter((x) => x.status !== 'done' && /خصم|٪|%|تخفيض|بدل/.test(x.offer || '')); return d.length ? R('need', `${d.length === 1 ? 'حملة فيها' : d.length + ' حملات فيها'} خصم: ${d.map((x) => x.name).join('، ')}. تأكدوا من ترخيص التخفيض.`, '#/marketing?t=campaigns') : R('na', 'ما فيه حملات خصم قادمة.'); } },
+    { code: 'LAW-06', dom: 'law', basis: 'law', title: 'المسابقة بترخيص وبلا شرط شراء', why: 'المسابقات والسحوبات الترويجية تحتاج ترخيص، وما يصير تشترطون فيها شراء خدمة.',
+      ev: (c) => { const d = c.campaigns.filter((x) => x.status !== 'done' && /مسابقة|سحب|قرعة/.test((x.offer || '') + x.name)); return d.length ? R('need', `حملة فيها مسابقة: ${d.map((x) => x.name).join('، ')}. تأكدوا من الترخيص.`, '#/marketing?t=campaigns') : R('na', 'ما فيه مسابقات قادمة.'); } },
+    { code: 'LAW-07', dom: 'law', basis: 'law', title: 'المؤثرة المأجورة معها رخصة «موثوق»', why: 'اللي تعلن عن الصالون في حسابها مقابل أجر، لازم تكون حاملة رخصة «موثوق». اطلبوا رقم الرخصة قبل التعاقد.',
+      ev: (c) => { const d = c.campaigns.filter((x) => x.status !== 'done' && (x.channels || []).includes('influencer')); return d.length ? R('need', `حملة مع مؤثرة: ${d.map((x) => x.name).join('، ')}. تأكدوا من رقم رخصة «موثوق».`, '#/marketing?t=campaigns') : R('na', 'ما فيه حملات مع مؤثرات.'); } },
+    { code: 'LAW-08', dom: 'law', basis: 'law', title: 'رسائل العروض بموافقة العميلة', why: 'نظام حماية البيانات الشخصية يمنع إرسال رسائل تسويقية بدون موافقة. رسالة التذكير بموعدها غير، أما العروض فتحتاج موافقتها.',
+      ask: { q: 'هل تاخذون موافقة العميلة قبل ترسلون لها عروض؟', opts: [['yes', 'إيه نسأل'], ['no', 'لا']] },
+      ev: (c, a) => (a === 'yes' ? R('ok', 'تاخذون الموافقة قبل العروض.') : a === 'no' ? R('risk', 'رسائل العروض بدون موافقة مخالفة. أضيفوا سؤال الموافقة في الاستقبال.') : R('need', 'جاوبوا على السؤال.')) },
+    { code: 'LAW-09', dom: 'law', basis: 'law', title: 'تأكيد بيانات السجل التجاري كل سنة', why: 'نظام السجل التجاري يطلب تأكيد البيانات سنويًا، وإهماله يعرّض السجل للشطب.',
+      ev: (c) => ruleCheck(c, 'السجل', 'السجل التجاري') },
+    // السلامة والصحة
+    { code: 'SAF-01', dom: 'safe', basis: 'reg', title: 'طفايات الحريق مصونة في موعدها', why: 'الطفاية تنفحص بالعين كل شهر، وتنصان سنويًا عند جهة معتمدة. عقد الصيانة شرط لتجديد شهادة السلامة.', ev: (c) => ruleCheck(c, 'طفايات', 'صيانة طفايات الحريق') },
+    { code: 'SAF-02', dom: 'safe', basis: 'reg', title: 'الكاميرات تسجّل وتحفظ', why: 'الكاميرا اللي ما تسجّل كأنها مو موجودة. التسجيل يحمي العميلة والموظفة والصالون، والتأكد منه دوري.', ev: (c) => ruleCheck(c, 'الكاميرات', 'الكاميرات') },
+    { code: 'SAF-03', dom: 'safe', basis: 'reg', title: 'مكافحة الحشرات دورية بشهادة', why: 'المكافحة الدورية من شركة معتمدة مع شهادة، من اشتراطات النظافة في المحلات اللي تخدم الناس.', ev: (c) => ruleCheck(c, 'الحشرات', 'مكافحة الحشرات') },
+    { code: 'SAF-04', dom: 'safe', basis: 'prac', title: 'صندوق الإسعافات كامل وصالح', why: 'الحروق البسيطة والجروح واردة في الصالون. الصندوق الناقص يكتشفونه وقت الحاجة.', ev: (c) => ruleCheck(c, 'الإسعاف', 'صندوق الإسعافات') },
+    { code: 'SAF-05', dom: 'safe', basis: 'sci', title: 'اختبار حساسية قبل الصبغة', why: 'شركات الصبغات تطلب اختبار حساسية قبل الصبغة بـ٤٨ ساعة، حتى للعميلة اللي صبغت قبل. الحساسية ممكن تظهر فجأة.',
+      ev: (c) => { const h = c.services.filter((s) => s.active && s.category === 'hair' && /صبغ|لون/.test(s.name)); if (!h.length) return R('na', 'ما فيه بطاقة خدمة صبغة.'); const miss = h.filter((s) => !/حساسي/.test(s.steps || '')); return miss.length ? R('need', `أضيفوا خطوة اختبار الحساسية في: ${miss.map((s) => s.name).join('، ')}.`, `#/svc/${miss[0].id}`) : R('ok', 'خطوة الحساسية مكتوبة في بطاقات الصبغة.'); } },
+    { code: 'SAF-06', dom: 'safe', basis: 'reg', title: 'التعقيم بند أساسي في الإقفال', why: 'الأداة اللي ما تعقّمت آخر اليوم، تُستعمل الصبح على أول عميلة.',
+      ev: (c) => { const l = c.lists.find((x) => x.kind === 'close'); if (!l) return R('na', ''); const it = c.litems.find((i) => i.list_id === l.id && /تعقيم/.test(i.body)); return !it ? R('risk', 'قائمة الإقفال ما فيها بند تعقيم.', '#/ops') : it.critical ? R('ok', 'التعقيم بند أساسي في الإقفال.') : R('need', 'التعقيم موجود بس مو أساسي. خلّوه أساسي.', '#/ops'); } },
+    // التشغيل
+    { code: 'OPS-01', dom: 'ops', basis: 'prac', title: 'قائمة الفتح والإقفال كل يوم', why: 'القائمة تضمن إن الصالون يفتح ويقفل بنفس المستوى مهما تغيّرت الموظفة. اللي ما ينكتب، يُنسى.',
+      ev: (c) => { const days = Array.from({ length: 7 }, (_, i) => dk(lensShift('d', D(todayR()), -i - 1))).filter((d) => !c.closedWd.includes(D(d).getDay())); const cnt = (kind) => { const l = c.lists.find((x) => x.kind === kind); return l ? days.filter((d) => c.runs.some((r) => r.list_id === l.id && r.day === d && Object.keys(r.done).length)).length : 0; }; const o = cnt('open'), z = cnt('close'), n = days.length; const m = Math.min(o, z); return m >= n - 1 ? R('ok', `الفتح ${o} من ${n}، والإقفال ${z} من ${n} أيام.`) : m >= Math.ceil(n / 2) ? R('need', `الفتح ${o} من ${n}، والإقفال ${z} من ${n} أيام.`, '#/ops') : R('risk', `القوائم ما تنشغل: الفتح ${o} والإقفال ${z} من آخر ${n} أيام.`, '#/ops'); } },
+    { code: 'OPS-02', dom: 'ops', basis: 'prac', title: 'إجراءات مكتوبة، مو في الرأس', why: 'لكل موقف متكرر إجراء مكتوب: الاستقبال، والشكوى، والكاشير، والطوارئ. الموظفة الجديدة تتعلم منه، والقديمة ترجع له.',
+      ev: (c) => (c.sops >= 6 ? R('ok', `في الدليل ${c.sops} إجراءات.`) : c.sops ? R('need', `في الدليل ${c.sops} إجراءات بس.`, '#/ops?t=manual') : R('risk', 'ما فيه إجراءات مكتوبة.', '#/ops?t=manual')) },
+    { code: 'OPS-03', dom: 'ops', basis: 'prac', title: 'كل موظفة وقّعت على أدلتها', why: 'الدليل اللي ما انقرأ ما ينطبق. التوقيع يثبت إنها قرأت آخر إصدار، وكل تعديل يطلب توقيع جديد.',
+      ev: (c) => { const ppl = c.members.filter((m) => m.active && m.profile_id); if (!c.guides.length) return R('need', 'ما فيه أدلة.', '#/ops?t=manual'); if (!ppl.length) return R('need', 'اربطوا حسابات الموظفات بملفاتهم في «الفريق» عشان يوقّعون.', '#/team'); const tot = ppl.length * c.guides.length; const ok = ppl.reduce((a, m) => a + c.guides.filter((g) => c.reads.some((r) => r.guide_id === g.id && r.profile_id === m.profile_id && r.version === g.version)).length, 0); const p = Math.round((ok / tot) * 100); return p === 100 ? R('ok', 'كل الفريق وقّع على آخر إصدار.') : R(p >= 60 ? 'need' : 'risk', `التوقيعات ${p}٪ من المطلوب.`, '#/ops?t=manual'); } },
+    { code: 'OPS-04', dom: 'ops', basis: 'prac', title: 'تفقّد بعينك مرة بالأسبوع', why: 'التأشير على القائمة شي، والتطبيق شي ثاني. التفقّد العشوائي يخلي التأشير صادق.',
+      ev: (c) => { const n = c.audits.filter((a) => a.day >= dk(lensShift('d', D(todayR()), -7))).length; return n ? R('ok', `${n} تفقّد هالأسبوع.`) : R('need', 'ما فيه تفقّد هالأسبوع.', '#/ops'); } },
+    { code: 'OPS-05', dom: 'ops', basis: 'prac', title: 'صدق التأشير فوق ٩٠٪', why: 'إذا اللي تشوفونه بعينكم ما يطابق اللي انأشّر، القوائم صارت شكل بس.',
+      ev: (c) => { if (c.audits.length < 5) return R('na', 'يحتاج ٥ تفقّدات على الأقل.'); const p = Math.round((c.audits.filter((a) => a.match).length / c.audits.length) * 100); return p >= 90 ? R('ok', `صدق التأشير ${p}٪.`) : R(p >= 75 ? 'need' : 'risk', `صدق التأشير ${p}٪ بآخر ٤٥ يوم.`, '#/ops'); } },
+    { code: 'OPS-06', dom: 'ops', basis: 'prac', title: 'لكل خدمة بطاقة بخطواتها', why: 'الخدمة تطلع بنفس الجودة من أي أخصائية لما تكون خطواتها مكتوبة.',
+      ev: (c) => { const a = c.services.filter((s) => s.active); if (!a.length) return R('need', 'ما فيه بطاقات خدمات.', '#/ops?t=services'); const m = a.filter((s) => steps(s.steps).length < 3); return m.length ? R('need', `${m.length} خدمات خطواتها ناقصة.`, '#/ops?t=services') : R('ok', `${a.length} خدمات كلها مكتوبة.`); } },
+    // المالية والمبيعات
+    { code: 'FIN-01', dom: 'fin', basis: 'prac', title: 'رقم مبيعات كل يوم', why: 'الرقم اللي ينكتب نفس اليوم دقيق. اللي ينكتب بعد أيام تخمين.',
+      ev: (c) => { let gap = 0; for (let i = 1; i <= 10; i++) { const d = dk(lensShift('d', D(todayR()), -i)); if (c.closedWd.includes(D(d).getDay())) continue; if (c.fdays.includes(d)) break; gap++; } return gap === 0 ? R('ok', 'آخر يوم دوام مقفل.') : gap <= 2 ? R('need', `${daysTxt(gap)} بدون إقفال.`, '#/closing') : R('risk', `${gap >= 10 ? 'أكثر من ١٠ أيام' : daysTxt(gap)} بدون إقفال.`, '#/closing'); } },
+    { code: 'FIN-02', dom: 'fin', basis: 'prac', title: 'هدف مبيعات لكل شهر', why: 'بدون هدف ما تعرفون الشهر زين ولا لا. الهدف يحوّل الرقم لقرار.', ev: (c) => (c.target ? R('ok', `هدف الشهر ${sar(c.target)} ر.س.`) : R('need', 'ما فيه هدف لهالشهر.', '#/finance?l=m')) },
+    { code: 'FIN-03', dom: 'fin', basis: 'prac', title: 'تكلفة كل خدمة معروفة', why: 'لما تعرفون كم تكلف الخدمة من منتجات، تعرفون كم تربحون منها، وتسعّرون صح.',
+      ev: (c) => { const a = c.services.filter((s) => s.active && s.price > 0); if (!a.length) return R('na', 'ما فيه خدمات مسعّرة.'); const m = a.filter((s) => !c.slinks.some((l) => l.service_id === s.id)); return m.length ? R('need', `${m.length} من ${a.length} خدمات بدون منتجات مربوطة.`, '#/ops?t=services') : R('ok', 'كل الخدمات تكلفتها محسوبة.'); } },
+    { code: 'FIN-04', dom: 'fin', basis: 'prac', title: 'ربح كل خدمة فوق النص', why: 'الخدمة اللي منتجاتها تاكل أكثر من نص سعرها، تشغل الكرسي وما ترجع.',
+      ev: (c) => { const low = c.services.filter((s) => s.active && s.price > 0 && c.slinks.some((l) => l.service_id === s.id)).filter((s) => c.svcMargin(s) < 50); return c.services.some((s) => s.price > 0 && c.slinks.some((l) => l.service_id === s.id)) ? (low.length ? R('need', `راجعوا سعر: ${low.map((s) => s.name).join('، ')}.`, `#/svc/${low[0].id}`) : R('ok', 'كل الخدمات ربحها فوق النص.')) : R('na', 'اربطوا منتجات الخدمات أول.'); } },
+    { code: 'FIN-05', dom: 'fin', basis: 'prac', title: 'المصروفات مسجلة أول بأول', why: 'صافي الربح ما يكون حقيقي إذا الإيجار والرواتب والفواتير ما انسجلت.',
+      ev: (c) => (D(todayR()).getDate() < 10 ? R('na', 'بداية الشهر.') : c.expCount ? R('ok', `${c.expCount} مصروفات مسجلة هالشهر.`) : R('need', 'ما انسجلت أي مصروفات هالشهر.', '#/expenses')) },
+    { code: 'FIN-06', dom: 'fin', basis: 'law', title: 'الرواتب عبر البنك وفي موعدها', why: 'نظام حماية الأجور يتطلب صرف الرواتب عن طريق البنك ورفعها في منصة مدد، والتأخير يوقف خدمات المنشأة.',
+      ask: { q: 'هل الرواتب تنصرف عن طريق البنك وتنرفع في مدد؟', opts: [['yes', 'إيه'], ['no', 'لا']] },
+      ev: (c, a) => (a === 'yes' ? R('ok', 'الرواتب عبر البنك ومدد.') : a === 'no' ? R('risk', 'الرواتب لازم تنصرف عبر البنك وتنرفع في مدد.') : R('need', 'جاوبوا على السؤال.')) },
+    // العميلات
+    { code: 'CLI-01', dom: 'cli', basis: 'prac', title: 'الشكوى تنحل خلال يومين', why: 'العميلة اللي انحلت شكواها بسرعة غالبًا ترجع، واللي انتركت تحكي لغيرها.',
+      ev: (c) => { const o = c.fb.filter((f) => f.kind === 'complaint' && f.status === 'open'); const old = o.filter((f) => until(f.day) < -2); return old.length ? R('risk', `${old.length === 1 ? 'شكوى مفتوحة' : old.length + ' شكاوى مفتوحة'} من أكثر من يومين.`, '#/feedback?t=open') : o.length ? R('need', `${o.length === 1 ? 'شكوى حديثة' : o.length + ' شكاوى حديثة'} بانتظار الحل.`, '#/feedback?t=open') : R('ok', 'ما فيه شكاوى مفتوحة.'); } },
+    { code: 'CLI-02', dom: 'cli', basis: 'prac', title: 'ملف لكل عميلة برقمها', why: 'رقم الجوال هو اللي يربط زياراتها وولاءها ورسائلها. الملف بدون رقم ما يفيد.',
+      ev: (c) => { if (!c.clients.length) return R('need', 'ما فيه عميلات مسجلات.', '#/clients'); const p = Math.round((c.clients.filter((x) => x.phone).length / c.clients.length) * 100); return p >= 90 ? R('ok', `${p}٪ من الملفات فيها رقم.`) : R('need', `${p}٪ بس من الملفات فيها رقم.`, '#/clients'); } },
+    { code: 'CLI-03', dom: 'cli', basis: 'prac', title: 'اللي غابت، نسأل عنها', why: 'إرجاع عميلة قديمة أرخص بكثير من جلب عميلة جديدة. رسالة وحدة تكفي.',
+      ev: (c) => { const a = c.clients.filter((x) => x.segment === 'away').length; return a ? R('need', `${a} عميلات غابوا أكثر من ٤٥ يوم.`, '#/clients?s=away') : R('ok', 'ما فيه عميلات غايبات.'); } },
+    { code: 'CLI-04', dom: 'cli', basis: 'prac', title: 'بطاقة الولاء ومكافأتها واضحة', why: 'المكافأة الغامضة ما تحمّس أحد. «مانيكير هدية» أقوى من «خدمة هدية».',
+      ev: (c) => (!c.loyalty?.active ? R('na', 'البطاقة موقفة.') : /اختيارك|خدمة هدية$/.test(c.loyalty.reward) ? R('need', `المكافأة الحالية «${c.loyalty.reward}». حدّدوها.`, '#/clients') : R('ok', `المكافأة: ${c.loyalty.reward}.`)) },
+    { code: 'CLI-05', dom: 'cli', basis: 'prac', title: 'ردّوا على تقييمات قوقل', why: 'أغلب العميلات الجدد يقرون التقييمات قبل ما يحجزون. الرد على كل تقييم، حتى السلبي، يبيّن إن الصالون يهتم.',
+      ask: { q: 'عندكم صفحة في خرائط قوقل وتردون على التقييمات؟', opts: [['yes', 'إيه'], ['no', 'لا']] },
+      ev: (c, a) => (a === 'yes' ? R('ok', 'تردون على التقييمات.') : a === 'no' ? R('need', 'سجّلوا الصالون في خرائط قوقل وردّوا على كل تقييم.') : R('need', 'جاوبوا على السؤال.')) },
+    // التسويق
+    { code: 'MKT-01', dom: 'mkt', basis: 'prac', title: 'استعدوا للموسم قبل وقته', why: 'الحجوزات تبدأ قبل الموسم. اللي يبدأ حملته وقت الموسم يلقى العميلات حجزوا عند غيره.',
+      ev: (c) => { const p = c.seasons.filter((s) => { const u = until(s.starts_on); return u > 0 && u <= s.prep_days; }); const no = p.filter((s) => !c.campaigns.some((x) => x.season_id === s.id)); return no.length ? R('need', `دخلتوا وقت تجهيز ${no.map((s) => s.name).join('، ')} بدون حملة.`, '#/marketing') : p.length ? R('ok', `حملة ${p.map((s) => s.name).join('، ')} جاهزة.`) : R('ok', 'ما فيه موسم في وقت التجهيز.'); } },
+    { code: 'MKT-02', dom: 'mkt', basis: 'prac', title: 'ثلاث منشورات بالأسبوع على الأقل', why: 'الحساب اللي يسكت يختفي. الانتظام أهم من الكثرة.',
+      ev: (c) => { const [ws, we] = lensRange('w', D(todayR())); const n = c.posts.filter((p) => p.publish_on >= dk(ws) && p.publish_on <= dk(we)).length; return n >= 3 ? R('ok', `${n} منشورات هالأسبوع.`) : R('need', `${n} ${n === 1 ? 'منشور' : 'منشورات'} بس هالأسبوع.`, '#/marketing?t=content'); } },
+    { code: 'MKT-03', dom: 'mkt', basis: 'prac', title: 'لا منشور يتأخر بلا قرار', why: 'المنشور المتأخر إما ينشر أو ينأجل أو يُلغى. تركه معلّق يخرب الخطة.',
+      ev: (c) => { const l = c.posts.filter((p) => p.publish_on && p.publish_on < todayR() && p.status !== 'posted'); return l.length ? R('need', `${l.length} منشورات فات موعدها.`, '#/marketing?t=content') : R('ok', 'ما فيه منشورات متأخرة.'); } },
+    { code: 'MKT-04', dom: 'mkt', basis: 'prac', title: 'كل حملة خلصت لها نتيجة', why: 'الحملة بدون نتيجة مكتوبة ما تعلّمكم شي للحملة الجاية.',
+      ev: (c) => { const d = c.campaigns.filter((x) => x.status === 'done'); if (!d.length) return R('na', 'ما فيه حملات منتهية.'); const m = d.filter((x) => x.revenue == null && x.new_clients == null); return m.length ? R('need', `${m.length} حملات بدون نتائج.`, '#/marketing?t=campaigns') : R('ok', 'كل الحملات نتائجها مكتوبة.'); } },
+    // الفريق
+    { code: 'TEAM-01', dom: 'team', basis: 'law', title: 'لا أكثر من ٤٨ ساعة بالأسبوع', why: 'نظام العمل يحدد ساعات العمل بثمان ساعات يوميًا و٤٨ ساعة أسبوعيًا، وما زاد عليها يكون عمل إضافي بأجر إضافي.',
+      ev: (c) => { if (!c.shifts.length) return R('na', 'ما فيه مناوبات.'); const over = c.members.filter((m) => m.active).map((m) => [m, c.shifts.filter((s) => s.member_id === m.id).reduce((a, s) => { let d = mins(s.ends) - mins(s.starts); if (d <= 0) d += 1440; return a + d; }, 0) / 60]).filter((x) => x[1] > 48); return over.length ? R('risk', `فوق ٤٨ ساعة: ${over.map(([m, h]) => `${firstName(m.name)} ${Math.round(h)}س`).join('، ')}.`, '#/team?t=shifts') : R('ok', 'كل المناوبات ضمن الحد.'); } },
+    { code: 'TEAM-02', dom: 'team', basis: 'law', title: 'راحة نص ساعة في الوردية الطويلة', why: 'نظام العمل ما يسمح بأكثر من خمس ساعات متتالية بدون راحة لا تقل عن نص ساعة.',
+      ask: { q: 'هل أوقات الراحة محددة في الورديات الطويلة؟', opts: [['yes', 'محددة'], ['no', 'لا']] },
+      ev: (c, a) => { const long = c.shifts.some((s) => { let d = mins(s.ends) - mins(s.starts); if (d <= 0) d += 1440; return d > 300; }); if (!long) return R('na', 'ما فيه ورديات أطول من ٥ ساعات.'); return a === 'yes' ? R('ok', 'أوقات الراحة محددة.') : R('need', 'فيه ورديات أطول من ٥ ساعات. حددوا فيها راحة نص ساعة.', '#/team?t=shifts'); } },
+    { code: 'TEAM-03', dom: 'team', basis: 'law', title: 'يوم راحة أسبوعي لكل عاملة', why: 'نظام العمل يعطي العامل يوم راحة أسبوعي على الأقل.',
+      ev: (c) => { if (!c.shifts.length) return R('na', 'ما فيه مناوبات.'); const full = c.members.filter((m) => m.active && c.shifts.filter((s) => s.member_id === m.id).length >= 7); return full.length ? R('risk', `بدون يوم راحة: ${full.map((m) => firstName(m.name)).join('، ')}.`, '#/team?t=shifts') : R('ok', 'كل الفريق عنده يوم راحة.'); } },
+    { code: 'TEAM-04', dom: 'team', basis: 'prac', title: 'الرد على طلب الإجازة خلال ٣ أيام', why: 'الموظفة تخطط حياتها على الإجازة. التأخير بالرد يضايقها أكثر من الرفض.',
+      ev: (c) => { const p = c.leaves.filter((l) => l.status === 'pending'); const old = p.filter((l) => (Date.now() - new Date(l.created_at)) / 86400000 > 3); return old.length ? R('risk', `${old.length} طلبات من أكثر من ٣ أيام.`, '#/team?t=leaves') : p.length ? R('need', `${p.length} طلبات حديثة بانتظاركم.`, '#/team?t=leaves') : R('ok', 'ما فيه طلبات معلقة.'); } },
+    { code: 'TEAM-05', dom: 'team', basis: 'prac', title: 'كل يوم دوام فيه فريق', why: 'يوم بدون مناوبة يعني حجوزات بدون أحد يخدمها.',
+      ev: (c) => { if (!c.shifts.length) return R('need', 'ما انرتبت المناوبات.', '#/team?t=shifts'); const empty = [0, 1, 2, 3, 4, 5, 6].filter((d) => !c.closedWd.includes(d) && !c.shifts.some((s) => s.weekday === d)); return empty.length ? R('need', `ما فيه أحد يوم: ${empty.map((d) => WDAYS[d]).join('، ')}.`, '#/team?t=shifts') : R('ok', 'كل أيام الدوام مغطاة.'); } },
+    // المخزون
+    { code: 'INV-01', dom: 'inv', basis: 'prac', title: 'لا صنف أساسي ناقص', why: 'العميلة ما يهمها ليش، يهمها إن لونها مو موجود اليوم.',
+      ev: (c) => { const l = S.items.filter((i) => i.is_active && isLow(i)); const out = l.filter((i) => Number(i.qty_on_hand) <= 0); return out.length ? R('risk', `نفد: ${out.slice(0, 3).map((i) => i.name).join('، ')}${out.length > 3 ? '…' : ''}.`, '#/shopping') : l.length ? R('need', `${l.length} أصناف تحت الحد الأدنى.`, '#/shopping') : R('ok', 'كل الأصناف فوق حدها.'); } },
+    { code: 'INV-02', dom: 'inv', basis: 'reg', title: 'لا منتج منتهي على الرف', why: 'استعمال منتج منتهي على العميلة مخالفة وخطر على بشرتها وشعرها.',
+      ev: (c) => { const ex = c.expiring.filter((x) => until(x.expiry_date) < 0); return ex.length ? R('risk', `منتهية: ${ex.slice(0, 3).map((x) => x.item_name).join('، ')}.`, '#/home') : c.expiring.length ? R('need', `${c.expiring.length} منتجات تقرب صلاحيتها.`, '#/home') : R('ok', 'ما فيه منتجات منتهية.'); } },
+  ];
+
+  async function rulesCtx() {
+    const tk = todayR(); const ago = (n) => dk(lensShift('d', D(tk), -n));
+    const sel = (t, s = '*') => q(sb.from(t).select(s)).catch(() => []);
+    const [orules, members, tpv, shifts, leaves, lists, litems, runs, sops, services, slinks, costs, fdays, target, expCount, fb, clients, seasons, campaigns, posts, guides, reads, audits, states, expiring, L, hs] = await Promise.all([
+      sel('ops_rules'), sel('team_members'), isManager() ? sel('team_private') : [], sel('team_shifts'), sel('team_leaves'),
+      sel('ops_lists'), sel('ops_list_items'), q(sb.from('ops_runs').select('*').gte('day', ago(10))).catch(() => []),
+      sb.from('ops_sops').select('id', { count: 'exact', head: true }).then((x) => x.count || 0, () => 0),
+      sel('ops_services'), sel('ops_service_items'), sel('item_costs', 'item_id,avg_cost,last_cost'),
+      q(sb.from('fin_daily').select('day').gte('day', ago(12))).then((r) => r.map((x) => x.day), () => []),
+      q(sb.from('fin_targets').select('revenue').eq('month', monthKey(D(tk))).maybeSingle()).then((r) => r?.revenue, () => null),
+      sb.from('fin_expenses').select('id', { count: 'exact', head: true }).gte('day', monthKey(D(tk))).then((x) => x.count || 0, () => 0),
+      q(sb.from('client_feedback').select('kind,status,day')).catch(() => []), q(sb.from('clients_overview').select('id,phone,segment').limit(5000)).catch(() => []),
+      sel('mkt_seasons'), sel('mkt_campaigns'), q(sb.from('mkt_posts').select('publish_on,status').gte('publish_on', ago(30))).catch(() => []),
+      sel('guides', 'id,version'), sel('guide_reads'), isManager() ? q(sb.from('ops_audits').select('*').gte('day', ago(45))).catch(() => []) : [],
+      sel('rules_state'), q(sb.rpc('get_expiring', { p_days: CFG.expiryWarningDays })).catch(() => []), loyalty().catch(() => null),
+      q(sb.from('home_settings').select('closed_weekdays').eq('id', 1).maybeSingle()).catch(() => null),
+    ]);
+    const cost = new Map(costs.map((c) => [c.item_id, Number(c.avg_cost ?? c.last_cost ?? 0)]));
+    const svcMargin = (s) => { const mat = slinks.filter((l) => l.service_id === s.id).reduce((a, l) => a + Number(l.qty) * (cost.get(l.item_id) || 0), 0); return s.price ? ((s.price - mat) / s.price) * 100 : 0; };
+    return { orules, members, tpriv: new Map(tpv.map((p) => [p.member_id, p])), shifts, leaves, lists, litems, runs, sops, services, slinks, svcMargin, fdays, target, expCount, fb, clients, seasons, campaigns, posts, guides, reads, audits, states: new Map(states.map((s) => [s.code, s])), expiring, loyalty: L, closedWd: hs?.closed_weekdays || [] };
+  }
+
+  function evalRules(c) {
+    return RULES.map((r) => {
+      const s = c.states.get(r.code) || {};
+      if (s.adopted === false) return { r, s, res: null, off: 'removed' };
+      if (s.dismissed_reason) return { r, s, res: null, off: 'dismissed' };
+      let res; try { res = r.ev(c, s.answer); } catch (e) { res = R('na', ''); }
+      return { r, s, res };
+    });
+  }
+  const rulesScore = (E) => { const live = E.filter((x) => x.res && x.res.st !== 'na'); return live.length ? Math.round((live.reduce((a, x) => a + (x.res.st === 'ok' ? 1 : x.res.st === 'need' ? 0.5 : 0), 0) / live.length) * 100) : 0; };
+
+  async function pageRules(view, _a, params, alive) {
+    const tab = params.get('t') || 'now';
+    const head = `<div class="rules-intro"><span class="sh-eyebrow">القرار لكم، واحنا نوضّح الطريق</span><h1>قواعد بيوتفريش</h1><p>قواعد مكتوبة لصالون نسائي في السعودية، تنفحص لحالها على بيانات الصالون وتقول: هذا سليم، وهذا يحتاجكم، وهذا خطر.</p></div>
+      <div class="lens" style="margin-bottom:16px">${[['now', 'مؤشراتنا'], ['lib', 'مكتبة القواعد'], ['docs', 'التراخيص والفحوصات']].map(([k, l]) => `<a href="#/rules?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
+    if (tab === 'docs') return opsRules(view, alive, head);
+    const c = await rulesCtx();
+    if (!alive()) return;
+    const E = evalRules(c);
+    if (tab === 'lib') return rulesLib(view, E, head);
+    const score = rulesScore(E);
+    try { localStorage.setItem('bf-rules', JSON.stringify({ score, risk: E.filter((x) => x.res?.st === 'risk').length, at: Date.now() })); } catch {}
+    const grp = (st) => E.filter((x) => x.res && x.res.st === st);
+    const risk = grp('risk'), need = grp('need'), ok = grp('ok'), na = E.filter((x) => x.res && x.res.st === 'na'), dis = E.filter((x) => x.off === 'dismissed');
+    const domScore = Object.keys(RDOM).map((d) => { const xs = E.filter((x) => x.r.dom === d && x.res && x.res.st !== 'na'); return [d, xs.length ? Math.round((xs.reduce((a, x) => a + (x.res.st === 'ok' ? 1 : x.res.st === 'need' ? 0.5 : 0), 0) / xs.length) * 100) : null, xs.filter((x) => x.res.st === 'risk').length]; }).filter((x) => x[1] != null);
+    const rcard = (x) => `<div class="rcard ${x.res.st}" data-code="${x.r.code}">
+        <div class="rc-top"><span class="badge ${RST[x.res.st][1]}">${RST[x.res.st][0]}</span><span class="rc-dom">${RDOM[x.r.dom]}</span><span class="rc-code">${x.r.code}</span></div>
+        <h3>${esc(x.r.title)}</h3><p class="rc-msg">${esc(x.res.msg)}</p>
+        ${x.r.ask && isManager() ? `<div class="rc-ask"><span>${esc(x.r.ask.q)}</span><div class="chips wrap">${x.r.ask.opts.map(([v, l]) => `<button class="chip ${x.s.answer === v ? 'on' : ''}" data-ans="${v}">${l}</button>`).join('')}</div></div>` : ''}
+        <details class="rc-why"><summary>لماذا؟</summary><p>${esc(x.r.why)}</p><span class="rc-basis">الأساس: ${BASIS[x.r.basis]}</span></details>
+        <div class="rc-acts">${x.res.link ? `<a class="btn sm ${x.res.st === 'ok' ? '' : 'primary'}" href="${x.res.link}">${x.res.st === 'ok' ? 'شوف' : 'صلّحها'} ←</a>` : ''}${isManager() && x.res.st !== 'ok' ? '<button class="rc-dis" data-dis>لي رأي آخر</button>' : ''}</div>
+      </div>`;
+    view.innerHTML = `${head}
+      <div class="rules-hero">${ring(score, `<b class="num">${score}</b><small>٪</small>`)}<div class="grow"><span class="sh-eyebrow">صحة بيوتفريش</span><h2>${risk.length ? `ابدؤوا بالخطر: ${risk.length === 1 ? 'قاعدة وحدة' : risk.length + ' قواعد'}` : need.length ? `${need.length} قواعد تحتاجكم` : 'كل القواعد سليمة 🤍'}</h2>
+        <div class="rh-c"><span class="bad">${risk.length} خطر</span><span class="warn">${need.length} تحتاجكم</span><span class="ok">${ok.length} سليم</span></div>
+        <p class="muted small" style="margin:8px 0 0">تنفحص كل ما تغيّرت البيانات. اللي تتركونها بـ«لي رأي آخر» ما تنحسب.</p></div></div>
+      <div class="dom-strip">${domScore.map(([d, p, rk]) => `<div class="dom ${rk ? 'r' : ''}"><i style="--p:${p}"></i><span>${RDOM[d]}</span><b class="num">${p}٪</b></div>`).join('')}</div>
+      ${risk.length ? `<div class="section-title"><h2>خطر</h2></div><div class="rgrid">${risk.map(rcard).join('')}</div>` : ''}
+      ${need.length ? `<div class="section-title"><h2>تحتاجكم</h2></div><div class="rgrid">${need.map(rcard).join('')}</div>` : ''}
+      ${ok.length ? `<details class="rfold"><summary>سليم (${ok.length})</summary><div class="rgrid">${ok.map(rcard).join('')}</div></details>` : ''}
+      ${na.length ? `<p class="muted small mt">ما تنطبق الحين: ${na.map((x) => esc(x.r.title)).join(' · ')}.</p>` : ''}
+      ${dis.length ? `<details class="rfold"><summary>تركتوها (${dis.length})</summary><div class="list">${dis.map((x) => `<div class="row"><div class="grow"><div class="title">${esc(x.r.title)}</div><div class="meta">${esc(x.s.dismissed_reason)}</div></div>${isManager() ? `<button class="btn sm" data-back="${x.r.code}">رجّعها</button>` : ''}</div>`).join('')}</div></details>` : ''}`;
+    const save = (code, patch) => q(sb.from('rules_state').upsert({ code, ...patch, updated_at: new Date().toISOString() }));
+    $$('[data-ans]', view).forEach((b) => b.onclick = () => busy(null, async () => { try { await save(b.closest('.rcard').dataset.code, { answer: b.dataset.ans }); route(); } catch (err) { toast(errMsg(err), true); } }));
+    $$('[data-back]', view).forEach((b) => b.onclick = () => busy(b, async () => { try { await save(b.dataset.back, { dismissed_reason: null }); route(); } catch (err) { toast(errMsg(err), true); } }));
+    $$('[data-dis]', view).forEach((b) => b.onclick = () => {
+      const code = b.closest('.rcard').dataset.code; const r = RULES.find((x) => x.code === code);
+      modal(`<h3>لي رأي آخر</h3><p class="muted" style="margin-top:-6px">«${esc(r.title)}». اكتبوا السبب، والقاعدة ما تنحسب لين ترجعونها.</p>
+        <div class="field"><textarea class="input" id="ds-r" rows="3" maxlength="300" placeholder="مثلًا: الصالون مغلق يوم الجمعة، فما نحتاجها"></textarea></div>
+        <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="ds-s">حفظ</button></div>`, (el, close) => {
+        $('#ds-s', el).onclick = (e) => busy(e.currentTarget, async () => { const v = $('#ds-r', el).value.trim(); if (v.length < 3) return toast('اكتبوا السبب', true); try { await save(code, { dismissed_reason: v }); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+      });
+    });
+  }
+
+  function rulesLib(view, E, head) {
+    const doms = Object.keys(RDOM);
+    view.innerHTML = `${head}
+      <p class="muted" style="margin-top:0">${RULES.length} قاعدة في ${doms.length} مجالات، معتمد منها ${E.filter((x) => x.off !== 'removed').length}. كل قاعدة تعرض أساسها: نظام، أو اشتراط رقابي، أو مرجع علمي، أو ممارسة مجربة.</p>
+      <div class="chips wrap" style="margin-bottom:12px">${doms.map((d) => { const xs = E.filter((x) => x.r.dom === d); return `<a class="chip" href="#lib-${d}">${RDOM[d]} ${xs.filter((x) => x.off !== 'removed').length}/${xs.length}</a>`; }).join('')}</div>
+      ${doms.map((d) => `<div class="section-title" id="lib-${d}"><h2>${RDOM[d]}</h2></div><div class="list">${E.filter((x) => x.r.dom === d).map((x) => `
+        <div class="row lib ${x.off === 'removed' ? 'dim' : ''}"><div class="grow"><div class="lib-top"><span class="rc-code">${x.r.code}</span><span class="rc-basis">${BASIS[x.r.basis]}</span></div><div class="title" style="white-space:normal">${esc(x.r.title)}</div><div class="meta" style="white-space:normal">${esc(x.r.why)}</div></div>
+          ${isManager() ? `<button class="btn sm ${x.off === 'removed' ? '' : 'on-ok'}" data-adopt="${x.r.code}" data-v="${x.off === 'removed' ? '1' : '0'}">${x.off === 'removed' ? 'اعتمدها' : 'معتمدة ✓'}</button>` : ''}</div>`).join('')}</div>`).join('')}`;
+    $$('a.chip[href^="#lib-"]', view).forEach((a) => a.onclick = (e) => { e.preventDefault(); $(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    $$('[data-adopt]', view).forEach((b) => b.onclick = () => busy(b, async () => { try { await q(sb.from('rules_state').upsert({ code: b.dataset.adopt, adopted: b.dataset.v === '1', updated_at: new Date().toISOString() })); route(); } catch (err) { toast(errMsg(err), true); } }));
+  }
+
+  /* ======================= أدلة بيوتفريش ======================= */
+  const AR_NUM = (n) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
+  function parseGuide(body) {
+    const ch = []; let cur = null; let tbl = null;
+    const flush = () => { tbl = null; };
+    String(body || '').split('\n').forEach((raw) => {
+      const ln = raw.trim(); if (!ln) { flush(); return; }
+      if (ln.startsWith('# ')) { cur = { title: ln.slice(2).trim(), blocks: [] }; ch.push(cur); flush(); return; }
+      if (!cur) { cur = { title: '', blocks: [] }; ch.push(cur); }
+      if (ln.startsWith('|')) { const cells = ln.replace(/^\|/, '').replace(/\|$/, '').split('|').map((x) => x.trim()); if (!tbl) { tbl = { t: 'table', head: cells, rows: [] }; cur.blocks.push(tbl); } else tbl.rows.push(cells); return; }
+      flush();
+      if (ln.startsWith('- ')) { const last = cur.blocks[cur.blocks.length - 1]; if (last?.t === 'list') last.items.push(ln.slice(2)); else cur.blocks.push({ t: 'list', items: [ln.slice(2)] }); return; }
+      if (ln.startsWith('! ')) { cur.blocks.push({ t: 'note', text: ln.slice(2) }); return; }
+      if (ln.startsWith('> ')) { const last = cur.blocks[cur.blocks.length - 1]; if (last?.t === 'say') last.items.push(ln.slice(2)); else cur.blocks.push({ t: 'say', items: [ln.slice(2)] }); return; }
+      cur.blocks.push({ t: 'p', text: ln });
+    });
+    return ch;
+  }
+  function guideHTML(g) {
+    const ch = parseGuide(g.body);
+    const blk = (b) => b.t === 'list' ? `<ul>${b.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`
+      : b.t === 'note' ? `<div class="gb-note"><b>تنبيه</b>${esc(b.text)}</div>`
+      : b.t === 'say' ? `<div class="gb-say"><span>ما يُقال للعميلة</span>${b.items.map((x) => `<p>«${esc(x)}»</p>`).join('')}</div>`
+      : b.t === 'table' ? `<div class="gb-tw"><table><thead><tr>${b.head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map((r) => `<tr>${b.head.map((_, i) => `<td>${esc(r[i] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+      : `<p>${esc(b.text)}</p>`;
+    const upd = new Date(g.updated_at || Date.now());
+    return `<article class="gbook">
+      <section class="gb-cover"><img class="gb-logo" src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"><span class="gb-aud">${esc(g.audience || '')}</span><h1>${esc(g.title)}</h1>${g.tagline ? `<p class="gb-tag">${esc(g.tagline)}</p>` : ''}<span class="gb-ver">الإصدار ${AR_NUM(g.version)} · ${upd.getDate()} ${MONTHS_AR[upd.getMonth()]} ${upd.getFullYear()} · بيوتفريش</span><img class="gb-rose" src="../home/assets/rosette-3.svg" alt=""></section>
+      <section class="gb-toc"><h2>المحتويات</h2><ol>${ch.filter((c) => c.title).map((c, i) => `<li><span class="num">${AR_NUM(i + 1)}</span>${esc(c.title)}</li>`).join('')}</ol></section>
+      ${ch.map((c, i) => `<section class="gb-ch">${c.title ? `<div class="gb-chh"><span class="num">${AR_NUM(i + 1)}</span><h2>${esc(c.title)}</h2></div>` : ''}${c.blocks.map(blk).join('')}</section>`).join('')}
+      <footer class="gb-end"><img src="../home/assets/rosette-1.svg" alt=""><span>بيوتفريش · The Fresh Version of You</span></footer>
+    </article>`;
+  }
+
+  function openGuide(g, reads, done) {
+    const mine = reads.find((r) => r.guide_id === g.id && r.profile_id === S.profile.id);
+    const signed = mine && mine.version === g.version;
+    const ov = document.createElement('div'); ov.className = 'greader';
+    ov.innerHTML = `<div class="gr-bar"><button class="icon-btn" data-x aria-label="إغلاق">×</button><b>${esc(g.title)}</b><span style="flex:1"></span>
+      ${isManager() ? `<button class="btn sm" data-ed>${I.edit} تعديل</button>` : ''}<button class="btn sm" data-pr>طباعة / PDF</button></div>
+      <div class="gr-body">${guideHTML(g)}
+        <div class="gr-sign">${signed ? `<div class="gs-done">✓ موقّع على الإصدار ${AR_NUM(g.version)}</div>` : `<button class="btn primary" data-sign>قرأت الدليل وألتزم فيه</button>${mine ? `<p class="muted small">الدليل انعدّل بعد توقيعك، والإصدار الجديد يحتاج توقيع.</p>` : ''}`}</div></div>`;
+    document.body.appendChild(ov); document.body.classList.add('noscroll');
+    const close = () => { ov.remove(); document.body.classList.remove('noscroll'); };
+    $('[data-x]', ov).onclick = close;
+    $('[data-pr]', ov).onclick = () => { document.body.classList.add('printing-guide'); window.print(); setTimeout(() => document.body.classList.remove('printing-guide'), 500); };
+    $('[data-ed]', ov)?.addEventListener('click', () => { close(); guideForm(g); });
+    $('[data-sign]', ov)?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      try { await q(sb.from('guide_reads').upsert({ guide_id: g.id, profile_id: S.profile.id, version: g.version, read_at: new Date().toISOString() })); toast('تم التوقيع 🤍'); close(); done && done(); } catch (err) { toast(errMsg(err), true); }
+    }));
+  }
+
+  function guideForm(g) {
+    modal(`
+      <h3>${g ? 'تعديل الدليل' : 'دليل جديد'}</h3>
+      <div class="field"><label>العنوان</label><input class="input" id="g-t" maxlength="100" value="${esc(g?.title || '')}"></div>
+      <div class="grid2"><div class="field"><label>لمن</label><input class="input" id="g-a" maxlength="100" value="${esc(g?.audience || '')}" placeholder="لكل من تخدم العميلة"></div>
+      <div class="field"><label>جملة الغلاف</label><input class="input" id="g-g" maxlength="200" value="${esc(g?.tagline || '')}"></div></div>
+      <div class="field"><label>المحتوى</label><textarea class="input gcode" id="g-b" rows="14" dir="rtl">${esc(g?.body || '# الفصل الأول\n- بند\n! تنبيه مهم\n> جملة تُقال للعميلة\n| العمود | العمود\n| قيمة | قيمة')}</textarea>
+        <p class="muted small" style="margin:6px 0 0"># فصل · - بند · ! تنبيه · &gt; جملة للعميلة · | جدول | بأعمدة</p></div>
+      ${g ? '<p class="muted small">أي تعديل على المحتوى يطلب من الفريق توقيع جديد.</p>' : ''}
+      <div class="actions end">${g ? '<button class="btn danger" id="g-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn" id="g-pv">معاينة</button><button class="btn primary" id="g-s">حفظ</button></div>`, (el, close) => {
+      const row = () => ({ title: $('#g-t', el).value.trim(), audience: $('#g-a', el).value.trim() || null, tagline: $('#g-g', el).value.trim() || null, body: $('#g-b', el).value });
+      $('#g-pv', el).onclick = () => openGuide({ ...(g || { id: 0, version: 1 }), ...row(), updated_at: new Date().toISOString() }, []);
+      $('#g-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const r = row(); if (r.title.length < 2 || !r.body.trim()) return toast('اكتبوا العنوان والمحتوى', true);
+        try { if (g) await q(sb.from('guides').update(r).eq('id', g.id)); else await q(sb.from('guides').insert(r)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#g-del', el)?.addEventListener('click', async () => { close(); if (await confirmBox('حذف الدليل', 'ينحذف الدليل وتوقيعاته.', 'حذف', true)) { try { await q(sb.from('guides').delete().eq('id', g.id)); route(); } catch (err) { toast(errMsg(err), true); } } });
     });
   }
 

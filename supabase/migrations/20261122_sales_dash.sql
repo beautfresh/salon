@@ -98,7 +98,7 @@ declare
 begin
   if coalesce(private.my_role()::text, '') not in ('admin', 'partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
   if p_to < p_from or span > 400 then raise exception 'فترة غير صالحة'; end if;
-  select (min(created_at) at time zone 'Asia/Riyadh')::date into first_day from public.rekaz_orders;
+  select (min(processed_at) at time zone 'Asia/Riyadh')::date into first_day from public.rekaz_transactions;
   has_ly := first_day is not null and first_day <= yf;
   -- السلسلة المقارنة: السنة الماضية إذا موجودة، وإلا الفترة اللي قبل
   if has_ly then cf := yf; ct := yt;

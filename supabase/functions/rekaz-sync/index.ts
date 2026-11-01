@@ -87,6 +87,7 @@ async function run(cfg: Cfg, mode: string) {
     } else if (mode === 'full_tx') {
       await step('transactions', () => pull(cfg, 'transactions', '/transactions', { processedFrom: iso(days(-400)) }));
     }
+    if (mode === 'quick' || mode === 'full_base') await db.rpc('sb_link_rekaz');
     await db.rpc('rekaz_log', { p_mode: mode, p_ok: true, p_counts: { ...counts, seconds: Math.round((Date.now() - t0) / 1000) }, p_error: null });
   } catch (e) {
     await db.rpc('rekaz_log', { p_mode: mode, p_ok: false, p_counts: { ...counts, seconds: Math.round((Date.now() - t0) / 1000) }, p_error: (e as Error).message });

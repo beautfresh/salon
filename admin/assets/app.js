@@ -21,7 +21,7 @@
   const isAdmin = () => S.profile?.role === 'admin';
   const isManager = () => ['admin', 'partner'].includes(S.profile?.role);
 
-  const ROLE_LABEL = { admin: 'مدير النظام', partner: 'شريك', staff: 'موظف' };
+  const ROLE_LABEL = { admin: 'مدير النظام', partner: 'الإدارة', staff: 'موظف' };
   const MOVE_LABEL = { purchase: 'شراء', issue: 'صرف', damage: 'تالف', expired: 'منتهي الصلاحية', count_adjust: 'تسوية جرد' };
   const MOVE_BADGE = { purchase: 'ok', issue: 'accent', damage: 'danger', expired: 'warn', count_adjust: '' };
   const STATUS_LABEL = { draft: 'مسودة', approved: 'معتمدة', cancelled: 'ملغاة' };
@@ -1227,7 +1227,7 @@
       <p class="muted" style="margin-top:-8px" dir="ltr">${esc(p.login || '')}</p>
       <form id="ap-form">
         <div class="field"><label>الصلاحية</label><select class="input" name="role">${roleOptions('staff')}</select>
-          <div class="hint">الموظف: صرف وإدخال فواتير مسودة بدون رؤية الأسعار. الشريك: يرى كل شيء والتقارير. مدير النظام: كل الصلاحيات.</div></div>
+          <div class="hint">الموظف: صرف وإدخال فواتير مسودة بدون رؤية الأسعار. الإدارة: ترى كل شيء والتقارير. مدير النظام: كل الصلاحيات.</div></div>
         <div class="field"><label>الاسم</label><input class="input" name="full_name" value="${esc(p.full_name || '')}" required></div>
         <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">اعتماد الحساب</button></div>
       </form>`, (el, close) => {
@@ -3654,7 +3654,7 @@
     });
   }
 
-  /* ======================= تقرير الشريكتين ======================= */
+  /* ======================= تقرير الشهر ======================= */
   async function monthReport(mStart) {
     const s0 = D(mStart), e0 = new Date(s0.getFullYear(), s0.getMonth() + 1, 0, 12);
     const from = dk(s0), to = dk(e0);
@@ -3679,10 +3679,8 @@
     const pm = PAY_KEYS.map(([k, l]) => [l, Number(r.methods[k] || 0)]).filter((x) => x[1] > 0);
     const ex = Object.entries(r.exp_cats).map(([k, v]) => [EXP_CAT[k] || k, Number(v)]).sort((a, b) => b[1] - a[1]);
     const html = `<div class="pp-wrap"><div class="pp rp">
-      <section class="rp-cover"><img src="../home/assets/Beautfresh-brown.svg" alt=""><span class="rp-eb">تقرير الشريكتين</span><h1>${mName}</h1><p>${esc(K.legal_name || 'بيوتفريش')}</p><img class="rp-rose" src="../home/assets/rosette-3.svg" alt=""></section>
+      <section class="rp-cover"><img src="../home/assets/Beautfresh-brown.svg" alt=""><span class="rp-eb">تقرير الشهر</span><h1>${mName}</h1><p>${esc(K.legal_name || 'بيوتفريش')}</p><img class="rp-rose" src="../home/assets/rosette-3.svg" alt=""></section>
       <section class="rp-hero"><div><span>صافي الربح</span><b class="num">${sar(r.net)} <small>ر.س</small></b><em>هامش ${margin}٪</em></div><div><span>المبيعات</span><b class="num">${sar(r.revenue)}</b>${delta != null ? `<em>${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}٪ عن الشهر الماضي</em>` : ''}</div>${tgt ? `<div><span>الهدف</span><b class="num">${sar(tgt.revenue)}</b><em>تحقق ${Math.round((r.revenue / tgt.revenue) * 100)}٪</em></div>` : ''}</section>
-      <h2>نصيب الشريكتين</h2>
-      <table class="pp-t rp-p"><thead><tr><th>الشريكة</th><th>النسبة</th><th>النصيب من صافي الربح</th><th>التوقيع</th></tr></thead><tbody>${r.partners.map((p) => `<tr><td>${esc(p.name)}</td><td class="num">${Number(p.pct)}٪</td><td class="num"><b>${sar(p.amount)} ر.س</b></td><td></td></tr>`).join('')}</tbody></table>
       <h2>المبيعات يومًا بيوم</h2>${chart}<p class="pp-small"><span style="color:#5A2A22">■</span> الصالون ${sar(r.salon)} ر.س &nbsp; <span style="color:#B88A68">■</span> الخدمات المنزلية ${sar(r.home)} ر.س &nbsp;·&nbsp; ${r.closed_days ?? 0} يوم مقفل</p>
       <div class="rp-2"><div><h2>الأرقام</h2>${kv([['المبيعات', sar(r.revenue)], ['المشتريات (فواتير معتمدة)', sar(r.purchases)], ['المصروفات', sar(r.expenses)], ['صافي الربح', `<b>${sar(r.net)}</b>`], r.methods.clients && ['متوسط الفاتورة', sar(r.salon / r.methods.clients)], r.closed_days && ['متوسط اليوم', sar(r.salon / r.closed_days)]])}</div>
         <div><h2>طرق الدفع</h2>${pm.length ? kv(pm.map(([l, v]) => [l, `${sar(v)} <small>(${Math.round((v / (r.salon || 1)) * 100)}٪)</small>`])) : '<p class="pp-small">ما فيه إقفالات</p>'}</div></div>
@@ -3691,7 +3689,7 @@
           ${top.length ? `<h3>أعلى العميلات صرفًا</h3><ol class="rp-top">${top.map((t) => `<li><span>${esc(t.name)}</span><span class="num">${sar(t.s)} ر.س · ${t.n} زيارة</span></li>`).join('')}</ol>` : ''}</div></div>
       ${cmps.length ? `<h2>الحملات</h2><table class="pp-t"><thead><tr><th>الحملة</th><th>الصرف</th><th>عميلات جدد</th><th>المبيعات</th><th>العائد</th></tr></thead><tbody>${cmps.map((c) => `<tr><td>${esc(c.name)}</td><td class="num">${c.spent != null ? sar(c.spent) : '—'}</td><td class="num">${c.new_clients ?? '—'}</td><td class="num">${c.revenue != null ? sar(c.revenue) : '—'}</td><td class="num">${c.spent > 0 && c.revenue != null ? (c.revenue / c.spent).toFixed(1) + '×' : '—'}</td></tr>`).join('')}</tbody></table>` : ''}
       <h2>ملاحظات وقرارات الشهر الجاي</h2><div class="rp-notes" contenteditable="true">اكتبوا هنا قبل الطباعة…</div>
-      <div class="pp-sign"><div><label>${esc(r.partners[0]?.name || 'الشريكة الأولى')}</label><div class="pp-line"></div></div><div><label>${esc(r.partners[1]?.name || 'الشريكة الثانية')}</label><div class="pp-line"></div></div><div><label>التاريخ</label><div class="pp-line"></div></div></div>
+      <div class="pp-sign"><div><label>اعتماد الإدارة</label><div class="pp-line"></div></div><div><label>التاريخ</label><div class="pp-line"></div></div></div>
       <p class="pp-small" style="text-align:center;margin-top:28px">صدر من نظام بيوتفريش · المبيعات من الإقفال اليومي والحجوزات المنزلية المدفوعة، والمشتريات من فواتير الشراء المعتمدة.</p>
     </div></div>`;
     paper(`تقرير ${mName}`, html, { mount: (ov) => { const n = $('.rp-notes', ov); n.addEventListener('focus', () => { if (n.textContent.startsWith('اكتبوا هنا')) n.textContent = ''; }, { once: true }); } });
@@ -3798,7 +3796,6 @@
           <div><span>المصروفات</span><b class="num">${sar(r.expenses)}</b><em>${exps.length} تصنيف</em></div>
         </div>
       </div>
-      ${r.partners.length && lens !== 'd' ? `<div class="partners">${r.partners.map((p) => `<div class="partner"><span class="pav">${esc(initial(p.name))}</span><div><div class="pn">${esc(p.name)} <small>${Number(p.pct)}٪</small></div><b class="num">${sar(p.amount)} ر.س</b></div></div>`).join('')}</div>` : ''}
       ${chart}
       <div class="fin-grid">
         <div><div class="section-title"><h2>طرق الدفع</h2></div><div class="card">${methods.length ? bars(methods, Math.max(...methods.map((x) => x[1])), ident) : `<div class="empty">ما فيه إقفالات ${LENS_THIS[lens]}</div>`}</div></div>

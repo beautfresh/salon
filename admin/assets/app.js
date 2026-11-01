@@ -4824,7 +4824,7 @@
         <div class="fin-title"><h2>${lensTitle(lens, s, e)}</h2>${!isCurrent ? `<a class="small" href="${link(lens, D(todayKey))}">ارجع للحالي</a>` : ''}</div>
         <a class="icon-btn ${dk(e) >= todayKey ? 'off' : ''}" href="${link(lens, lensShift(lens, at, 1))}" aria-label="التالي">‹</a>
       </div>
-      <div class="fin-actions"><a class="btn primary" href="#/sales?l=${lens}&at=${dk(s)}">${I.chart} لوحة المبيعات</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(s)}">المصروفات</a>${lens === 'm' ? '<button class="btn" id="rp-go">📄 تقرير الشهر</button>' : ''}</div>
+      <div class="fin-actions"><a class="btn primary" href="#/sales?l=${lens}&at=${dk(s)}">لوحة المبيعات</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(s)}">المصروفات</a>${lens === 'm' ? '<button class="btn" id="rp-go">📄 تقرير الشهر</button>' : ''}</div>
       ${unclosed && isCurrent && lens !== 'd' ? `<a class="notice warn" style="display:block" href="#/closing">فيه ${unclosed} ${unclosed === 1 ? 'يوم' : unclosed <= 10 ? 'أيام' : 'يوم'} ${LENS_THIS[lens]} بدون إقفال ←</a>` : ''}
       ${dayCard}
       <div class="fin-hero">

@@ -13,6 +13,9 @@ declare d0 date := p_from; d1 date := p_to + 1; span int := p_to - p_from + 1;
 begin
   if private.my_role() not in ('admin','partner') then raise exception 'ليس لديك صلاحية لهذا الإجراء'; end if;
   if p_to < p_from or span > 400 then raise exception 'فترة غير صالحة'; end if;
+  if extract(day from d0) = 1 and extract(day from d1) = 1 then
+    pd0 := (d0 - make_interval(months => (extract(year from d1) * 12 + extract(month from d1) - extract(year from d0) * 12 - extract(month from d0))::int))::date;
+  end if;
   salon := private.rk_day_collected(d0, d1);
   select coalesce(sum(total),0) into home from public.home_bookings
    where payment_status = 'paid' and status <> 'cancelled' and (starts_at at time zone 'Asia/Riyadh')::date >= d0 and (starts_at at time zone 'Asia/Riyadh')::date < d1;

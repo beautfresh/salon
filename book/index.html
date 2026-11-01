@@ -1,3 +1,30 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>بيوتفريش</title>
-<script>location.replace('../home/' + location.hash);</script>
-<meta http-equiv="refresh" content="0; url=../home/"></head><body></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>احجزي موعدك · بيوتفريش</title>
+<script>if (location.hash && !location.search) location.replace('../home/' + location.hash);</script>
+<meta name="robots" content="noindex">
+<meta name="description" content="احجزي موعدك في صالون بيوتفريش بالأحساء: اختاري الخدمة والوقت، بدون حساب.">
+<meta name="theme-color" content="#F3EBDF">
+<link rel="icon" href="../home/assets/rosette-1.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="book.css?v=1793541653">
+</head>
+<body>
+<div class="app" id="app"><span class="bgros" aria-hidden="true"></span>
+  <header class="top"><a href="../" aria-label="بيوتفريش"><span class="logo"></span></a><span class="steps" id="steps"><i></i><i></i><i></i></span></header>
+  <main id="main"></main>
+  <div class="toplink"><a href="../home/">تبين الصالون يجيك؟ الخدمات المنزلية ←</a></div>
+</div>
+<div class="bar" id="bar"><div class="in"><div class="meta"><b class="num" id="barT"></b><small id="barS"></small></div><button class="go" id="barGo"></button></div></div>
+<div class="veil" id="veil"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<script src="../vendor/supabase.js"></script>
+<script src="../assets/config.js?v=1793541653"></script>
+<script src="book.js?v=1793541653"></script>
+</body>
+</html>

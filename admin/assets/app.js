@@ -279,7 +279,7 @@
   function navLinks() {
     const M = isManager(), A = isAdmin();
     const G = [
-      ['اليوم', [['home', 'الرئيسية', I.home], ['bookings', 'الحجوزات المنزلية', I.cal]]],
+      ['اليوم', [['home', 'الرئيسية', I.home], ['appts', 'مواعيد الصالون', I.cal], ['bookings', 'الحجوزات المنزلية', I.home]]],
       ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['finance', 'المالية', I.coin]]],
       ['الفريق والتشغيل', [['team', 'الفريق', I.users], ['ops', 'التشغيل', I.check], ['assets', 'الأصول والصيانة', I.wrench], ['rules', 'قواعد بيوتفريش', I.shield]]],
       ['المخزون', [['items', 'الأصناف', I.box], ['issue', 'صرف من المخزون', I.out], ['invoices', 'فواتير الشراء', I.invoice], ['shopping', 'قائمة المشتريات', I.cart], ['movements', 'سجل الحركات', I.list], M && ['reports', 'التقارير', I.chart]]],
@@ -312,7 +312,7 @@
         </div>
         <nav class="bottomnav">
           <a href="#/home" data-nav="home"><span class="ic">${I.home}</span>الرئيسية</a>
-          <a href="#/bookings" data-nav="bookings"><span class="ic">${I.cal}</span>الحجوزات</a>
+          <a href="#/appts" data-nav="appts"><span class="ic">${I.cal}</span>المواعيد</a>
           <button type="button" class="fab" id="fab" aria-label="إجراء سريع"><span class="ic">${I.plus}</span>إجراء</button>
           <a href="#/clients" data-nav="clients"><span class="ic">${I.heart}</span>العميلات</a>
           <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>المزيد</a>
@@ -367,6 +367,7 @@
     catalog: { title: 'الفئات والموردين', nav: 'catalog', fn: pageCatalog, admin: true },
     tour: { title: 'جولة في بيوتفريش', nav: 'home', fn: pageTour },
     naqla: { title: 'نقلة بيوتفريش', nav: 'home', fn: pageNaqla },
+    appts: { title: 'مواعيد الصالون', nav: 'appts', fn: pageAppts },
     kit: { title: 'عُدّة بيوتفريش', nav: 'kit', fn: pageKit },
     more: { title: 'الإعدادات', nav: 'more', fn: pageMore },
   };
@@ -3826,6 +3827,284 @@
     });
     void close;
   }
+  /* ======================= salon appointments ======================= */
+  const AP_STATUS = { pending: 'بانتظار التأكيد', confirmed: 'مؤكد', arrived: 'وصلت', done: 'خلصت', no_show: 'ما حضرت', cancelled: 'ملغي' };
+  const AP_BADGE = { pending: 'warn', confirmed: 'accent', arrived: 'gold', done: 'ok', no_show: 'danger', cancelled: '' };
+  const AP_ROLES = [['hair', 'شعر'], ['nails', 'أظافر'], ['lashes', 'رموش'], ['face', 'وجه وحواجب'], ['makeup', 'مكياج']];
+  const AP_PAY = ['ركاز · مدى', 'ركاز · كاش', 'ركاز · Apple Pay', 'تحويل', 'قسيمة هدية'];
+  const BOOK_URL = 'https://beautfresh.com/book/';
+  const apMin = (ts) => { const t = new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hour12: false }); const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const apHM = (m) => { let h = Math.floor(m / 60), mm = m % 60; const ap = h < 12 ? 'ص' : 'م'; h = h % 12 || 12; return `${AR_NUM(h)}:${AR_NUM(String(mm).padStart(2, '0'))} ${ap}`; };
+  const apDayShift = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  const apTimeTxt = (ts) => apHM(apMin(ts));
+  const apMsg = (b, kind) => {
+    const when = `${rDayLabel(rDay(b.starts_at))} الساعة ${apTimeTxt(b.starts_at)}`;
+    const svcs = (b.salon_booking_items || []).map((i) => i.name).join('، ');
+    const link = `${BOOK_URL}?t=${b.access_token}`;
+    if (kind === 'confirm') return `أهلًا ${b.customer_name} 🤍\nموعدك في بيوتفريش تأكد: ${when}\n${svcs}\n\nلو تبين تعدلين أو تلغين من هنا:\n${link}\n\nننتظرك ✨`;
+    if (kind === 'remind') return `أهلًا ${b.customer_name}، نذكّرك بموعدك في بيوتفريش ${when} 🤍\n${svcs}\n\nتفاصيل الموعد:\n${link}`;
+    if (kind === 'miss') return `أهلًا ${b.customer_name}، افتقدناك اليوم 🤍 إذا تبين نرتّب لك موعد ثاني احجزي من هنا:\n${BOOK_URL}`;
+    return `أهلًا ${b.customer_name} 🤍`;
+  };
+
+  async function pageAppts(view, _a, params, alive) {
+    const t = params.get('t') || 'day';
+    const M = isManager();
+    const tabs = [['day', 'جدول اليوم'], ['pending', 'بانتظار التأكيد'], ...(M ? [['svc', 'الخدمات والأسعار'], ['set', 'الإعدادات']] : [])];
+    const head = `<div class="chips">${tabs.map(([k, l]) => `<a class="chip ${k === t ? 'on' : ''}" href="#/appts?t=${k}">${l}</a>`).join('')}<a class="chip" href="#/bookings">الحجوزات المنزلية ←</a></div>`;
+    if (t === 'svc' && M) return apServices(view, head, alive);
+    if (t === 'set' && M) return apSettings(view, head, alive);
+    if (t === 'pending') return apPending(view, head, alive);
+    return apDay(view, head, params.get('d') || rDay(Date.now()), alive);
+  }
+
+  async function apDay(view, head, day, alive) {
+    const from = new Date(day + 'T00:00:00+03:00'), to = new Date(from.getTime() + 86400000);
+    const [rows, staff, set] = await Promise.all([
+      q(sb.from('salon_bookings').select('id,code,access_token,customer_name,phone,starts_at,ends_at,total,status,payment_status,paid_amount,notes,source,salon_booking_items(id,name,role,member_id,starts_at,ends_at,price)').gte('starts_at', from.toISOString()).lt('starts_at', to.toISOString()).order('starts_at')),
+      q(sb.from('team_members').select('id,name,color,book_roles').eq('active', true).order('name')),
+      q(sb.from('salon_settings').select('*').eq('id', 1).maybeSingle()),
+    ]);
+    if (!alive()) return;
+    const bookable = staff.filter((m) => (m.book_roles || []).length);
+    const live = rows.filter((b) => b.status !== 'cancelled');
+    const hm = (s, d) => { const [a, b] = String(s || d).split(':').map(Number); return a * 60 + (b || 0); };
+    const open = hm(set?.open_time, '10:00'), close = hm(set?.close_time, '22:00') || 1440;
+    const cols = bookable.length ? bookable.map((m) => ({ id: m.id, name: m.name.split(' ')[0], color: m.color })) : [{ id: null, name: 'الصالون', color: '#5A2A22' }];
+    if (bookable.length && live.some((b) => b.salon_booking_items.some((i) => !i.member_id))) cols.push({ id: 0, name: 'بدون موظفة', color: '#8A6F66' });
+    const PX = 1.3, H = Math.max(60, (close - open)) * PX;
+    const blocks = (col) => {
+      const its = live.flatMap((b) => b.salon_booking_items.filter((i) => (col.id === null) || (col.id === 0 ? !i.member_id : i.member_id === col.id)).map((i) => ({ b, i, s: +new Date(i.starts_at), e: +new Date(i.ends_at) }))).sort((x, y) => x.s - y.s);
+      const ends = []; its.forEach((x) => { let l = ends.findIndex((e) => e <= x.s); if (l < 0) { l = ends.length; ends.push(0); } ends[l] = x.e; x.l = l; });
+      its.forEach((x) => { x.n = Math.max(...its.filter((y) => y.s < x.e && y.e > x.s).map((y) => y.l)) + 1; });
+      return its.map(({ b, i, l, n }) => {
+        const top = (apMin(i.starts_at) - open) * PX, h = Math.max(26, (new Date(i.ends_at) - new Date(i.starts_at)) / 60000 * PX - 3);
+        return `<button class="ap-blk st-${b.status}" style="top:${top}px;height:${h}px;--c:${col.color};inset-inline-start:calc(${(l * 100) / n}% + 3px);width:calc(${100 / n}% - 6px)" data-b="${b.id}"><b>${esc(b.customer_name)}</b><span>${apTimeTxt(i.starts_at)} · ${esc(i.name)}</span></button>`;
+      }).join('');
+    };
+    const hours = []; for (let m = Math.ceil(open / 60) * 60; m < close; m += 60) hours.push(m);
+    const isToday = day === rDay(Date.now());
+    const nowM = apMin(Date.now());
+    const pend = live.filter((b) => b.status === 'pending').length;
+    const exp = live.filter((b) => b.status !== 'no_show').reduce((a, b) => a + Number(b.total || 0), 0);
+    view.innerHTML = `${head}
+      <div class="ap-nav"><a class="icon-btn" href="#/appts?d=${apDayShift(day, -1)}" aria-label="اليوم السابق">→</a>
+        <label class="ap-date"><b>${esc(rDayLabel(day))}</b><input type="date" id="ap-d" value="${day}"></label>
+        <a class="icon-btn" href="#/appts?d=${apDayShift(day, 1)}" aria-label="اليوم التالي">←</a>
+        ${isToday ? '' : `<a class="chip" href="#/appts">اليوم</a>`}
+        <button class="btn primary" id="ap-new" style="margin-inline-start:auto">${I.plus} موعد</button></div>
+      <div class="ap-kpi"><div><b class="num">${AR_NUM(live.length)}</b><span>موعد</span></div><div><b class="num">${sar(exp)}</b><span>ريال متوقع</span></div><div class="${pend ? 'warn' : ''}"><b class="num">${AR_NUM(pend)}</b><span>بانتظار التأكيد</span></div><div><b class="num">${AR_NUM(live.filter((b) => b.status === 'done').length)}</b><span>خلصت</span></div></div>
+      ${live.length ? '' : `<div class="notice" style="margin-bottom:12px">ما فيه مواعيد ${isToday ? 'اليوم' : 'في هاليوم'}. المواعيد اللي تنحجز من الموقع تطلع هنا تلقائيًا.</div>`}
+      ${!bookable.length ? `<div class="notice small" style="margin-bottom:12px">المواعيد الحين تنحسب على ${AR_NUM(set?.seats || 2)} كراسي. لما تضيفون الموظفات ومناوباتهن من <a href="#/team">الفريق</a> وتحددون وش تسوي كل وحدة من <a href="#/appts?t=set">الإعدادات</a>، يصير لكل موظفة عمود ومواعيدها.</div>` : ''}
+      <div class="ap-tl" style="--n:${cols.length}">
+        <div class="ap-hcol"><div class="ap-hd"></div><div class="ap-body" style="height:${H}px">${hours.map((m) => `<span style="top:${(m - open) * PX}px">${apHM(m).replace(':٠٠', '')}</span>`).join('')}</div></div>
+        ${cols.map((c) => `<div class="ap-col"><div class="ap-hd"><i style="background:${esc(c.color)}"></i>${esc(c.name)}</div><div class="ap-body" style="height:${H}px">${hours.map((m) => `<i class="ap-line" style="top:${(m - open) * PX}px"></i>`).join('')}${isToday && nowM > open && nowM < close ? `<i class="ap-now" style="top:${(nowM - open) * PX}px"></i>` : ''}${blocks(c)}</div></div>`).join('')}
+      </div>
+      ${rows.some((b) => b.status === 'cancelled') ? `<div class="section-title"><h2>ملغية</h2></div><div class="list">${rows.filter((b) => b.status === 'cancelled').map((b) => `<button class="row" data-b="${b.id}"><div class="grow"><div class="title">${esc(b.customer_name)}</div><div class="meta">${apTimeTxt(b.starts_at)} · ${esc(b.salon_booking_items.map((i) => i.name).join('، '))}</div></div><span class="badge">ملغي</span></button>`).join('')}</div>` : ''}`;
+    $('#ap-d', view).onchange = (e) => { if (e.target.value) location.hash = `#/appts?d=${e.target.value}`; };
+    $('#ap-new', view).onclick = () => apForm(day);
+    $$('[data-b]', view).forEach((el) => el.onclick = () => apSheet(rows.find((b) => b.id === el.dataset.b), staff));
+    if (isToday && nowM > open) { const tl = $('.ap-tl', view); requestAnimationFrame(() => { const y = tl.getBoundingClientRect().top + window.scrollY + (nowM - open - 60) * PX; if (y > 300) window.scrollTo({ top: y - 120 }); }); }
+  }
+
+  async function apPending(view, head, alive) {
+    const [rows, staff] = await Promise.all([
+      q(sb.from('salon_bookings').select('id,code,access_token,customer_name,phone,starts_at,ends_at,total,status,payment_status,paid_amount,notes,source,salon_booking_items(id,name,role,member_id,starts_at,ends_at,price)').eq('status', 'pending').gte('starts_at', new Date(Date.now() - 3600000).toISOString()).order('starts_at').limit(100)),
+      q(sb.from('team_members').select('id,name,color,book_roles').eq('active', true)),
+    ]);
+    if (!alive()) return;
+    view.innerHTML = `${head}
+      <p class="muted small" style="margin-top:-4px">الحجوزات اللي جات من الموقع. أرسلوا لها التأكيد على الواتساب واضغطوا «تأكيد».</p>
+      ${rows.length ? `<div class="list">${rows.map((b) => `<div class="row"><div style="width:70px;flex:none;text-align:center"><div style="font-weight:700" class="num">${apTimeTxt(b.starts_at)}</div><div class="meta">${esc(rDayLabel(rDay(b.starts_at)))}</div></div>
+        <button class="grow" data-b="${b.id}" style="text-align:right;background:none;border:0;padding:0"><div class="title">${esc(b.customer_name)} <span class="muted small num" dir="ltr">${esc(b.phone)}</span></div><div class="meta">${esc(b.salon_booking_items.map((i) => i.name).join('، '))} · ${sar(b.total)} ريال</div></button>
+        <div class="end" style="display:flex;gap:6px"><a class="icon-btn" target="_blank" rel="noopener" href="https://wa.me/${waNum(b.phone)}?text=${encodeURIComponent(apMsg(b, 'confirm'))}" aria-label="أرسل التأكيد">${I.wa}</a><button class="btn sm primary" data-ok="${b.id}">تأكيد</button></div></div>`).join('')}</div>`
+        : '<div class="list"><div class="empty">ما فيه حجوزات تنتظر التأكيد 🤍</div></div>'}`;
+    $$('[data-b]', view).forEach((el) => el.onclick = () => apSheet(rows.find((b) => b.id === el.dataset.b), staff));
+    $$('[data-ok]', view).forEach((el) => el.onclick = () => busy(el, async () => { await q(sb.from('salon_bookings').update({ status: 'confirmed' }).eq('id', el.dataset.ok)); toast('تأكد الموعد'); route(); }));
+  }
+
+  function apSheet(b, staff) {
+    const who = (id) => { const m = staff.find((x) => x.id === id); return m ? m.name.split(' ')[0] : ''; };
+    const items = b.salon_booking_items.slice().sort((a, c) => new Date(a.starts_at) - new Date(c.starts_at));
+    const act = {
+      pending: [['confirmed', 'تأكيد الموعد', 'primary']],
+      confirmed: [['arrived', 'وصلت', 'primary'], ['no_show', 'ما حضرت', '']],
+      arrived: [['done', 'خلصت · سجّل الدفع', 'primary']],
+    }[b.status] || [];
+    modal(`
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3 style="margin:0">${esc(b.customer_name)}</h3><div class="muted small">${esc(b.code)} · ${b.source === 'web' ? 'من الموقع' : 'من الإدارة'}</div></div><span class="badge ${AP_BADGE[b.status]}">${AP_STATUS[b.status]}</span></div>
+      <div class="ap-when">${esc(rDayLabel(rDay(b.starts_at)))} · ${apTimeTxt(b.starts_at)} – ${apTimeTxt(b.ends_at)}</div>
+      <div class="list" style="margin:10px 0">${items.map((i) => `<div class="row"><div class="grow"><div class="title">${esc(i.name)}</div><div class="meta">${apTimeTxt(i.starts_at)}${i.member_id ? ` · مع ${esc(who(i.member_id))}` : ''}</div></div><div class="end num">${sar(i.price)}</div></div>`).join('')}
+        <div class="row"><div class="grow title">الإجمالي</div><div class="end num" style="font-weight:700">${sar(b.total)} ريال</div></div></div>
+      ${b.notes ? `<div class="notice small">«${esc(b.notes)}»</div>` : ''}
+      <div class="chips wrap" style="margin-top:10px">
+        <a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(b.phone)}?text=${encodeURIComponent(apMsg(b, 'confirm'))}">واتساب · رسالة التأكيد</a>
+        <a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(b.phone)}?text=${encodeURIComponent(apMsg(b, 'remind'))}">واتساب · تذكير</a>
+        ${b.status === 'no_show' ? `<a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(b.phone)}?text=${encodeURIComponent(apMsg(b, 'miss'))}">افتقدناك</a>` : ''}
+        <a class="chip" href="tel:${esc(b.phone)}">اتصال · <span dir="ltr">${esc(b.phone)}</span></a>
+      </div>
+      <div class="actions" style="margin-top:14px">${act.map(([s, l, c]) => `<button class="btn ${c}" data-s="${s}">${l}</button>`).join('')}
+        ${['pending', 'confirmed'].includes(b.status) ? '<button class="btn" data-s="cancelled" style="color:var(--danger)">إلغاء</button>' : ''}
+        ${['no_show', 'cancelled'].includes(b.status) ? '<button class="btn" data-s="confirmed">رجّعه مؤكد</button>' : ''}</div>
+      <div id="ap-pay"></div>`, (el, close) => {
+      $$('[data-s]', el).forEach((btn) => btn.onclick = async () => {
+        const s = btn.dataset.s;
+        if (s === 'done') return apPay(el, b, close);
+        if (s === 'cancelled' && !(await confirmBox('إلغاء الموعد؟', `${b.customer_name} · ${apTimeTxt(b.starts_at)}`, 'إلغاء الموعد', true))) return;
+        await busy(btn, async () => {
+          await q(sb.from('salon_bookings').update({ status: s, ...(s === 'cancelled' ? { cancel_reason: 'ألغته الإدارة' } : {}) }).eq('id', b.id));
+          toast(AP_STATUS[s]); close(); route();
+        });
+      });
+    });
+  }
+  function apPay(el, b, close) {
+    $('#ap-pay', el).innerHTML = `<div class="card" style="margin-top:12px"><div class="grid2"><div class="field"><label>المبلغ المدفوع</label><input class="input num" id="pa" inputmode="decimal" value="${Number(b.total)}"></div>
+      <div class="field"><label>طريقة الدفع</label><select class="input" id="pm">${AP_PAY.map((p) => `<option>${p}</option>`).join('')}</select></div></div>
+      <div class="field"><label>رقم فاتورة ركاز <span class="muted small">(اختياري)</span></label><input class="input" id="pi" dir="ltr"></div>
+      <button class="btn primary" id="pok" style="width:100%">تسجيل · تنضاف زيارة لملفها وختم بالبطاقة</button></div>`;
+    $('#pok', el).onclick = (e) => busy(e.target, async () => {
+      const amt = Number(String($('#pa', el).value).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+      await q(sb.from('salon_bookings').update({ status: 'done', payment_status: 'paid', paid_amount: isFinite(amt) ? amt : b.total, payment_method: $('#pm', el).value, rekaz_invoice: $('#pi', el).value.trim() || null }).eq('id', b.id));
+      toast('خلصت الزيارة وانضافت لملفها'); close(); route();
+    });
+  }
+
+  async function apForm(day) {
+    const cat = await q(sb.rpc('sb_catalog'));
+    const staff = await q(sb.from('team_members').select('id,name,book_roles').eq('active', true));
+    const bookable = staff.filter((m) => (m.book_roles || []).length);
+    const sel = [];
+    modal(`<h3>موعد جديد</h3><p class="muted small" style="margin-top:-6px">للحجوزات اللي توصل بالواتساب أو الاتصال أو تجي مباشرة.</p>
+      <div class="grid2"><div class="field"><label>الجوال</label><input class="input" id="f-ph" dir="ltr" inputmode="tel" placeholder="05xxxxxxxx"></div><div class="field"><label>الاسم</label><input class="input" id="f-nm"></div></div>
+      <div class="field"><label>الخدمات</label><input class="input" id="f-q" type="search" placeholder="ابحث عن خدمة…"><div id="f-res" class="ap-res"></div><div id="f-sel" class="chips wrap" style="margin-top:6px"></div></div>
+      <div class="grid2"><div class="field"><label>اليوم</label><input class="input" type="date" id="f-d" value="${day}"></div>
+        <div class="field"><label>الموظفة</label><select class="input" id="f-m"><option value="">أي وحدة</option>${bookable.map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></div></div>
+      <div class="field"><label>الوقت</label><div id="f-slots" class="chips wrap"><span class="muted small">اختاروا الخدمة أول</span></div></div>
+      <div class="grid2"><div class="field"><label>المصدر</label><select class="input" id="f-src"><option value="phone">واتساب أو اتصال</option><option value="walkin">جت مباشرة</option></select></div><div class="field"><label>ملاحظة</label><input class="input" id="f-nt"></div></div>
+      <div class="actions"><button class="btn primary" id="f-ok" disabled>احجز</button></div>`, (el, close) => {
+      let slot = null;
+      const res = $('#f-res', el), selBox = $('#f-sel', el);
+      const items = () => sel.map((x) => ({ service_id: x.s.id, option_id: x.o ? x.o.id : null }));
+      const drawSel = () => { selBox.innerHTML = sel.map((x, i) => `<span class="chip on">${esc(x.s.name)}${x.o ? ' · ' + esc(x.o.name) : ''} <button data-x="${i}" style="background:none;border:0;color:inherit">×</button></span>`).join(''); $$('[data-x]', selBox).forEach((b) => b.onclick = () => { sel.splice(+b.dataset.x, 1); drawSel(); loadSlots(); }); };
+      const loadSlots = async () => {
+        slot = null; $('#f-ok', el).disabled = true;
+        const box = $('#f-slots', el);
+        if (!sel.length) { box.innerHTML = '<span class="muted small">اختاروا الخدمة أول</span>'; return; }
+        box.innerHTML = '<span class="muted small">نبحث…</span>';
+        const rows = await q(sb.rpc('sb_slots', { p_day: $('#f-d', el).value, p_items: items(), p_member: +$('#f-m', el).value || null }));
+        box.innerHTML = rows.length ? rows.map((r) => `<button class="chip" data-t="${r.slot}">${apHM(+r.slot.slice(0, 2) * 60 + +r.slot.slice(3))}</button>`).join('') : '<span class="muted small">ما فيه وقت فاضي بهاليوم</span>';
+        $$('[data-t]', box).forEach((b) => b.onclick = () => { $$('[data-t]', box).forEach((x) => x.classList.toggle('on', x === b)); slot = b.dataset.t; $('#f-ok', el).disabled = false; });
+      };
+      $('#f-q', el).oninput = (e) => {
+        const v = e.target.value.trim();
+        res.innerHTML = v ? cat.services.filter((s) => s.name.includes(v)).slice(0, 8).map((s) => (s.opts && s.opts.length ? s.opts.map((o) => `<button data-s="${s.id}" data-o="${o.id}">${esc(s.name)} · ${esc(o.name)} <span class="muted small">${sar(o.price)} · ${durTxt(o.dur)}</span></button>`).join('') : `<button data-s="${s.id}">${esc(s.name)} <span class="muted small">${sar(s.price)} · ${durTxt(s.dur)}</span></button>`)).join('') : '';
+        $$('button', res).forEach((b) => b.onclick = () => { const s = cat.services.find((x) => x.id === +b.dataset.s); const o = b.dataset.o ? s.opts.find((x) => x.id === +b.dataset.o) : null; sel.push({ s, o }); res.innerHTML = ''; e.target.value = ''; drawSel(); loadSlots(); });
+      };
+      $('#f-d', el).onchange = loadSlots; $('#f-m', el).onchange = loadSlots;
+      $('#f-ph', el).onchange = async (e) => {
+        const p = e.target.value.replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, '').replace(/^966/, '0').replace(/^5/, '05');
+        e.target.value = p;
+        if (/^05\d{8}$/.test(p) && !$('#f-nm', el).value) { const { data } = await sb.from('clients').select('name').eq('phone', p).maybeSingle(); if (data) $('#f-nm', el).value = data.name; }
+      };
+      $('#f-ok', el).onclick = (e) => busy(e.target, async () => {
+        const r = await q(sb.rpc('sb_create', { p: { name: $('#f-nm', el).value.trim(), phone: $('#f-ph', el).value, items: items(), day: $('#f-d', el).value, time: slot, member_id: +$('#f-m', el).value || null, notes: $('#f-nt', el).value, source: $('#f-src', el).value } }));
+        toast(`انحجز · ${r.code}`); close(); location.hash = `#/appts?d=${$('#f-d', el).value}`; route();
+      });
+    });
+  }
+
+  async function apServices(view, head, alive) {
+    const [cats, svcs, opts] = await Promise.all([
+      q(sb.from('salon_svc_cats').select('*').order('sort')),
+      q(sb.from('salon_services').select('*').order('sort')),
+      q(sb.from('salon_service_options').select('*').order('sort')),
+    ]);
+    if (!alive()) return;
+    view.innerHTML = `${head}
+      <p class="muted small" style="margin-top:-4px">${AR_NUM(svcs.length)} خدمة منقولة من ركاز. أي تعديل هنا يطلع في صفحة الحجز فورًا. <a href="${BOOK_URL}" target="_blank" rel="noopener">افتحوا صفحة الحجز ↗</a></p>
+      ${cats.map((c) => `<div class="section-title"><h2>${esc(c.name)}</h2><span class="muted small">${AR_NUM(svcs.filter((s) => s.cat_id === c.id).length)}</span></div>
+        <div class="list">${svcs.filter((s) => s.cat_id === c.id).map((s) => { const o = opts.filter((x) => x.service_id === s.id); return `<button class="row" data-s="${s.id}" style="${s.is_active ? '' : 'opacity:.5'}"><div class="grow"><div class="title">${s.popular ? '★ ' : ''}${esc(s.name)}</div><div class="meta">${o.length ? `${AR_NUM(o.length)} خيارات · ` : ''}${durTxt(s.duration_min)}${s.is_active ? '' : ' · مخفية'}</div></div><div class="end num">${o.length ? 'من ' + sar(Math.min(...o.map((x) => x.price))) : sar(s.price)}</div></button>`; }).join('')}</div>`).join('')}
+      <div class="actions" style="margin-top:16px"><button class="btn primary" id="sv-new">${I.plus} خدمة جديدة</button></div>`;
+    const edit = (s) => {
+      const o = s ? opts.filter((x) => x.service_id === s.id) : [];
+      modal(`<h3>${s ? 'تعديل خدمة' : 'خدمة جديدة'}</h3>
+        <div class="field"><label>الاسم</label><input class="input" id="e-n" value="${esc(s?.name || '')}"></div>
+        <div class="field"><label>القسم</label><select class="input" id="e-c">${cats.map((c) => `<option value="${c.id}" ${s?.cat_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>الوصف</label><textarea class="input" id="e-d" rows="2">${esc(s?.description || '')}</textarea></div>
+        <div class="grid2"><div class="field"><label>السعر</label><input class="input num" id="e-p" inputmode="decimal" value="${s ? Number(s.price) : ''}"></div><div class="field"><label>المدة (دقيقة)</label><input class="input num" id="e-m" inputmode="numeric" value="${s?.duration_min || 45}"></div></div>
+        <div class="field"><label>خيارات (مثل الطول) <span class="muted small">اسم · سعر · مدة</span></label><div id="e-o">${o.map((x) => `<div class="grid3 ap-opt" data-id="${x.id}"><input class="input" value="${esc(x.name)}"><input class="input num" value="${Number(x.price)}"><input class="input num" value="${x.duration_min}"></div>`).join('')}</div><button class="btn sm" id="e-add" type="button">${I.plus} خيار</button></div>
+        <label class="check"><input type="checkbox" id="e-a" ${!s || s.is_active ? 'checked' : ''}> ظاهرة في صفحة الحجز</label>
+        <label class="check"><input type="checkbox" id="e-pop" ${s?.popular ? 'checked' : ''}> من «الأكثر طلبًا»</label>
+        <div class="actions"><button class="btn primary" id="e-ok">حفظ</button></div>`, (el, close) => {
+        $('#e-add', el).onclick = () => $('#e-o', el).insertAdjacentHTML('beforeend', '<div class="grid3 ap-opt"><input class="input" placeholder="مثلًا: طويل"><input class="input num" placeholder="السعر"><input class="input num" placeholder="الدقايق"></div>');
+        $('#e-ok', el).onclick = (e) => busy(e.target, async () => {
+          const num = (v) => Number(String(v).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+          const row = { name: $('#e-n', el).value.trim(), cat_id: +$('#e-c', el).value, description: $('#e-d', el).value.trim() || null, price: num($('#e-p', el).value) || 0, duration_min: num($('#e-m', el).value) || 45, is_active: $('#e-a', el).checked, popular: $('#e-pop', el).checked };
+          let id = s?.id;
+          if (s) await q(sb.from('salon_services').update(row).eq('id', s.id));
+          else id = (await q(sb.from('salon_services').insert(row).select('id').single())).id;
+          const keep = [];
+          for (const [k, r] of $$('.ap-opt', el).entries()) {
+            const [n, p, m] = $$('input', r).map((i) => i.value.trim());
+            if (!n) continue;
+            const v = { service_id: id, name: n, price: num(p) || 0, duration_min: num(m) || row.duration_min, sort: k };
+            if (r.dataset.id) { await q(sb.from('salon_service_options').update(v).eq('id', +r.dataset.id)); keep.push(+r.dataset.id); }
+            else keep.push((await q(sb.from('salon_service_options').insert(v).select('id').single())).id);
+          }
+          const gone = o.filter((x) => !keep.includes(x.id)).map((x) => x.id);
+          if (gone.length) await q(sb.from('salon_service_options').update({ is_active: false }).in('id', gone));
+          toast('انحفظت'); close(); route();
+        });
+      });
+    };
+    $$('[data-s]', view).forEach((el) => el.onclick = () => edit(svcs.find((s) => s.id === +el.dataset.s)));
+    $('#sv-new', view).onclick = () => edit(null);
+  }
+
+  async function apSettings(view, head, alive) {
+    const [set, staff, shifts, blk] = await Promise.all([
+      q(sb.from('salon_settings').select('*').eq('id', 1).maybeSingle()),
+      q(sb.from('team_members').select('id,name,role_title,book_roles,color').eq('active', true).order('name')),
+      q(sb.from('team_shifts').select('member_id')),
+      q(sb.from('salon_blackouts').select('*').gte('day', rDay(Date.now())).order('day')),
+    ]);
+    if (!alive()) return;
+    const s = set || {};
+    const WDS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    view.innerHTML = `${head}
+      <div class="card"><h3 style="margin-top:0">الحجز من الموقع</h3>
+        <label class="check"><input type="checkbox" id="s-acc" ${s.accepting ? 'checked' : ''}> الحجز من الموقع مفتوح</label>
+        <div class="grid2"><div class="field"><label>يفتح</label><input class="input" type="time" id="s-o" value="${(s.open_time || '10:00').slice(0, 5)}"></div><div class="field"><label>يقفل</label><input class="input" type="time" id="s-c" value="${(s.close_time || '22:00').slice(0, 5)}"></div></div>
+        <div class="field"><label>أيام الإغلاق</label><div class="chips wrap" id="s-wd">${WDS.map((d, i) => `<button class="chip ${(s.closed_weekdays || []).includes(i) ? 'on' : ''}" data-w="${i}" type="button">${d}</button>`).join('')}</div></div>
+        <div class="grid3"><div class="field"><label>كل كم دقيقة موعد</label><input class="input num" id="s-sl" value="${s.slot_minutes || 30}"></div><div class="field"><label>أقل وقت قبل الموعد (دقيقة)</label><input class="input num" id="s-ld" value="${s.lead_minutes ?? 60}"></div><div class="field"><label>كم يوم قدام</label><input class="input num" id="s-hz" value="${s.horizon_days || 21}"></div></div>
+        <div class="grid3"><div class="field"><label>عدد الكراسي (لو ما فيه موظفات)</label><input class="input num" id="s-st" value="${s.seats || 2}"></div><div class="field"><label>حجوزات مفتوحة لكل رقم</label><input class="input num" id="s-mx" value="${s.max_open_per_phone || 2}"></div><div class="field"><label>الإلغاء من الرابط قبل (ساعة)</label><input class="input num" id="s-ch" value="${s.cancel_hours ?? 3}"></div></div>
+        <div class="field"><label>واتساب الصالون</label><input class="input" id="s-wa" dir="ltr" value="${esc(s.whatsapp || '')}"></div>
+        <div class="actions"><button class="btn primary" id="s-ok">حفظ الإعدادات</button></div></div>
+      <div class="card"><h3 style="margin-top:0">مين تسوي وش</h3><p class="muted small">النظام يوزّع المواعيد على الموظفة اللي تسوي الخدمة وهي في دوامها. الدوام من صفحة <a href="#/team">الفريق</a>.</p>
+        ${staff.length ? `<div class="list">${staff.map((m) => `<div class="row" style="flex-wrap:wrap"><div class="grow"><div class="title"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(m.color)}"></i> ${esc(m.name)}</div><div class="meta">${shifts.some((x) => x.member_id === m.id) ? 'لها دوام مسجّل' : '⚠️ ما لها دوام مسجّل، ما تنحجز لها مواعيد'}</div></div>
+          <div class="chips wrap" style="margin:0">${AP_ROLES.map(([k, l]) => `<button class="chip ${(m.book_roles || []).includes(k) ? 'on' : ''}" data-m="${m.id}" data-r="${k}" type="button">${l}</button>`).join('')}</div></div>`).join('')}</div>` : '<div class="notice small">ما فيه موظفات مسجّلات للحين. أضيفوهن من <a href="#/team">الفريق</a>.</div>'}</div>
+      <div class="card"><h3 style="margin-top:0">أيام مقفلة</h3><p class="muted small">إجازة أو مناسبة، ما ينحجز فيها من الموقع.</p>
+        <div class="grid2"><input class="input" type="date" id="b-d"><input class="input" id="b-n" placeholder="السبب (اختياري)"></div><div class="actions"><button class="btn" id="b-add">${I.plus} أضف</button></div>
+        ${blk.length ? `<div class="list" style="margin-top:8px">${blk.map((b) => `<div class="row"><div class="grow title">${esc(rDayLabel(b.day))}${b.note ? ` · <span class="muted">${esc(b.note)}</span>` : ''}</div><button class="btn sm" data-del="${b.day}">حذف</button></div>`).join('')}</div>` : ''}</div>`;
+    $$('#s-wd .chip', view).forEach((c) => c.onclick = () => c.classList.toggle('on'));
+    const n = (id) => Number(String($(id, view).value).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+    $('#s-ok', view).onclick = (e) => busy(e.target, async () => {
+      await q(sb.from('salon_settings').update({ accepting: $('#s-acc', view).checked, open_time: $('#s-o', view).value, close_time: $('#s-c', view).value,
+        closed_weekdays: $$('#s-wd .chip.on', view).map((c) => +c.dataset.w), slot_minutes: n('#s-sl'), lead_minutes: n('#s-ld'), horizon_days: n('#s-hz'),
+        seats: n('#s-st'), max_open_per_phone: n('#s-mx'), cancel_hours: n('#s-ch'), whatsapp: $('#s-wa', view).value.replace(/\D/g, ''), updated_at: new Date().toISOString() }).eq('id', 1));
+      toast('انحفظت الإعدادات');
+    });
+    $$('[data-m]', view).forEach((c) => c.onclick = async () => {
+      const m = staff.find((x) => x.id === +c.dataset.m); const r = c.dataset.r;
+      const roles = new Set(m.book_roles || []); roles.has(r) ? roles.delete(r) : roles.add(r);
+      m.book_roles = [...roles]; c.classList.toggle('on');
+      try { await q(sb.from('team_members').update({ book_roles: m.book_roles }).eq('id', m.id)); } catch (err) { toast(errMsg(err), true); }
+    });
+    $('#b-add', view).onclick = (e) => busy(e.target, async () => { const d = $('#b-d', view).value; if (!d) return toast('اختاروا اليوم', true); await q(sb.from('salon_blackouts').upsert({ day: d, note: $('#b-n', view).value.trim() || null })); route(); });
+    $$('[data-del]', view).forEach((b) => b.onclick = () => busy(b, async () => { await q(sb.from('salon_blackouts').delete().eq('day', b.dataset.del)); route(); }));
+  }
+
   /* ======================= finance ======================= */
   const EXP_CAT = { rent: 'إيجار', salaries: 'رواتب', commissions: 'عمولات', utilities: 'كهرباء وماء', telecom: 'إنترنت واتصالات', marketing: 'تسويق وإعلانات', maintenance: 'صيانة', government: 'رسوم حكومية وتراخيص', subscriptions: 'اشتراكات وأنظمة', hospitality: 'ضيافة', transport: 'مشاوير وتوصيل', supplies_other: 'مستلزمات خارج المخزون', other: 'أخرى' };
   const PAY_KEYS = [['cash', 'كاش'], ['card', 'شبكة'], ['transfer', 'تحويل'], ['online', 'رابط دفع'], ['bnpl', 'تابي وتمارا'], ['other', 'أخرى']];

@@ -502,7 +502,6 @@
     const alerts = [];
     if (sp.pending) alerts.push(['warn', I.cal, sp.pending === 1 ? 'حجز من الموقع بانتظار التأكيد' : `${sp.pending} حجوزات من الموقع بانتظار التأكيد`, 'أرسلوا التأكيد على الواتساب', '#/appts?t=pending']);
     if (sp.today) alerts.push(['', I.cal, `${sp.today === 1 ? 'موعد واحد' : sp.today + ' مواعيد'} في الصالون اليوم`, 'جدول اليوم', '#/appts']);
-    if (isManager() && yc === null && D(yday).getDay() !== 5) alerts.push(['warn', I.coin, 'أمس ما انقفل', 'سجّلوا مبيعاته عشان تكتمل الأرقام', `#/closing?d=${yday}`]);
     if (isManager()) { try { const rc = JSON.parse(localStorage.getItem('bf-rules') || 'null'); if (rc && rc.risk) alerts.unshift(['danger', I.shield, `${rc.risk === 1 ? 'قاعدة وحدة' : rc.risk + ' قواعد'} في خطر`, `صحة بيوتفريش ${rc.score}٪`, '#/rules']); else if (!rc) alerts.push(['', I.shield, 'افحصوا صحة بيوتفريش', 'قواعد تنفحص على بيانات الصالون', '#/rules']); } catch {} }
     const [mIss, mPl] = await Promise.all([q(sb.from('maint_issues').select('id,title,created_at').eq('status', 'open')).catch(() => []), q(sb.from('maint_plans').select('*')).catch(() => [])]);
     const mLate = mPl.filter((p) => planSt(p) === 'bad').length;
@@ -519,12 +518,11 @@
     const tpct = tg && mrev != null ? Math.min(100, (mrev / Number(tg.revenue)) * 100) : null;
     const pulse = !fr ? '' : `<div class="pulse">
         <div class="lens sm">${Object.entries(HL).map(([k, l]) => `<a href="#/home?l=${k}" class="${k === hl ? 'on' : ''}">${l}</a>`).join('')}</div>
-        <a class="pulse-body" href="#/finance?l=${hl}&at=${tk}">
+        <a class="pulse-body" href="#/sales?l=${hl}&at=${tk}">
           <div><span>مبيعات ${HL[hl] === 'اليوم' ? 'اليوم' : 'هذا ' + HL[hl]}</span><b class="num">${sar(fr.revenue)}</b>${fdelta != null ? `<em class="${fdelta >= 0 ? 'up' : 'down'}">${fdelta >= 0 ? '▲' : '▼'} ${Math.abs(fdelta)}٪</em>` : ''}</div>
           <div><span>صافي الربح</span><b class="num">${sar(fr.net)}</b></div>
           ${tpct != null ? `<div class="pulse-ring" style="--p:${tpct}"><b class="num">${Math.round(tpct)}٪</b><span>من هدف الشهر</span></div>` : `<div class="pulse-ring empty"><span>حطّوا هدف للشهر</span></div>`}
         </a>
-        ${hl === 'd' && !fr.closed_days && D(tk).getDay() !== 5 ? `<a class="pulse-cta" href="#/closing">آخر الدوام لا تنسون إقفال اليوم ←</a>` : ''}
       </div>`;
     // ورديتي: لأي حساب مربوط بملف في الفريق
     let myShift = '';
@@ -3709,7 +3707,7 @@
       ${cmps.length ? `<h2>الحملات</h2><table class="pp-t"><thead><tr><th>الحملة</th><th>الصرف</th><th>عميلات جدد</th><th>المبيعات</th><th>العائد</th></tr></thead><tbody>${cmps.map((c) => `<tr><td>${esc(c.name)}</td><td class="num">${c.spent != null ? sar(c.spent) : '—'}</td><td class="num">${c.new_clients ?? '—'}</td><td class="num">${c.revenue != null ? sar(c.revenue) : '—'}</td><td class="num">${c.spent > 0 && c.revenue != null ? (c.revenue / c.spent).toFixed(1) + '×' : '—'}</td></tr>`).join('')}</tbody></table>` : ''}
       <h2>ملاحظات وقرارات الشهر الجاي</h2><div class="rp-notes" contenteditable="true">اكتبوا هنا قبل الطباعة…</div>
       <div class="pp-sign"><div><label>اعتماد الإدارة</label><div class="pp-line"></div></div><div><label>التاريخ</label><div class="pp-line"></div></div></div>
-      <p class="pp-small" style="text-align:center;margin-top:28px">صدر من نظام بيوتفريش · المبيعات من الإقفال اليومي والحجوزات المنزلية المدفوعة، والمشتريات من فواتير الشراء المعتمدة.</p>
+      <p class="pp-small" style="text-align:center;margin-top:28px">صدر من نظام بيوتفريش · مبيعات الصالون من ركاز تلقائيًا والحجوزات المنزلية المدفوعة، والمشتريات من فواتير الشراء المعتمدة.</p>
     </div></div>`;
     paper(`تقرير ${mName}`, html, { mount: (ov) => { const n = $('.rp-notes', ov); n.addEventListener('focus', () => { if (n.textContent.startsWith('اكتبوا هنا')) n.textContent = ''; }, { once: true }); } });
   }
@@ -3816,7 +3814,7 @@
     const A = [
       ['visit', I.heart, 'ختم زيارة', 'لعميلة في الصالون', true],
       ['issue', I.out, 'صرف من المخزون', 'منتجات استخدمتوها', true],
-      ['closing', I.coin, 'إقفال اليوم', 'مبيعات اليوم', M],
+      ['sales', I.chart, 'مبيعات اليوم', 'لحظة بلحظة من ركاز', M],
       ['expense', I.invoice, 'مصروف', 'فاتورة أو دفعة', M],
       ['purchase', I.cart, 'فاتورة شراء', 'بضاعة وصلت', true],
       ['fault', I.wrench, 'بلّغ عن عطل', 'جهاز أو كرسي', true],
@@ -3829,7 +3827,7 @@
         const k = b.dataset.qa; c();
         if (k === 'visit') pickClient('ختم زيارة لمين؟', (cl) => visitForm(cl, () => route()));
         else if (k === 'issue') location.hash = '#/issue';
-        else if (k === 'closing') location.hash = '#/closing';
+        else if (k === 'sales') location.hash = '#/sales?l=d';
         else if (k === 'expense') expenseForm(null, () => route());
         else if (k === 'purchase') location.hash = '#/invoice/new';
         else if (k === 'fault') issueForm(await q(sb.from('assets').select('id,name,category,location').order('name')).catch(() => []), null);
@@ -4818,7 +4816,7 @@
           ${weak && strong && weak[0] !== strong[0] ? `<div><span>ملاحظة</span><b>${WDAYS[weak[0]]} أضعف أيامك، مبيعاته ${Math.round((weak[1] / strong[1]) * 100)}٪ من ${WDAYS[strong[0]]}</b></div>` : ''}
         </div>
       </div>`;
-    const dayCard = lens !== 'd' ? '' : (r.closed_days ? '' : `<a class="day-open" href="#/closing?d=${dk(s)}"><b>${dk(s) > todayKey ? 'هذا اليوم ما جا بعد' : 'هذا اليوم ما انقفل'}</b><span>${dk(s) > todayKey ? 'تقدرون تشوفونه بعد ما يخلص الدوام' : 'سجّلوا مبيعاته من إقفال اليوم ←'}</span></a>`);
+    const dayCard = lens !== 'd' || dk(s) <= todayKey ? '' : (r.closed_days ? '' : `<a class="day-open" href="#/closing?d=${dk(s)}"><b>${dk(s) > todayKey ? 'هذا اليوم ما جا بعد' : 'هذا اليوم ما انقفل'}</b><span>${dk(s) > todayKey ? 'تقدرون تشوفونه بعد ما يخلص الدوام' : 'سجّلوا مبيعاته من إقفال اليوم ←'}</span></a>`);
     view.innerHTML = `
       <div class="lens" role="group" aria-label="العدسة">${LENSES.map(([k, l]) => `<a href="${link(k, at)}" class="${k === lens ? 'on' : ''}">${l}</a>`).join('')}</div>
       <div class="fin-head">
@@ -4826,7 +4824,7 @@
         <div class="fin-title"><h2>${lensTitle(lens, s, e)}</h2>${!isCurrent ? `<a class="small" href="${link(lens, D(todayKey))}">ارجع للحالي</a>` : ''}</div>
         <a class="icon-btn ${dk(e) >= todayKey ? 'off' : ''}" href="${link(lens, lensShift(lens, at, 1))}" aria-label="التالي">‹</a>
       </div>
-      <div class="fin-actions"><a class="btn primary" href="#/closing${lens === 'd' ? `?d=${dk(s)}` : ''}">${I.plus} إقفال اليوم</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(s)}">المصروفات</a>${lens === 'm' ? '<button class="btn" id="rp-go">📄 تقرير الشهر</button>' : ''}</div>
+      <div class="fin-actions"><a class="btn primary" href="#/sales?l=${lens}&at=${dk(s)}">${I.chart} لوحة المبيعات</a><button class="btn" id="exp-new">${I.plus} مصروف</button><a class="btn" href="#/expenses?m=${monthKey(s)}">المصروفات</a>${lens === 'm' ? '<button class="btn" id="rp-go">📄 تقرير الشهر</button>' : ''}</div>
       ${unclosed && isCurrent && lens !== 'd' ? `<a class="notice warn" style="display:block" href="#/closing">فيه ${unclosed} ${unclosed === 1 ? 'يوم' : unclosed <= 10 ? 'أيام' : 'يوم'} ${LENS_THIS[lens]} بدون إقفال ←</a>` : ''}
       ${dayCard}
       <div class="fin-hero">

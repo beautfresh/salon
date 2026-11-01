@@ -117,6 +117,7 @@
 
   /* ======================= icons ======================= */
   const I = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
     mega: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12"/></svg>',
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
     wa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.6-2-1-.9.9a3.6 3.6 0 0 1-1.9-1.9l.9-.9-1-2L9 9.5z"/></svg>',
@@ -278,6 +279,7 @@
       { href: '#/bookings', label: 'الحجوزات المنزلية', icon: I.cal, key: 'bookings' },
     ];
     L.push({ href: '#/clients', label: 'العميلات', icon: I.heart, key: 'clients' });
+    L.push({ href: '#/ops', label: 'التشغيل', icon: I.check, key: 'ops' });
     L.push({ href: '#/team', label: 'الفريق', icon: I.users, key: 'team' });
     L.push({ href: '#/marketing', label: 'التسويق', icon: I.mega, key: 'marketing' });
     if (isManager()) L.push({ href: '#/finance', label: 'المالية', icon: I.coin, key: 'finance' });
@@ -353,6 +355,8 @@
     clients: { title: 'العميلات', nav: 'clients', fn: pageClients },
     client: { title: 'ملف العميلة', nav: 'clients', fn: pageClient },
     feedback: { title: 'الآراء والملاحظات', nav: 'clients', fn: pageFeedback },
+    ops: { title: 'التشغيل', nav: 'ops', fn: pageOps },
+    svc: { title: 'بطاقة الخدمة', nav: 'ops', fn: pageSvc },
     team: { title: 'الفريق', nav: 'team', fn: pageTeam },
     member: { title: 'ملف الموظفة', nav: 'team', fn: pageMember },
     marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
@@ -2568,6 +2572,258 @@
           toast('تم الحفظ'); close(); done && done(id);
         } catch (err) { toast(err.code === '23505' ? 'هذا الحساب مربوط بموظفة ثانية' : errMsg(err), true); }
       });
+    });
+  }
+
+  /* ======================= operations ======================= */
+  const SOP_CAT = { service: 'خدمة العميلة', hygiene: 'النظافة والتعقيم', cashier: 'الكاشير', complaints: 'الشكاوى', emergency: 'الطوارئ', team: 'الفريق', other: 'أخرى' };
+  const SVC_CAT2 = { nails: 'أظافر', hair: 'شعر', makeup: 'مكياج', lashes: 'رموش وحواجب', skin: 'بشرة', package: 'باقات', other: 'أخرى' };
+  const steps = (t) => String(t || '').split('\n').map((x) => x.trim()).filter(Boolean);
+  const weekStart = (d) => dk(lensRange('w', d)[0]);
+  const ring = (pct, inner) => `<div class="pring" style="--p:${pct}"><span>${inner}</span></div>`;
+
+  async function pageOps(view, _a, params, alive) {
+    const tab = params.get('t') || 'today';
+    const tabs = [['today', 'القوائم'], ['services', 'الخدمات'], ['manual', 'الدليل'], ['rules', 'القواعد']];
+    const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/ops?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
+    if (tab === 'services') return opsServices(view, alive, head);
+    if (tab === 'manual') return opsManual(view, alive, head);
+    if (tab === 'rules') return opsRules(view, alive, head);
+    return opsToday(view, alive, head);
+  }
+
+  async function opsToday(view, alive, head) {
+    const tk = todayR(), ws = weekStart(D(tk));
+    const from7 = dk(lensShift('d', D(tk), -6));
+    const [lists, items, runs] = await Promise.all([
+      q(sb.from('ops_lists').select('*').order('sort')),
+      q(sb.from('ops_list_items').select('*').order('sort')),
+      q(sb.from('ops_runs').select('*').gte('day', dk(lensShift('d', D(ws), -7)))),
+    ]);
+    if (!alive()) return;
+    const dayOf = (l) => (l.kind === 'weekly' ? ws : tk);
+    const runOf = (l) => runs.find((r) => r.list_id === l.id && r.day === dayOf(l))?.done || {};
+    const hr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }) * 1;
+    const order = [...lists].sort((a, b) => (hr >= 17 ? (a.kind === 'close' ? -1 : b.kind === 'close' ? 1 : 0) : 0) || a.sort - b.sort);
+    const last7 = Array.from({ length: 7 }, (_, i) => dk(lensShift('d', D(from7), i)));
+    const card = (l) => {
+      const its = items.filter((i) => i.list_id === l.id); const done = runOf(l);
+      const n = its.filter((i) => done[i.id]).length; const pct = its.length ? (n / its.length) * 100 : 0;
+      const crit = its.filter((i) => i.critical && !done[i.id]).length;
+      return `<div class="ck ${pct === 100 ? 'full' : ''}" data-l="${l.id}">
+        <div class="ck-h">${ring(pct, `<b class="num">${n}</b>/${its.length}`)}<div class="grow"><h3>${esc(l.name)}</h3><span>${pct === 100 ? 'خلصت كلها، يعطيكم العافية 🤍' : crit ? `باقي ${crit} ${crit === 1 ? 'بند أساسي' : 'بنود أساسية'}` : l.kind === 'weekly' ? 'هالأسبوع' : 'اليوم'}</span></div>
+          ${l.kind !== 'weekly' ? `<div class="ck-hist">${last7.map((d) => { const r = runs.find((x) => x.list_id === l.id && x.day === d); const c = r ? Object.keys(r.done).length : 0; const p = its.length ? c / its.length : 0; return `<i class="${p === 1 ? 'f' : p > 0 ? 'p' : ''} ${d === tk ? 't' : ''}" title="${d}"></i>`; }).join('')}</div>` : ''}</div>
+        <div class="ck-items">${its.map((i) => { const d = done[i.id]; return `<button class="ck-i ${d ? 'on' : ''} ${i.critical ? 'crit' : ''}" data-i="${i.id}"><span class="ck-box">${d ? '✓' : ''}</span><span class="grow"><span class="ck-t">${esc(i.body)}</span>${d ? `<em>${esc(firstName(personName(d.by)))} · ${h12(new Date(d.at).toLocaleTimeString('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hour12: false }))}</em>` : ''}</span></button>`; }).join('')}</div>
+        ${isManager() ? `<button class="ck-edit" data-edit="${l.id}">تعديل البنود</button>` : ''}
+      </div>`;
+    };
+    view.innerHTML = `${head}<div class="ck-grid">${order.map(card).join('')}</div>
+      <p class="muted small mt">البنود اللي عليها نقطة أساسية. كل تأشيرة تنحفظ باسم اللي سوّتها ووقتها.</p>`;
+    const bind = (root) => {
+      $$('.ck-i', root).forEach((b) => b.addEventListener('click', async () => {
+        const ck = b.closest('.ck'); const lid = Number(ck.dataset.l); const l = lists.find((x) => x.id === lid); const on = !b.classList.contains('on');
+        b.classList.toggle('on', on); $('.ck-box', b).textContent = on ? '✓' : '';
+        try {
+          const done = await q(sb.rpc('ops_tick', { p_list: lid, p_day: dayOf(l), p_item: Number(b.dataset.i), p_on: on }));
+          const r = runs.find((x) => x.list_id === lid && x.day === dayOf(l)); if (r) r.done = done; else runs.push({ list_id: lid, day: dayOf(l), done });
+          const tmp = document.createElement('div'); tmp.innerHTML = card(l); const fresh = tmp.firstElementChild; ck.replaceWith(fresh); bind(fresh);
+          if (on && items.filter((i) => i.list_id === lid).every((i) => done[i.id])) toast(`${l.name}: خلصت كلها 🤍`);
+        } catch (err) { b.classList.toggle('on', !on); $('.ck-box', b).textContent = on ? '' : '✓'; toast(errMsg(err), true); }
+      }));
+      $$('[data-edit]', root).forEach((b) => b.addEventListener('click', () => listEditForm(lists.find((l) => l.id === Number(b.dataset.edit)), items.filter((i) => i.list_id === Number(b.dataset.edit)))));
+    };
+    bind(view);
+  }
+
+  function listEditForm(l, its) {
+    const text = its.map((i) => (i.critical ? '! ' : '') + i.body).join('\n');
+    modal(`
+      <h3>${esc(l.name)}</h3>
+      <p class="muted small" style="margin-top:-6px">كل بند في سطر. حطوا «!» في بداية السطر للبند الأساسي.</p>
+      <div class="field"><textarea class="input" id="le-t" rows="12">${esc(text)}</textarea></div>
+      <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="le-s">حفظ</button></div>`, (el, close) => {
+      $('#le-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const lines = $('#le-t', el).value.split('\n').map((x) => x.trim()).filter((x) => x.replace(/^!\s*/, '').length >= 2);
+        const keep = lines.map((x, i) => ({ body: x.replace(/^!\s*/, '').slice(0, 160), critical: x.startsWith('!'), sort: i + 1 }));
+        try {
+          for (let i = 0; i < keep.length; i++) { if (its[i]) await q(sb.from('ops_list_items').update(keep[i]).eq('id', its[i].id)); else await q(sb.from('ops_list_items').insert({ ...keep[i], list_id: l.id })); }
+          const extra = its.slice(keep.length).map((x) => x.id); if (extra.length) await q(sb.from('ops_list_items').delete().in('id', extra));
+          toast('تم الحفظ'); close(); route();
+        } catch (err) { toast(errMsg(err), true); }
+      });
+    });
+  }
+
+  async function svcData() {
+    const [svcs, links, costs] = await Promise.all([
+      q(sb.from('ops_services').select('*').order('sort').order('name')),
+      q(sb.from('ops_service_items').select('*')),
+      q(sb.from('item_costs').select('item_id,avg_cost,last_cost')).catch(() => []),
+    ]);
+    const cost = new Map(costs.map((c) => [c.item_id, Number(c.avg_cost ?? c.last_cost ?? 0)]));
+    const calc = (s) => { const ls = links.filter((x) => x.service_id === s.id); const mat = ls.reduce((a, x) => a + Number(x.qty) * (cost.get(x.item_id) || 0), 0); const price = Number(s.price || 0); const profit = price - mat; return { ls, mat, price, profit, margin: price ? (profit / price) * 100 : null, perHour: s.duration_min ? (profit / s.duration_min) * 60 : 0 }; };
+    return { svcs, links, cost, calc };
+  }
+
+  async function opsServices(view, alive, head) {
+    const Sd = await svcData();
+    if (!alive()) return;
+    const act = Sd.svcs.filter((s) => s.active);
+    const priced = act.filter((s) => s.price > 0).map((s) => ({ s, c: Sd.calc(s) })).sort((a, b) => b.c.perHour - a.c.perHour);
+    const maxH = Math.max(1, ...priced.map((x) => x.c.perHour));
+    const tag = (c) => (!c.price ? '' : c.margin >= 75 ? '<span class="badge ok">ربحها عالي</span>' : c.margin >= 50 ? '' : '<span class="badge warn">راجعوا سعرها</span>');
+    view.innerHTML = `${head}
+      ${priced.length >= 2 ? `<div class="card svc-rank"><div class="close-h">كم تربح كل خدمة بالساعة</div>${priced.slice(0, 8).map(({ s, c }) => `<a class="fbar" href="#/svc/${s.id}"><div class="fbar-top"><span>${esc(s.name)}</span><b class="num">${sar(c.perHour)} ر.س/ساعة</b></div><div class="fbar-track"><i style="width:${Math.max(2, (c.perHour / maxH) * 100)}%"></i></div></a>`).join('')}
+        <p class="muted small" style="margin:10px 0 0">الربح = السعر ناقص تكلفة المنتجات المستخدمة من المخزون، مقسوم على مدة الخدمة. الكرسي والوقت هم رأس مالكم.</p></div>` : ''}
+      <div class="section-title"><h2>الخدمات</h2>${isManager() ? `<button class="btn sm" id="sv-new">${I.plus} خدمة</button>` : ''}</div>
+      ${Object.entries(SVC_CAT2).filter(([k]) => Sd.svcs.some((s) => s.category === k)).map(([k, l]) => `<div class="svc-cat-h">${l}</div>
+        <div class="list">${Sd.svcs.filter((s) => s.category === k).map((s) => { const c = Sd.calc(s); return `<a class="row ${s.active ? '' : 'dim'}" href="#/svc/${s.id}"><div class="grow"><div class="title">${esc(s.name)} ${tag(c)}</div><div class="meta">${durTxt(s.duration_min)} · ${steps(s.steps).length} خطوات · ${c.ls.length} منتجات${isManager() && c.price ? ` · تكلفة ${sar(c.mat)}` : ''}</div></div><div class="end">${c.price ? `<b class="num">${sar(c.price)}</b> <span class="muted small">ر.س</span>${isManager() ? `<div class="meta">ربح ${Math.round(c.margin)}٪</div>` : ''}` : '<span class="muted small">بدون سعر</span>'}</div></a>`; }).join('')}</div>`).join('') || '<div class="list"><div class="empty">أضيفوا خدمات الصالون، ولكل خدمة خطواتها والمنتجات اللي تستهلكها. تصير مرجع للفريق، وتعرفون منها ربح كل خدمة.</div></div>'}`;
+    $('#sv-new')?.addEventListener('click', () => serviceForm(null, (id) => { location.hash = `#/svc/${id}`; }));
+  }
+
+  async function pageSvc(view, args, _p, alive) {
+    const id = Number(args[0]);
+    const Sd = await svcData();
+    if (!alive()) return;
+    const s = Sd.svcs.find((x) => x.id === id);
+    if (!s) { view.innerHTML = '<div class="notice danger">ما لقينا الخدمة</div>'; return; }
+    setTitle(s.name);
+    const c = Sd.calc(s);
+    const itemName = (iid) => S.items.find((i) => i.id === iid);
+    view.innerHTML = `
+      <div class="svc-hero">
+        <span class="sh-eyebrow">${SVC_CAT2[s.category]}${s.active ? '' : ' · موقوفة'}</span><h2>${esc(s.name)}</h2>
+        <div class="svc-nums"><div><b class="num">${c.price ? sar(c.price) : '—'}</b><span>السعر</span></div><div><b>${durTxt(s.duration_min)}</b><span>المدة</span></div>
+          ${isManager() ? `<div><b class="num">${sar(c.mat)}</b><span>تكلفة المنتجات</span></div><div><b class="num">${c.price ? sar(c.perHour) : '—'}</b><span>ربح الساعة</span></div>` : ''}</div>
+        ${isManager() && c.price ? `<div class="svc-split"><i style="width:${Math.max(0, Math.min(100, 100 - c.margin))}%"></i></div><div class="svc-leg"><span>منتجات ${Math.round(100 - c.margin)}٪</span><span>ربح ${Math.round(c.margin)}٪</span></div>` : ''}
+        ${isManager() ? `<button class="btn on-oud sm" id="sv-edit" style="margin-top:12px">${I.edit} تعديل</button>` : ''}
+      </div>
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>الخطوات</h2></div>
+          ${steps(s.steps).length ? `<ol class="steps">${steps(s.steps).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : '<div class="muted small">ما فيه خطوات مكتوبة</div>'}
+          ${s.tips ? `<div class="tip-box">💡 ${esc(s.tips)}</div>` : ''}</div>
+        <div><div class="section-title"><h2>المنتجات المستخدمة</h2></div>
+          <div class="list">${c.ls.map((x) => { const it = itemName(x.item_id); const cc = Number(x.qty) * (Sd.cost.get(x.item_id) || 0); return `<div class="row"><div class="grow"><div class="title">${esc(it?.name || 'صنف محذوف')}</div><div class="meta">${num(x.qty)} ${esc(it?.unit || '')} لكل عميلة</div></div>${isManager() ? `<div class="end num">${cc ? cc.toFixed(2) : '—'} <span class="muted small">ر.س</span></div><button class="x-btn" data-rm="${x.item_id}">×</button>` : ''}</div>`; }).join('') || '<div class="empty">ما فيه منتجات مربوطة</div>'}</div>
+          ${isManager() ? `<div class="add-line"><select class="input" id="sv-item"><option value="">+ منتج من المخزون</option>${S.items.filter((i) => i.is_active && !c.ls.some((x) => x.item_id === i.id)).map((i) => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('')}</select><input class="input num" id="sv-qty" type="number" min="0" step="0.01" placeholder="الكمية"><button class="btn primary" id="sv-add">${I.plus}</button></div>` : ''}
+        </div>
+      </div>`;
+    $('#sv-edit')?.addEventListener('click', () => serviceForm(s, () => route()));
+    $('#sv-add')?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      const iid = Number($('#sv-item').value), qty = Number($('#sv-qty').value); if (!iid || !(qty > 0)) return toast('اختاروا المنتج والكمية', true);
+      try { await q(sb.from('ops_service_items').upsert({ service_id: s.id, item_id: iid, qty })); route(); } catch (err) { toast(errMsg(err), true); }
+    }));
+    $$('[data-rm]', view).forEach((b) => b.onclick = () => busy(b, async () => { try { await q(sb.from('ops_service_items').delete().eq('service_id', s.id).eq('item_id', Number(b.dataset.rm))); route(); } catch (err) { toast(errMsg(err), true); } }));
+  }
+
+  function serviceForm(s, done) {
+    let cat = s?.category || 'nails', act = s ? s.active : true;
+    modal(`
+      <h3>${s ? 'تعديل الخدمة' : 'خدمة جديدة'}</h3>
+      <div class="field"><label>الاسم</label><input class="input" id="sf-n" maxlength="80" value="${esc(s?.name || '')}"></div>
+      <div class="field"><label>القسم</label><div class="chips wrap" id="sf-c">${Object.entries(SVC_CAT2).map(([k, l]) => `<button type="button" class="chip ${k === cat ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="grid2"><div class="field"><label>السعر (ر.س)</label><input class="input num" type="number" min="0" id="sf-p" value="${s?.price ?? ''}"></div><div class="field"><label>المدة (دقيقة)</label><input class="input num" type="number" min="5" max="600" id="sf-d" value="${s?.duration_min ?? 60}"></div></div>
+      <div class="field"><label>الخطوات <span class="muted small">(كل خطوة في سطر)</span></label><textarea class="input" id="sf-s" rows="6" maxlength="3000" placeholder="تعقيم يد العميلة\nتشكيل الأظافر\n…">${esc(s?.steps || '')}</textarea></div>
+      <div class="field"><label>نصيحة للأخصائية</label><input class="input" id="sf-t" maxlength="1000" value="${esc(s?.tips || '')}"></div>
+      ${s ? `<label class="toggle-row"><span><b>الخدمة متاحة</b></span><button type="button" class="sw ${act ? 'on' : ''}" id="sf-a"></button></label>` : ''}
+      <div class="actions end">${s ? '<button class="btn danger" id="sf-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="sf-save">حفظ</button></div>`, (el, close) => {
+      $$('#sf-c .chip', el).forEach((b) => b.onclick = () => { cat = b.dataset.k; $$('#sf-c .chip', el).forEach((x) => x.classList.toggle('on', x === b)); });
+      $('#sf-a', el)?.addEventListener('click', (e) => { act = !act; e.currentTarget.classList.toggle('on', act); });
+      $('#sf-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { name: $('#sf-n', el).value.trim(), category: cat, price: $('#sf-p', el).value === '' ? null : Number($('#sf-p', el).value), duration_min: Number($('#sf-d', el).value) || 60, steps: $('#sf-s', el).value.trim() || null, tips: $('#sf-t', el).value.trim() || null, active: act };
+        if (row.name.length < 2) return toast('اكتبوا اسم الخدمة', true);
+        try { let id = s?.id; if (s) await q(sb.from('ops_services').update(row).eq('id', s.id)); else id = (await q(sb.from('ops_services').insert(row).select('id').single())).id; toast('تم الحفظ'); close(); done && done(id); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#sf-del', el)?.addEventListener('click', async () => { close(); if (await confirmBox('حذف الخدمة', 'تنحذف البطاقة ومنتجاتها.', 'حذف', true)) { try { await q(sb.from('ops_services').delete().eq('id', s.id)); location.hash = '#/ops?t=services'; } catch (err) { toast(errMsg(err), true); } } });
+    });
+  }
+
+  async function opsManual(view, alive, head) {
+    const rows = await q(sb.from('ops_sops').select('*').order('sort').order('id'));
+    if (!alive()) return;
+    view.innerHTML = `${head}
+      ${isManager() ? `<div class="actions" style="margin-bottom:14px"><button class="btn primary" id="sop-new">${I.plus} إجراء</button></div>` : ''}
+      <div class="sop-grid">${rows.map((r, i) => `<button class="sop" data-s="${r.id}" style="--d:${i * 50}ms"><span class="sop-n num">${String(i + 1).padStart(2, '0')}</span><span class="sop-cat">${SOP_CAT[r.category]}</span><b>${esc(r.title)}</b><span class="sop-c">${steps(r.steps).length} خطوات</span></button>`).join('') || '<div class="empty">ما فيه إجراءات</div>'}</div>`;
+    $('#sop-new')?.addEventListener('click', () => sopForm(null));
+    $$('[data-s]', view).forEach((b) => b.onclick = () => {
+      const r = rows.find((x) => x.id === Number(b.dataset.s));
+      modal(`<span class="sop-cat">${SOP_CAT[r.category]}</span><h3 style="margin-top:6px">${esc(r.title)}</h3><ol class="steps">${steps(r.steps).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+        <div class="actions end">${isManager() ? '<button class="btn" id="sop-ed">تعديل</button>' : ''}<button class="btn primary" data-close>تمام</button></div>`, (el, close) => { $('#sop-ed', el)?.addEventListener('click', () => { close(); sopForm(r); }); });
+    });
+  }
+
+  function sopForm(r) {
+    modal(`
+      <h3>${r ? 'تعديل الإجراء' : 'إجراء جديد'}</h3>
+      <div class="field"><label>العنوان</label><input class="input" id="so-t" maxlength="100" value="${esc(r?.title || '')}"></div>
+      <div class="field"><label>التصنيف</label><select class="input" id="so-c">${Object.entries(SOP_CAT).map(([k, l]) => `<option value="${k}" ${k === r?.category ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>الخطوات <span class="muted small">(كل خطوة في سطر)</span></label><textarea class="input" id="so-s" rows="8" maxlength="4000">${esc(r?.steps || '')}</textarea></div>
+      <div class="actions end">${r ? '<button class="btn danger" id="so-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="so-save">حفظ</button></div>`, (el, close) => {
+      $('#so-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { title: $('#so-t', el).value.trim(), category: $('#so-c', el).value, steps: $('#so-s', el).value.trim(), updated_at: new Date().toISOString() };
+        if (row.title.length < 2 || !row.steps) return toast('اكتبوا العنوان والخطوات', true);
+        try { if (r) await q(sb.from('ops_sops').update(row).eq('id', r.id)); else await q(sb.from('ops_sops').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#so-del', el)?.addEventListener('click', async () => { try { await q(sb.from('ops_sops').delete().eq('id', r.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+    });
+  }
+
+  function ruleState(r) {
+    const due = r.kind === 'expiry' ? r.due_on : r.last_done && r.every_days ? dk(lensShift('d', D(r.last_done), r.every_days)) : null;
+    if (!due) return { st: 'unknown', due: null, u: null };
+    const u = until(due); const warnAt = r.kind === 'expiry' ? 45 : Math.max(1, Math.round((r.every_days || 30) * 0.15));
+    return { st: u < 0 ? 'bad' : u <= warnAt ? 'warn' : 'ok', due, u };
+  }
+
+  async function opsRules(view, alive, head) {
+    const [rules, tpv, tms] = await Promise.all([
+      q(sb.from('ops_rules').select('*').order('sort').order('id')),
+      isManager() ? q(sb.from('team_private').select('member_id,health_card_expiry')).catch(() => []) : [],
+      q(sb.from('team_members').select('id,name,active')).catch(() => []),
+    ]);
+    if (!alive()) return;
+    const st = rules.map((r) => ({ r, s: ruleState(r) }));
+    const hc = isManager() ? tms.filter((m) => m.active).map((m) => { const p = tpv.find((x) => x.member_id === m.id); const u = p?.health_card_expiry ? until(p.health_card_expiry) : null; return { m, u, st: u == null ? 'unknown' : u < 0 ? 'bad' : u <= 30 ? 'warn' : 'ok' }; }) : [];
+    const all = [...st.map((x) => x.s.st), ...hc.map((x) => x.st)];
+    const score = all.length ? Math.round((all.reduce((a, s) => a + (s === 'ok' ? 1 : s === 'warn' ? 0.6 : 0), 0) / all.length) * 100) : 0;
+    const cnt = (k) => all.filter((s) => s === k).length;
+    const SL = { ok: 'سليم', warn: 'قرب موعده', bad: 'متأخر', unknown: 'ما انسجّل' };
+    view.innerHTML = `${head}
+      <div class="rules-hero">${ring(score, `<b class="num">${score}</b><small>٪</small>`)}<div><span class="sh-eyebrow">صحة الصالون</span><h2>${score >= 90 ? 'كل شي تمام' : score >= 70 ? 'أموركم طيبة، فيه شي يحتاج متابعة' : 'فيه أشياء تحتاج تتحدّث'}</h2>
+        <div class="rh-c"><span class="ok">${cnt('ok')} سليم</span><span class="warn">${cnt('warn')} قرب</span><span class="bad">${cnt('bad')} متأخر</span>${cnt('unknown') ? `<span>${cnt('unknown')} ما انسجّل</span>` : ''}</div></div></div>
+      <div class="section-title"><h2>التراخيص والوثائق</h2></div>
+      <div class="list">${st.filter((x) => x.r.kind === 'expiry').map(ruleRow).join('')}</div>
+      <div class="section-title"><h2>الفحوصات الدورية</h2></div>
+      <div class="list">${st.filter((x) => x.r.kind === 'check').map(ruleRow).join('')}</div>
+      ${hc.length ? `<div class="section-title"><h2>الشهادات الصحية للفريق</h2></div><div class="list">${hc.map((x) => `<a class="row rule ${x.st}" href="#/member/${x.m.id}"><span class="rdot"></span><div class="grow"><div class="title">${esc(x.m.name)}</div><div class="meta">${x.u == null ? 'ما انسجّل تاريخ الانتهاء' : x.u < 0 ? `منتهية من ${daysTxt(-x.u)}` : `باقي ${daysTxt(x.u)}`}</div></div><span class="badge ${{ ok: 'ok', warn: 'warn', bad: 'danger', unknown: '' }[x.st]}">${SL[x.st]}</span></a>`).join('')}</div>` : ''}
+      ${isManager() ? `<div class="actions mt"><button class="btn" id="ru-new">${I.plus} قاعدة جديدة</button></div>` : ''}`;
+    function ruleRow({ r, s }) {
+      return `<div class="row rule ${s.st}"><span class="rdot"></span><div class="grow"><div class="title">${esc(r.name)}</div><div class="meta">${s.due ? (r.kind === 'expiry' ? `ينتهي ${dShort(s.due)} ${D(s.due).getFullYear()}` : `آخر مرة ${dShort(r.last_done)} · الجاية ${dShort(s.due)}`) : r.kind === 'expiry' ? 'سجّلوا تاريخ الانتهاء' : `كل ${daysTxt(r.every_days)} · ما انسجّل`}${s.u != null ? ` · ${s.u < 0 ? `متأخر ${daysTxt(-s.u)}` : `باقي ${daysTxt(s.u)}`}` : ''}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
+        <div class="end">${r.kind === 'check' ? `<button class="btn sm ${s.st === 'ok' ? '' : 'primary'}" data-did="${r.id}">تم اليوم</button>` : ''}${isManager() ? ` <button class="x-btn" data-ru="${r.id}" style="font-size:13px">${I.edit.replace('<svg', '<svg width="13" height="13"')}</button>` : ''}</div></div>`;
+    }
+    $$('[data-did]', view).forEach((b) => b.onclick = () => busy(b, async () => { try { await q(sb.from('ops_rules').update({ last_done: todayR() }).eq('id', Number(b.dataset.did))); toast('تم التسجيل'); route(); } catch (err) { toast(errMsg(err), true); } }));
+    $$('[data-ru]', view).forEach((b) => b.onclick = () => ruleForm(rules.find((x) => x.id === Number(b.dataset.ru))));
+    $('#ru-new')?.addEventListener('click', () => ruleForm(null));
+  }
+
+  function ruleForm(r) {
+    let kind = r?.kind || 'expiry';
+    modal(`
+      <h3>${r ? esc(r.name) : 'قاعدة جديدة'}</h3>
+      <div class="field"><label>الاسم</label><input class="input" id="ru-n" maxlength="80" value="${esc(r?.name || '')}"></div>
+      <div class="field"><label>النوع</label><div class="chips" id="ru-k"><button type="button" class="chip ${kind === 'expiry' ? 'on' : ''}" data-k="expiry">له تاريخ انتهاء</button><button type="button" class="chip ${kind === 'check' ? 'on' : ''}" data-k="check">فحص يتكرر</button></div></div>
+      <div class="grid2"><div class="field ru-e"><label>تاريخ الانتهاء</label><input class="input" type="date" id="ru-d" value="${r?.due_on || ''}"></div>
+        <div class="field ru-c"><label>يتكرر كل (يوم)</label><input class="input num" type="number" min="1" id="ru-ev" value="${r?.every_days || 30}"></div>
+        <div class="field ru-c"><label>آخر مرة</label><input class="input" type="date" id="ru-l" value="${r?.last_done || ''}"></div></div>
+      <div class="field"><label>ملاحظة</label><input class="input" id="ru-no" maxlength="300" value="${esc(r?.note || '')}"></div>
+      <div class="actions end">${r ? '<button class="btn danger" id="ru-del">حذف</button><span style="flex:1"></span>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="ru-s">حفظ</button></div>`, (el, close) => {
+      const vis = () => { $$('.ru-e', el).forEach((x) => { x.style.display = kind === 'expiry' ? '' : 'none'; }); $$('.ru-c', el).forEach((x) => { x.style.display = kind === 'check' ? '' : 'none'; }); };
+      $$('#ru-k .chip', el).forEach((b) => b.onclick = () => { kind = b.dataset.k; $$('#ru-k .chip', el).forEach((x) => x.classList.toggle('on', x === b)); vis(); }); vis();
+      $('#ru-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+        const row = { name: $('#ru-n', el).value.trim(), kind, due_on: kind === 'expiry' ? $('#ru-d', el).value || null : null, every_days: kind === 'check' ? Number($('#ru-ev', el).value) || 30 : null, last_done: kind === 'check' ? $('#ru-l', el).value || null : null, note: $('#ru-no', el).value.trim() || null };
+        if (row.name.length < 2) return toast('اكتبوا الاسم', true);
+        try { if (r) await q(sb.from('ops_rules').update(row).eq('id', r.id)); else await q(sb.from('ops_rules').insert(row)); toast('تم الحفظ'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      });
+      $('#ru-del', el)?.addEventListener('click', async () => { try { await q(sb.from('ops_rules').delete().eq('id', r.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
     });
   }
 

@@ -467,7 +467,8 @@
         sb.from('salon_bookings').select('id', { count: 'exact', head: true }).gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 86400000).toISOString()).not('status', 'in', '(cancelled,no_show)'),
         sb.from('salon_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending').gte('starts_at', new Date().toISOString()),
       ]);
-      sp = { today: a.count || 0, pending: b.count || 0 };
+      const rk = await sb.from('rekaz_reservations').select('id', { count: 'exact', head: true }).gte('start_at', dayStart.toISOString()).lt('start_at', new Date(dayStart.getTime() + 86400000).toISOString()).not('status', 'ilike', '%cancel%');
+      sp = { today: (a.count || 0) + (rk.count || 0), pending: b.count || 0 };
     } catch (_) { /* salon bookings unavailable */ }
     if (!alive()) return;
     const tk = todayR();
@@ -3870,12 +3871,15 @@
 
   async function apDay(view, head, day, alive) {
     const from = new Date(day + 'T00:00:00+03:00'), to = new Date(from.getTime() + 86400000);
-    const [rows, staff, set] = await Promise.all([
+    const [rows, staff, set, rk] = await Promise.all([
       q(sb.from('salon_bookings').select('id,code,access_token,customer_name,phone,starts_at,ends_at,total,status,payment_status,paid_amount,notes,source,salon_booking_items(id,name,role,member_id,starts_at,ends_at,price)').gte('starts_at', from.toISOString()).lt('starts_at', to.toISOString()).order('starts_at')),
       q(sb.from('team_members').select('id,name,color,book_roles').eq('active', true).order('name')),
       q(sb.from('salon_settings').select('*').eq('id', 1).maybeSingle()),
+      sb.from('rekaz_reservations').select('id,number,customer_name,phone,status,product_name,price_name,provider_names,start_at,end_at,total,remaining,custom_status,customer_note').gte('start_at', from.toISOString()).lt('start_at', to.toISOString()).order('start_at').then((x) => x.data || []),
     ]);
     if (!alive()) return;
+    const rkLive = rk.filter((r) => !/cancel/i.test(r.status || ''));
+    if (rkLive.length) return apDayRekaz(view, head, day, rows, rkLive, rk, set);
     const bookable = staff.filter((m) => (m.book_roles || []).length);
     const live = rows.filter((b) => b.status !== 'cancelled');
     const hm = (s, d) => { const [a, b] = String(s || d).split(':').map(Number); return a * 60 + (b || 0); };
@@ -3917,6 +3921,63 @@
     if (isToday && nowM > open) { const tl = $('.ap-tl', view); requestAnimationFrame(() => { const y = tl.getBoundingClientRect().top + window.scrollY + (nowM - open - 60) * PX; if (y > 300) window.scrollTo({ top: y - 120 }); }); }
   }
 
+
+  const RK_ST = (s) => { s = String(s || '').toLowerCase(); if (/cancel/.test(s)) return ['ملغي', '']; if (/no.?show|absent/.test(s)) return ['ما حضرت', 'danger']; if (/complet|done|finish|attend|checked/.test(s)) return ['خلصت', 'ok']; if (/pend|unconfirm|draft/.test(s)) return ['غير مؤكد', 'warn']; if (/confirm/.test(s)) return ['مؤكد', 'accent']; return [s || '—', '']; };
+  async function apDayRekaz(view, head, day, own, rk, rkAll, set) {
+    const hm = (s, d) => { const [a, b] = String(s || d).split(':').map(Number); return a * 60 + (b || 0); };
+    const PX = 1.3;
+    let open = hm(set?.open_time, '10:00'), close = hm(set?.close_time, '22:00') || 1440;
+    rk.forEach((r) => { open = Math.min(open, Math.floor(apMin(r.start_at) / 60) * 60); const e = apMin(r.end_at || r.start_at) || 0; close = Math.max(close, Math.ceil((e < apMin(r.start_at) ? 1440 : e) / 60) * 60); });
+    const H = Math.max(60, close - open) * PX;
+    const ownLive = own.filter((b) => b.status !== 'cancelled');
+    const names = [...new Set(rk.map((r) => (r.provider_names || 'بدون أخصائية').split('، ')[0]))].sort();
+    const COLORS = ['#5A2A22', '#9C7A57', '#3F6B5B', '#7A4E8C', '#B0603A', '#2F5D8A', '#8A6F66', '#A33F5E'];
+    const cols = names.map((n, i) => ({ name: n, color: COLORS[i % COLORS.length] }));
+    if (ownLive.length) cols.push({ name: 'من موقعنا', color: '#C9A46A', own: true });
+    const lanes = (its) => { its.sort((x, y) => x.s - y.s); const ends = []; its.forEach((x) => { let l = ends.findIndex((e) => e <= x.s); if (l < 0) { l = ends.length; ends.push(0); } ends[l] = x.e; x.l = l; }); its.forEach((x) => { x.n = Math.max(...its.filter((y) => y.s < x.e && y.e > x.s).map((y) => y.l)) + 1; }); return its; };
+    const blk = (x, color, attr, title, sub, st) => { const top = (apMin(x.s) - open) * PX, h = Math.max(26, (x.e - x.s) / 60000 * PX - 3); return `<button class="ap-blk st-${st}" style="top:${top}px;height:${h}px;--c:${color};inset-inline-start:calc(${(x.l * 100) / x.n}% + 3px);width:calc(${100 / x.n}% - 6px)" ${attr}><b>${esc(title)}</b><span>${apTimeTxt(x.s)} · ${esc(sub)}</span></button>`; };
+    const colHtml = (c) => {
+      let its;
+      if (c.own) its = lanes(ownLive.flatMap((b) => b.salon_booking_items.map((i) => ({ s: +new Date(i.starts_at), e: +new Date(i.ends_at), b, i }))));
+      else its = lanes(rk.filter((r) => (r.provider_names || 'بدون أخصائية').split('، ')[0] === c.name).map((r) => ({ s: +new Date(r.start_at), e: +new Date(r.end_at || r.start_at) || +new Date(r.start_at) + 1800000, r })));
+      return its.map((x) => c.own ? blk(x, c.color, `data-b="${x.b.id}"`, x.b.customer_name, x.i.name, x.b.status)
+        : blk(x, c.color, `data-rk="${x.r.id}"`, x.r.customer_name || '—', [x.r.product_name, x.r.price_name].filter(Boolean).join(' · '), /pend|unconfirm/i.test(x.r.status) ? 'pending' : /complet|done/i.test(x.r.status) ? 'done' : 'confirmed')).join('');
+    };
+    const hours = []; for (let m = Math.ceil(open / 60) * 60; m < close; m += 60) hours.push(m);
+    const isToday = day === rDay(Date.now()), nowM = apMin(Date.now());
+    const exp = rk.reduce((a, r) => a + Number(r.total || 0), 0) + ownLive.reduce((a, b) => a + Number(b.total || 0), 0);
+    const unconf = rk.filter((r) => /pend|unconfirm/i.test(r.status || '')).length + ownLive.filter((b) => b.status === 'pending').length;
+    const { data: log } = await sb.from('rekaz_sync_log').select('finished_at,ok').order('id', { ascending: false }).limit(1);
+    view.innerHTML = `${head}
+      <div class="ap-nav"><a class="icon-btn" href="#/appts?d=${apDayShift(day, -1)}" aria-label="اليوم السابق">→</a>
+        <label class="ap-date"><b>${esc(rDayLabel(day))}</b><input type="date" id="ap-d" value="${day}"></label>
+        <a class="icon-btn" href="#/appts?d=${apDayShift(day, 1)}" aria-label="اليوم التالي">←</a>
+        ${isToday ? '' : '<a class="chip" href="#/appts">اليوم</a>'}
+        <span class="muted small" style="margin-inline-start:auto">من ركاز${log && log[0] ? ` · آخر تحديث ${apTimeTxt(log[0].finished_at)}` : ''}</span></div>
+      <div class="ap-kpi"><div><b class="num">${AR_NUM(rk.length + ownLive.length)}</b><span>موعد</span></div><div><b class="num">${sar(exp)}</b><span>ريال حسب ركاز</span></div><div class="${unconf ? 'warn' : ''}"><b class="num">${AR_NUM(unconf)}</b><span>غير مؤكد</span></div><div><b class="num">${AR_NUM(names.length)}</b><span>أخصائية</span></div></div>
+      <div class="ap-tl" style="--n:${cols.length}">
+        <div class="ap-hcol"><div class="ap-hd"></div><div class="ap-body" style="height:${H}px">${hours.map((m) => `<span style="top:${(m - open) * PX}px">${apHM(m).replace(':٠٠', '')}</span>`).join('')}</div></div>
+        ${cols.map((c) => `<div class="ap-col"><div class="ap-hd"><i style="background:${c.color}"></i>${esc(c.name)}</div><div class="ap-body" style="height:${H}px">${hours.map((m) => `<i class="ap-line" style="top:${(m - open) * PX}px"></i>`).join('')}${isToday && nowM > open && nowM < close ? `<i class="ap-now" style="top:${(nowM - open) * PX}px"></i>` : ''}${colHtml(c)}</div></div>`).join('')}
+      </div>
+      ${rkAll.length > rk.length ? `<div class="section-title"><h2>ملغية</h2></div><div class="list">${rkAll.filter((r) => /cancel/i.test(r.status || '')).map((r) => `<div class="row"><div class="grow"><div class="title">${esc(r.customer_name || '—')}</div><div class="meta">${apTimeTxt(r.start_at)} · ${esc(r.product_name || '')}</div></div><span class="badge">ملغي</span></div>`).join('')}</div>` : ''}`;
+    $('#ap-d', view).onchange = (e) => { if (e.target.value) location.hash = `#/appts?d=${e.target.value}`; };
+    $$('[data-b]', view).forEach((el) => el.onclick = async () => { const staff = await q(sb.from('team_members').select('id,name')); apSheet(own.find((b) => b.id === el.dataset.b), staff); });
+    $$('[data-rk]', view).forEach((el) => el.onclick = () => apRkSheet(rk.find((r) => r.id === el.dataset.rk)));
+    if (isToday && nowM > open) { const tl = $('.ap-tl', view); requestAnimationFrame(() => { const y = tl.getBoundingClientRect().top + window.scrollY + (nowM - open - 60) * PX; if (y > 300) window.scrollTo({ top: y - 120 }); }); }
+  }
+  function apRkSheet(r) {
+    const st = RK_ST(r.status);
+    const when = `${rDayLabel(rDay(r.start_at))} الساعة ${apTimeTxt(r.start_at)}`;
+    const svc = [r.product_name, r.price_name].filter(Boolean).join(' · ');
+    const T = { confirm: `أهلًا ${r.customer_name || ''} 🤍\nموعدك في بيوتفريش ${when}\n${svc}${r.provider_names ? ' مع ' + r.provider_names : ''}\n\nننتظرك ✨`, remind: `أهلًا ${r.customer_name || ''}، نذكّرك بموعدك في بيوتفريش ${when} 🤍\n${svc}` };
+    modal(`<div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3 style="margin:0">${esc(r.customer_name || '—')}</h3><div class="muted small">حجز ركاز رقم ${AR_NUM(r.number || '')}</div></div><span class="badge ${st[1]}">${esc(st[0])}</span></div>
+      <div class="ap-when">${esc(rDayLabel(rDay(r.start_at)))} · ${apTimeTxt(r.start_at)}${r.end_at ? ' – ' + apTimeTxt(r.end_at) : ''}</div>
+      <div class="list" style="margin:10px 0"><div class="row"><div class="grow"><div class="title">${esc(svc || '—')}</div><div class="meta">${r.provider_names ? 'مع ' + esc(r.provider_names) : 'بدون أخصائية'}</div></div><div class="end num">${r.total != null ? sar(r.total) : ''}</div></div>
+        ${Number(r.remaining) > 0 ? `<div class="row"><div class="grow title">المتبقي</div><div class="end num" style="font-weight:700">${sar(r.remaining)} ريال</div></div>` : ''}</div>
+      ${r.customer_note ? `<div class="notice small">«${esc(r.customer_note)}»</div>` : ''}
+      ${r.phone ? `<div class="chips wrap" style="margin-top:10px"><a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(r.phone)}?text=${encodeURIComponent(T.confirm)}">واتساب · تأكيد</a><a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(r.phone)}?text=${encodeURIComponent(T.remind)}">واتساب · تذكير</a><a class="chip" href="tel:${esc(r.phone)}">اتصال · <span dir="ltr">${esc(r.phone)}</span></a></div>` : ''}
+      <p class="muted small" style="margin-top:12px">هذا الموعد من ركاز. التعديل والإلغاء والدفع يصير من ركاز، ويتحدّث هنا تلقائيًا.</p>`);
+  }
   async function apPending(view, head, alive) {
     const [rows, staff] = await Promise.all([
       q(sb.from('salon_bookings').select('id,code,access_token,customer_name,phone,starts_at,ends_at,total,status,payment_status,paid_amount,notes,source,salon_booking_items(id,name,role,member_id,starts_at,ends_at,price)').eq('status', 'pending').gte('starts_at', new Date(Date.now() - 3600000).toISOString()).order('starts_at').limit(100)),
@@ -4082,7 +4143,17 @@
     if (!alive()) return;
     const s = set || {};
     const WDS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const { data: rlog } = await sb.from('rekaz_sync_log').select('*').order('id', { ascending: false }).limit(1);
+    const { count: rkN } = await sb.from('rekaz_reservations').select('id', { count: 'exact', head: true });
+    const L = rlog && rlog[0];
     view.innerHTML = `${head}
+      <div class="card"><h3 style="margin-top:0">الربط مع ركاز</h3>
+        ${L ? `<p class="small" style="margin:0 0 6px">${L.ok ? '✅ شغّال' : '⚠️ آخر محاولة فشلت'} · آخر تحديث ${esc(rDayLabel(rDay(L.finished_at)))} ${apTimeTxt(L.finished_at)}</p>
+          <p class="muted small" style="margin:0 0 10px">${AR_NUM(rkN || 0)} حجز منسوخ من ركاز${L.counts ? ` · ${Object.entries(L.counts).filter(([, v]) => v > 0).map(([k, v]) => `${{ customers: 'عميلات', reservations: 'حجوزات', orders: 'طلبات', orders_paid: 'مدفوعات', transactions: 'عمليات دفع', reviews: 'تقييمات', products: 'خدمات', providers: 'أخصائيات' }[k] || k} ${AR_NUM(v)}`).join('، ')}` : ''}</p>
+          ${!L.ok && L.error ? `<div class="notice small" dir="ltr" style="text-align:left">${esc(L.error.slice(0, 300))}</div>` : ''}
+          <div class="actions"><button class="btn" id="rk-now">حدّث الحين</button></div>`
+        : '<p class="muted small" style="margin:0">ما بدأ الربط للحين. يحتاج «تكامل» من إعدادات Platform API في ركاز بصلاحيات قراءة فقط، وتنحط بياناته في خزنة قاعدة البيانات. بعدها تتحدّث الحجوزات والعميلات والمبيعات كل ١٠ دقايق، بدون ما يتغيّر شي في ركاز.</p>'}
+        <p class="muted small" style="margin:8px 0 0">قراءة فقط: النظام ما يكتب ولا يعدّل أي شي في ركاز.</p></div>
       <div class="card"><h3 style="margin-top:0">الحجز من الموقع</h3>
         <label class="check"><input type="checkbox" id="s-acc" ${s.accepting ? 'checked' : ''}> الحجز من الموقع مفتوح</label>
         <div class="grid2"><div class="field"><label>يفتح</label><input class="input" type="time" id="s-o" value="${(s.open_time || '10:00').slice(0, 5)}"></div><div class="field"><label>يقفل</label><input class="input" type="time" id="s-c" value="${(s.close_time || '22:00').slice(0, 5)}"></div></div>
@@ -4097,6 +4168,7 @@
       <div class="card"><h3 style="margin-top:0">أيام مقفلة</h3><p class="muted small">إجازة أو مناسبة، ما ينحجز فيها من الموقع.</p>
         <div class="grid2"><input class="input" type="date" id="b-d"><input class="input" id="b-n" placeholder="السبب (اختياري)"></div><div class="actions"><button class="btn" id="b-add">${I.plus} أضف</button></div>
         ${blk.length ? `<div class="list" style="margin-top:8px">${blk.map((b) => `<div class="row"><div class="grow title">${esc(rDayLabel(b.day))}${b.note ? ` · <span class="muted">${esc(b.note)}</span>` : ''}</div><button class="btn sm" data-del="${b.day}">حذف</button></div>`).join('')}</div>` : ''}</div>`;
+    $('#rk-now', view)?.addEventListener('click', (e) => busy(e.target, async () => { await q(sb.rpc('rekaz_sync_now')); toast('بدأ التحديث، خلال دقيقة يكتمل'); setTimeout(() => route(), 45000); }));
     $$('#s-wd .chip', view).forEach((c) => c.onclick = () => c.classList.toggle('on'));
     const n = (id) => Number(String($(id, view).value).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
     $('#s-ok', view).onclick = (e) => busy(e.target, async () => {

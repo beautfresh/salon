@@ -279,8 +279,8 @@
   function navLinks() {
     const M = isManager(), A = isAdmin();
     const G = [
-      ['اليوم', [['home', 'الرئيسية', I.home], ['appts', 'مواعيد الصالون', I.cal], ['bookings', 'الحجوزات المنزلية', I.home]]],
-      ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['sales', 'لوحة المبيعات', I.chart], M && ['finance', 'المالية', I.coin]]],
+      ['اليوم', [M && ['sales', 'المبيعات والأداء', I.chart], ['home', 'الرئيسية', I.home], ['appts', 'مواعيد الصالون', I.cal], ['bookings', 'الحجوزات المنزلية', I.home]]],
+      ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['finance', 'المالية', I.coin]]],
       ['الفريق والتشغيل', [['team', 'الفريق', I.users], ['ops', 'التشغيل', I.check], ['assets', 'الأصول والصيانة', I.wrench], ['rules', 'قواعد بيوتفريش', I.shield]]],
       ['المخزون', [['items', 'الأصناف', I.box], ['issue', 'صرف من المخزون', I.out], ['invoices', 'فواتير الشراء', I.invoice], ['shopping', 'قائمة المشتريات', I.cart], ['movements', 'سجل الحركات', I.list], M && ['reports', 'التقارير', I.chart]]],
       ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
@@ -314,7 +314,7 @@
           <a href="#/home" data-nav="home"><span class="ic">${I.home}</span>الرئيسية</a>
           <a href="#/appts" data-nav="appts"><span class="ic">${I.cal}</span>المواعيد</a>
           <button type="button" class="fab" id="fab" aria-label="إجراء سريع"><span class="ic">${I.plus}</span>إجراء</button>
-          <a href="#/clients" data-nav="clients"><span class="ic">${I.heart}</span>العميلات</a>
+          ${isManager() ? `<a href="#/sales" data-nav="sales"><span class="ic">${I.chart}</span>المبيعات</a>` : `<a href="#/clients" data-nav="clients"><span class="ic">${I.heart}</span>العميلات</a>`}
           <a href="#/more" data-nav="more"><span class="ic">${I.more}</span>المزيد</a>
         </nav>
       </div>`;
@@ -352,7 +352,7 @@
     team: { title: 'الفريق', nav: 'team', fn: pageTeam },
     member: { title: 'ملف الموظفة', nav: 'team', fn: pageMember },
     marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
-    sales: { title: 'لوحة المبيعات', nav: 'sales', fn: pageSales, manager: true },
+    sales: { title: 'المبيعات والأداء', nav: 'sales', fn: pageSales, manager: true },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
     expenses: { title: 'المصروفات', nav: 'finance', fn: pageExpenses, manager: true },

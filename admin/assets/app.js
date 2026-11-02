@@ -4258,6 +4258,17 @@
   const SD_SRC = { internal: 'من الاستقبال', website: 'من الموقع (العميلة حجزت بنفسها)' };
   const SD_PREV = { d: 'أمس', w: 'الأسبوع الماضي', m: 'الشهر الماضي', q: 'الربع الماضي', y: 'السنة الماضية', c: 'الفترة اللي قبلها' };
   const sdPct = (a, b) => (Number(b) > 0 ? ((Number(a) - Number(b)) / Number(b)) * 100 : null);
+  const sdRecon = (K, lens) => {
+    const sales = Number(K.sales), col = Number(K.collected), diff = col - sales, prev = Number(K.prev_paid || 0), un = Number(K.unpaid || 0), ref = Number(K.refunds || 0);
+    if (Math.abs(diff) < Math.max(50, sales * 0.01)) return '';
+    const per = { d: 'اليوم', w: 'الأسبوع', m: 'الشهر', q: 'الربع', y: 'السنة' }[lens] || 'الفترة';
+    const why = [];
+    if (prev > 0) why.push(`<b>${sar(prev)} ر.س</b> دفعات وصلت ${per === 'اليوم' ? 'اليوم' : `في ${per}`} على ${sdN(K.prev_orders)} طلب انفتح قبل`);
+    if (un > 0) why.push(`<b>${sar(un)} ر.س</b> من طلبات ${per} لسه ما انحصّلت`);
+    if (ref > 0) why.push(`<b>${sar(ref)} ر.س</b> مسترجع`);
+    if (!why.length) return '';
+    return `<div class="sd-recon"><span class="ic">ⓘ</span><p>المحصّل ${diff > 0 ? 'أكثر' : 'أقل'} من المبيعات بـ<b>${sar(Math.abs(diff))} ر.س</b> لأن المبيعات تنحسب بيوم فتح الطلب والمحصّل بيوم دخول الفلوس: ${why.join('، و')}.</p></div>`;
+  };
   const sdShare = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : 0);
   const sdN = (v) => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
   function sdChip(cur, prev, { inv = false, tip = '' } = {}) {
@@ -4460,10 +4471,11 @@
           ${tgtHtml}
           <div class="fin-split sd-split">
             <div data-tip="المبيعات بدون ضريبة القيمة المضافة"><span>صافي المبيعات</span><b class="num">${sdCu('net', K.net_sales)}</b><em>الضريبة ${sar(K.tax)}</em></div>
-            <div data-tip="المدفوعات اللي دخلت فعلًا في الفترة ناقص المسترجع، نفس «صافي المبالغ المدفوعة» في ركاز"><span>صافي المحصّل</span><b class="num">${sdCu('col', K.collected)}</b><em>المسترجع ${sar(K.refunds)}</em></div>
+            <div data-tip="المدفوعات اللي دخلت فعلًا في الفترة ناقص المسترجع، نفس «صافي المبالغ المدفوعة» في ركاز"><span>صافي المحصّل</span><b class="num">${sdCu('col', K.collected)}</b><em>${Number(K.prev_paid) > 0 ? `منها ${sar(K.prev_paid)} لطلبات سابقة` : `المسترجع ${sar(K.refunds)}`}</em></div>
             <div><span>الخصومات</span><b class="num">${sdCu('disc', K.discount)}</b><em>${K.sales ? sdShare(K.discount, Number(K.sales) + Number(K.discount)) : 0}٪ من قبل الخصم</em></div>
             ${Number(K.home) ? `<div><span>الخدمات المنزلية</span><b class="num">${sdCu('home', K.home)}</b><em>من موقعنا</em></div>` : ''}
           </div>
+          ${sdRecon(K, lens)}
         </div>`;
 
       const B = $('#sd-b', view);

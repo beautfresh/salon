@@ -1389,3 +1389,6 @@ a.sd-in:hover .go { transform: translateX(-4px); color: var(--accent); }
 .sd-step .ar { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); flex: none; }
 .sd-step .ar svg { width: 15px; height: 15px; fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .sd-hero .sd-sub { font-size: 13px; opacity: .72; margin: 0 0 12px; }
+.sd-recon { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(90, 42, 34, .06); font-size: 12.5px; line-height: 1.75; }
+.sd-recon p { margin: 0; }
+.sd-recon .ic { opacity: .6; line-height: 1.75; }

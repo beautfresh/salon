@@ -1,0 +1,107 @@
+// الكاتب الذكي لبيوتفريش: يكتب بصوت الصالون من البوصلة والبيانات الحقيقية، ولا يخترع أرقام ولا آراء.
+// المفتاح ANTHROPIC_API_KEY يحطه صاحب المشروع في أسرار الدوال (Edge Function Secrets).
+const URL_ = Deno.env.get('SUPABASE_URL')!;
+const SRV = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
+const KEY = Deno.env.get('ANTHROPIC_API_KEY') || '';
+const MODEL = Deno.env.get('AI_MODEL') || 'claude-sonnet-5-5';
+const MONTH_CAP = Number(Deno.env.get('AI_MONTH_CAP') || 400);
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
+const db = async (path: string, init: RequestInit = {}) => {
+  const r = await fetch(`${URL_}/rest/v1/${path}`, { ...init, headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, 'Content-Type': 'application/json', ...(init.headers || {}) } });
+  if (!r.ok) throw new Error(`db ${r.status}: ${await r.text()}`);
+  const t = await r.text(); return t ? JSON.parse(t) : null;
+};
+
+const KINDS: Record<string, { label: string; shape: string }> = {
+  post: { label: 'نص منشور', shape: '{"angles":[{"angle":"اسم الزاوية بكلمتين","hook":"السطر الأول الخاطف","body":"النص","cta":"الدعوة للفعل","hashtags":["..."]}]} بثلاث زوايا مختلفة فعلًا (مثلًا: إحساس، معلومة، قصة)' },
+  reel: { label: 'سيناريو مقطع قصير', shape: '{"title":"","seconds":25,"beats":[{"t":"0-2","shot":"وصف اللقطة للمصورة","text":"النص على الشاشة","voice":"الكلام أو الصوت"}],"shots":["قائمة اللقطات المطلوبة"],"cta":"","caption":"وصف المنشور"}' },
+  brief: { label: 'ورقة حملة للمصورة أو الوكالة', shape: '{"goal":"","truth":"الحقيقة عن العميلة اللي تبني عليها الحملة","message":"الرسالة بجملة","deliverables":["..."],"must":["..."],"avoid":["..."],"timing":""}' },
+  reply: { label: 'رد على رأي عميلة', shape: '{"options":[{"tone":"","text":""}]} بثلاث صيغ قصيرة' },
+  whatsapp: { label: 'رسالة واتساب للعميلات', shape: '{"options":[{"tone":"","text":""}]} بثلاث صيغ، كل وحدة أقل من ٦٠ كلمة' },
+  ideas: { label: 'أفكار محتوى للأسبوع', shape: '{"ideas":[{"title":"","kind":"reel|story|post|tiktok|snap","pillar":"before_after|color|behind|review|trend|service|tip|team|offer","why":""}]} سبع أفكار' },
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  if (req.method !== 'POST') return json({ error: 'method' }, 405);
+  try {
+    // الهوية والصلاحية
+    const auth = req.headers.get('Authorization') || '';
+    const u = await fetch(`${URL_}/auth/v1/user`, { headers: { apikey: ANON, Authorization: auth } });
+    if (!u.ok) return json({ error: 'auth', message: 'سجّلي دخولك من جديد' }, 401);
+    const user = await u.json();
+    const prof = (await db(`profiles?id=eq.${user.id}&select=role`))?.[0];
+    if (!prof || !['admin', 'partner'].includes(String(prof.role))) return json({ error: 'role', message: 'الكاتب الذكي للإدارة فقط' }, 403);
+    if (!KEY) return json({ error: 'no_key', message: 'الكاتب الذكي يحتاج مفتاح ANTHROPIC_API_KEY في أسرار الدوال' }, 503);
+
+    const b = await req.json().catch(() => ({}));
+    const kind = String(b.kind || 'post'); const K = KINDS[kind]; if (!K) return json({ error: 'kind' }, 400);
+    const topic = String(b.topic || '').slice(0, 600);
+    const channel = String(b.channel || '').slice(0, 30);
+    const extra = String(b.extra || '').slice(0, 1500);
+
+    const m0 = new Date(); m0.setUTCDate(1); m0.setUTCHours(0, 0, 0, 0);
+    const used = await fetch(`${URL_}/rest/v1/ai_log?select=id&at=gte.${m0.toISOString()}`, { method: 'HEAD', headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, Prefer: 'count=exact' } });
+    const n = Number((used.headers.get('content-range') || '*/0').split('/')[1] || 0);
+    if (n >= MONTH_CAP) return json({ error: 'cap', message: `وصلتوا الحد الشهري (${MONTH_CAP} طلب)` }, 429);
+
+    // السياق الحقيقي
+    const [comp, svcs, pub, seasons] = await Promise.all([
+      db('brand_compass?id=eq.1&select=data'),
+      db('salon_services?is_active=eq.true&select=name,price,duration_min&order=popular.desc,sort.asc&limit=80'),
+      fetch(`${URL_}/rest/v1/rpc/site_public`, { method: 'POST', headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json()),
+      db(`mkt_seasons?select=name,starts_on,ideas&starts_on=gte.${new Date().toISOString().slice(0, 10)}&order=starts_on&limit=3`),
+    ]);
+    const c = comp?.[0]?.data || {};
+    const quotes = (pub?.reviews || []).slice(0, 14).map((r: any) => `«${r.text}» — ${r.name}${r.service ? ` (${r.service})` : ''}`).join('\n');
+    const offers = (pub?.offers || []).map((o: any) => `${o.title}${o.price ? `: ${o.price}` : ''}${o.was ? ` بدل ${o.was}` : ''}${o.ends ? ` لين ${o.ends}` : ''}`).join('\n') || 'لا يوجد';
+    const team = (pub?.team || []).map((t: any) => `${t.name} (★${t.avg} من ${t.n} رأي)`).join('، ');
+
+    const system = `أنتِ كاتبة محتوى صالون «بيوتفريش» في الأحساء. تكتبين باللهجة السعودية الخليجية فقط (لا شامي ولا مصري، لا «كمان» ولا «هيك»)، وبصوت الصالون كما في البوصلة.
+
+# البوصلة
+من نحن: ${c.who || ''}
+الوعد: ${c.promise || ''}
+عميلاتنا: ${c.audience || ''}
+الشخصية: ${c.personality || ''}
+نسوي: ${c.tone_do || ''}
+ما نسوي: ${c.tone_dont || ''}
+كلمات نحبها: ${c.words_use || ''}
+كلمات نتجنبها: ${c.words_avoid || ''}
+وش يخلي العميلة تتكلم عنا: ${c.talk || ''}
+الدليل: ${c.proof || ''}
+
+# حقائق تقدرين تستخدمينها (ولا شي غيرها)
+التقييم: ${pub?.stats ? `${pub.stats.avg} من 5 من ${pub.stats.n} تقييم` : 'غير متوفر'}
+الخدمات والأسعار (ر.س): ${(svcs || []).map((s: any) => `${s.name} ${Number(s.price)}`).join('، ')}
+العروض الحالية: ${offers}
+الأخصائيات: ${team}
+المواسم الجاية: ${(seasons || []).map((s: any) => `${s.name} (${s.starts_on})`).join('، ') || 'لا يوجد'}
+آراء حقيقية (تقدرين تقتبسينها حرفيًا مع الاسم المختصر فقط):
+${quotes}
+
+# قواعد لا تنكسر
+- لا تخترعين أرقام أو أسعار أو نسب أو خصومات غير الموجودة فوق.
+- لا تخترعين آراء أو شهادات. الاقتباس فقط من الآراء الحقيقية فوق، حرفيًا.
+- لا وعود طبية أو علاجية، ولا «مضمون».
+- إيموجي قليل ومدروس.
+- ردّك JSON صالح فقط، بدون أي نص قبله أو بعده، بهذا الشكل: ${K.shape}`;
+    const userMsg = `المطلوب: ${K.label}${channel ? ` لقناة ${channel}` : ''}.\nالموضوع: ${topic || 'اختاري الأنسب للصالون الحين'}${extra ? `\nتفاصيل إضافية: ${extra}` : ''}`;
+
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, max_tokens: 2500, system, messages: [{ role: 'user', content: userMsg }] }),
+    });
+    const j = await r.json();
+    if (!r.ok) return json({ error: 'ai', message: 'الكاتب ما رد، جربي بعد شوي', detail: j?.error?.message }, 502);
+    const txt = (j.content || []).map((x: any) => x.text || '').join('').trim();
+    let out: unknown; try { out = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)); } catch { out = { raw: txt }; }
+    await db('ai_log', { method: 'POST', body: JSON.stringify({ user_id: user.id, kind, prompt: userMsg.slice(0, 2000), output: out, tokens: (j.usage?.input_tokens || 0) + (j.usage?.output_tokens || 0) }) }).catch(() => {});
+    return json({ kind, out, left: MONTH_CAP - n - 1 });
+  } catch (e) {
+    return json({ error: 'server', message: 'صار خطأ، جربي مرة ثانية', detail: String((e as Error).message || e).slice(0, 300) }, 500);
+  }
+});

@@ -2184,11 +2184,185 @@
 
   async function pageMarketing(view, _a, params, alive) {
     const tab = params.get('t') || 'seasons';
-    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['campaigns', 'الحملات']] : [])];
+    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
     const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/marketing?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
     if (tab === 'content') return mktContent(view, params, alive, head);
+    if (tab === 'compass') return mktCompass(view, alive, head);
+    if (tab === 'writer' && isManager()) return mktWriter(view, alive, head);
+    if (tab === 'studio' && isManager()) return mktStudio(view, alive, head);
     if (tab === 'campaigns' && isManager()) return mktCampaigns(view, alive, head);
     return mktSeasons(view, alive, head);
+  }
+
+  /* ======================= البوصلة ======================= */
+  const COMPASS_F = [
+    ['who', 'من نحن', 'جملتين: وش بيوتفريش ولمين', 3],
+    ['promise', 'وعدنا', 'وش تطلع فيه العميلة من عندنا', 2],
+    ['audience', 'عميلاتنا', 'كل نوع في سطر: مين هي ووش تبي', 4],
+    ['personality', 'شخصيتنا', 'لو بيوتفريش إنسانة، كيف تكون؟ صفة في كل سطر', 4],
+    ['tone_do', 'كذا نتكلم', 'سطر لكل قاعدة', 4],
+    ['tone_dont', 'كذا ما نتكلم', 'سطر لكل قاعدة', 4],
+    ['words_use', 'كلمات تشبهنا', 'مفصولة بفاصلة', 2],
+    ['words_avoid', 'كلمات ما تشبهنا', 'مفصولة بفاصلة', 2],
+    ['talk', 'وش يخلي العميلة تتكلم عنا', 'من آرائهن الحقيقية: سطر لكل سبب', 4],
+    ['proof', 'دليلنا', 'رقم حقيقي يثبت كلامنا', 2],
+  ];
+  async function mktCompass(view, alive, head) {
+    const row = await q(sb.from('brand_compass').select('*').eq('id', 1).maybeSingle());
+    if (!alive()) return;
+    const c = (row && row.data) || {};
+    const filled = COMPASS_F.filter(([k]) => String(c[k] || '').trim()).length;
+    view.innerHTML = `${head}
+      <div class="cmp-hero card"><div class="grow"><h2>البوصلة</h2><p class="muted">هوية بيوتفريش ونبرتها في مكان واحد. الكاتب الذكي يقرأها قبل كل كلمة يكتبها، والوكالة والمصورة يرجعون لها.</p></div>
+        <div class="cmp-ring" style="--p:${Math.round((filled / COMPASS_F.length) * 100)}"><b class="num">${filled}/${COMPASS_F.length}</b><span>مكتملة</span></div></div>
+      ${c.draft ? '<div class="notice warn">هذي مسودة كتبناها من آراء عميلاتكم وهوية الصالون. راجعوها وعدّلوها بكلامكم، وبعد الحفظ تصير معتمدة.</div>' : ''}
+      ${isManager() ? '' : '<div class="notice">للقراءة. التعديل للإدارة.</div>'}
+      <div class="cmp-grid">${COMPASS_F.map(([k, l, h, r]) => `<div class="card cmp-f"><label for="cf-${k}">${l}</label><span class="muted small">${h}</span>
+        <textarea class="input" id="cf-${k}" rows="${r}" ${isManager() ? '' : 'readonly'}>${esc(c[k] || '')}</textarea></div>`).join('')}</div>
+      ${isManager() ? '<div class="actions end mt"><a class="btn" href="#/marketing?t=writer">جربي الكاتب الذكي ←</a><button class="btn primary" id="cf-save">حفظ البوصلة</button></div>' : ''}`;
+    $('#cf-save', view)?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      const data = {}; COMPASS_F.forEach(([k]) => { data[k] = $(`#cf-${k}`, view).value.trim(); }); data.draft = false;
+      try { await q(sb.from('brand_compass').update({ data, updated_at: new Date().toISOString(), updated_by: S.profile?.id || null }).eq('id', 1)); toast('انحفظت البوصلة، والكاتب صار يكتب بها'); route(); } catch (err) { toast(errMsg(err), true); }
+    }));
+  }
+
+  /* ======================= الكاتب الذكي ======================= */
+  const WRITER_K = [['post', 'نص منشور', 'ثلاث زوايا، لكل وحدة خطّاف ودعوة'], ['reel', 'سيناريو ريل', 'بالثواني، مع قائمة اللقطات للمصورة'], ['ideas', 'أفكار الأسبوع', 'سبع أفكار تنضاف للوحة المحتوى'], ['brief', 'ورقة حملة', 'للمصورة أو الوكالة: الهدف والمطلوب والممنوع'], ['whatsapp', 'رسالة واتساب', 'للعميلات، ثلاث صيغ'], ['reply', 'رد على رأي', 'رد على تقييم عميلة، ثلاث صيغ']];
+  const WRITER_CH = ['إنستقرام', 'تيك توك', 'سناب', 'ستوري', 'واتساب'];
+  async function mktWriter(view, alive, head) {
+    const [pub, seasons] = await Promise.all([q(sb.rpc('site_public')), q(sb.from('mkt_seasons').select('id,name,starts_on').gte('starts_on', todayR()).order('starts_on').limit(4))]);
+    if (!alive()) return;
+    let kind = 'post', ch = 'إنستقرام';
+    const sugg = [...pub.offers.map((o) => `عرض: ${o.title}${o.price ? ` بـ${o.price}` : ''}`), ...seasons.map((s) => `تجهيز لموسم ${s.name}`), 'ليش العميلات يرجعون لنا', 'خلف الكواليس: يوم في الصالون', ...pub.team.slice(0, 2).map((t) => `تعريف بالأخصائية ${t.name}`)].slice(0, 8);
+    view.innerHTML = `${head}
+      <div class="wr card">
+        <div class="wr-h"><div><h2>الكاتب الذكي</h2><p class="muted">يكتب بصوت بيوتفريش من <a href="#/marketing?t=compass">البوصلة</a>، ويستخدم أسعاركم وعروضكم وآراء عميلاتكم الحقيقية. ما يخترع أرقام ولا آراء.</p></div></div>
+        <div class="wr-k">${WRITER_K.map(([k, l, d]) => `<button class="wr-kb ${k === kind ? 'on' : ''}" data-k="${k}"><b>${l}</b><span>${d}</span></button>`).join('')}</div>
+        <div class="field" id="wr-chw"><label>القناة</label><div class="chips">${WRITER_CH.map((c) => `<button type="button" class="chip ${c === ch ? 'on' : ''}" data-ch="${c}">${c}</button>`).join('')}</div></div>
+        <div class="field"><label id="wr-tl">عن وش؟</label><textarea class="input" id="wr-t" rows="2" maxlength="600" placeholder="مثلًا: عرض المانيكير والبديكير لنهاية الأسبوع"></textarea>
+          <div class="chips wrap" style="margin-top:8px">${sugg.map((x) => `<button type="button" class="chip sm" data-s="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>
+        <div class="actions end"><button class="btn primary" id="wr-go">✦ اكتبي</button></div>
+      </div>
+      <div id="wr-out"></div>`;
+    const setKind = (k) => { kind = k; $$('.wr-kb', view).forEach((b) => b.classList.toggle('on', b.dataset.k === k)); $('#wr-chw', view).hidden = !['post', 'reel'].includes(k); $('#wr-tl', view).textContent = k === 'reply' ? 'الصقي رأي العميلة' : k === 'ideas' ? 'وش التركيز هالأسبوع؟ (اختياري)' : 'عن وش؟'; };
+    $$('.wr-kb', view).forEach((b) => b.onclick = () => setKind(b.dataset.k));
+    $$('[data-ch]', view).forEach((b) => b.onclick = () => { ch = b.dataset.ch; $$('[data-ch]', view).forEach((x) => x.classList.toggle('on', x === b)); });
+    $$('[data-s]', view).forEach((b) => b.onclick = () => { $('#wr-t', view).value = b.dataset.s; });
+    $('#wr-go', view).onclick = (e) => busy(e.currentTarget, async () => {
+      const out = $('#wr-out', view);
+      out.innerHTML = '<div class="card wr-wait"><span class="spinner"></span> تكتب لك الحين… <span class="muted small">تقرأ البوصلة والأسعار والآراء أول</span></div>';
+      try {
+        const { data: s0 } = await sb.auth.getSession();
+        const r = await fetch(`${CFG.supabaseUrl}/functions/v1/ai-writer`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseKey, Authorization: `Bearer ${s0.session?.access_token}` }, body: JSON.stringify({ kind, topic: $('#wr-t', view).value.trim(), channel: ['post', 'reel'].includes(kind) ? ch : '' }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) { out.innerHTML = `<div class="card notice warn">${esc(j.message || 'الكاتب ما رد')}${j.error === 'no_key' ? '<br><span class="small">يحتاج صالح يحط مفتاح الكاتب في إعدادات Supabase مرة وحدة.</span>' : ''}</div>`; return; }
+        out.innerHTML = wrRender(kind, j.out) + `<p class="muted small" style="text-align:center">باقي ${j.left} طلب هالشهر · راجعي النص قبل النشر</p>`;
+        $$('[data-copy]', out).forEach((b) => b.onclick = () => copyTxt(b.closest('.wr-r').querySelector('.wr-txt').innerText, 'النص'));
+        $$('[data-add]', out).forEach((b) => b.onclick = () => busy(b, async () => {
+          const x = JSON.parse(b.dataset.add);
+          try { await q(sb.from('mkt_posts').insert({ title: x.title.slice(0, 120), kind: x.kind || 'post', pillar: x.pillar || null, notes: (x.notes || '').slice(0, 1000), status: 'idea' })); b.textContent = 'انضافت ✓'; b.disabled = true; } catch (err) { toast(errMsg(err), true); }
+        }));
+      } catch (err) { out.innerHTML = `<div class="card notice warn">${esc(errMsg(err))}</div>`; }
+    });
+  }
+  function wrRender(kind, o) {
+    if (!o || o.raw) return `<div class="card wr-r"><div class="wr-txt" style="white-space:pre-wrap">${esc(o?.raw || '')}</div><div class="actions"><button class="btn sm" data-copy>نسخ</button></div></div>`;
+    const add = (title, k, pillar, notes) => `<button class="btn sm" data-add='${esc(JSON.stringify({ title, kind: k, pillar, notes }))}'>${I.plus} للوحة المحتوى</button>`;
+    const box = (h, body, extra = '') => `<div class="card wr-r">${h ? `<div class="wr-rh">${h}</div>` : ''}<div class="wr-txt">${body}</div><div class="actions"><button class="btn sm" data-copy>نسخ</button>${extra}</div></div>`;
+    const P = (t) => `<p>${esc(t || '').replace(/\n/g, '<br>')}</p>`;
+    if (kind === 'post') return (o.angles || []).map((a) => box(esc(a.angle), `<p><b>${esc(a.hook)}</b></p>${P(a.body)}<p><b>${esc(a.cta)}</b></p>${(a.hashtags || []).length ? `<p class="muted">${a.hashtags.map((h) => esc(h.startsWith('#') ? h : '#' + h)).join(' ')}</p>` : ''}`, add(a.hook || a.angle, 'post', null, `${a.hook}\n${a.body}\n${a.cta}`))).join('');
+    if (kind === 'reel') return box(`${esc(o.title)} · ${o.seconds || ''} ثانية`, `<table class="wr-tb"><tr><th>الثواني</th><th>اللقطة</th><th>على الشاشة</th><th>الصوت</th></tr>${(o.beats || []).map((b) => `<tr><td class="num">${esc(b.t)}</td><td>${esc(b.shot)}</td><td>${esc(b.text)}</td><td>${esc(b.voice)}</td></tr>`).join('')}</table>${(o.shots || []).length ? `<p><b>قائمة اللقطات</b></p><ul>${o.shots.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}<p><b>الدعوة:</b> ${esc(o.cta)}</p>${o.caption ? `<p><b>الوصف:</b> ${esc(o.caption)}</p>` : ''}`, add(o.title, 'reel', null, (o.beats || []).map((b) => `${b.t}: ${b.shot}`).join('\n')));
+    if (kind === 'brief') return box('ورقة الحملة', `<p><b>الهدف:</b> ${esc(o.goal)}</p><p><b>الحقيقة عن العميلة:</b> ${esc(o.truth)}</p><p><b>الرسالة:</b> ${esc(o.message)}</p><p><b>المطلوب تسليمه</b></p><ul>${(o.deliverables || []).map((x) => `<li>${esc(x)}</li>`).join('')}</ul><p><b>لازم</b></p><ul>${(o.must || []).map((x) => `<li>${esc(x)}</li>`).join('')}</ul><p><b>ممنوع</b></p><ul>${(o.avoid || []).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>${o.timing ? `<p><b>التوقيت:</b> ${esc(o.timing)}</p>` : ''}`);
+    if (kind === 'ideas') return `<div class="card"><div class="list">${(o.ideas || []).map((x) => `<div class="row"><div class="grow"><div class="title">${esc(x.title)}</div><div class="meta">${POST_KIND[x.kind] || ''}${PILLAR[x.pillar] ? ' · ' + PILLAR[x.pillar] : ''} · ${esc(x.why || '')}</div></div>${add(x.title, POST_KIND[x.kind] ? x.kind : 'post', PILLAR[x.pillar] ? x.pillar : null, x.why)}</div>`).join('')}</div></div>`;
+    return (o.options || []).map((x) => box(esc(x.tone), P(x.text), kind === 'whatsapp' ? `<a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(x.text || '')}">${I.wa} افتحي في واتساب</a>` : '')).join('');
+  }
+
+  /* ======================= استوديو التصاميم ======================= */
+  const STU_SIZES = { post: [1080, 1350, 'منشور'], sq: [1080, 1080, 'مربع'], story: [1080, 1920, 'ستوري'] };
+  const STU_THEMES = { oud: ['#6A3229', '#3F1D17', '#F3EBDF', '#E3C690'], cream: ['#FBF6EF', '#E8DFD1', '#4A2620', '#9C6A45'], rose: ['#C99286', '#7E4639', '#FFF6F1', '#FFE3C2'], gold: ['#EBD5A4', '#A8834C', '#3F1D17', '#5A2A22'] };
+  const STU_T = [['offer', 'عرض'], ['review', 'كلمة عميلة'], ['service', 'خدمة الأسبوع'], ['count', 'عدّ تنازلي'], ['season', 'تهنئة موسم'], ['team', 'أخصائية'], ['hours', 'أوقات العمل']];
+  async function mktStudio(view, alive, head) {
+    const [pub, svcs, seasons] = await Promise.all([q(sb.rpc('site_public')), q(sb.from('salon_services').select('id,name,price,description').eq('is_active', true).order('popular', { ascending: false }).limit(80)), q(sb.from('mkt_seasons').select('name,emoji,starts_on').gte('starts_on', todayR()).order('starts_on').limit(6))]);
+    if (!alive()) return;
+    const st = { t: 'offer', size: 'post', theme: 'oud', photo: null, f: {} };
+    const defaults = () => {
+      const o = pub.offers[0] || {}, r = pub.reviews.find((x) => x.text.length < 160) || pub.reviews[0] || {}, s = svcs[0] || {}, se = seasons[0] || {}, tm = pub.team[0] || {};
+      return {
+        offer: { k: 'عرض خاص', h: o.title || 'باقة دلّعي نفسك', s: o.subtitle || 'مانيكير + بديكير + استشوار', p: o.price || '٢٩٩ ريال', w: o.was || '' },
+        review: { k: `★ ${pub.stats ? Number(pub.stats.avg).toFixed(1) : ''} من ${pub.stats ? pub.stats.n : ''} تقييم`, h: r.text || '', s: `${r.name || ''}${r.service ? ' · ' + r.service : ''}` },
+        service: { k: 'خدمة الأسبوع', h: s.name || '', s: (s.description || '').slice(0, 90), p: s.price ? `${Number(s.price)} ريال` : '' },
+        count: { k: o.title || 'العرض', h: o.ends ? String(Math.max(0, Math.ceil((new Date(o.ends + 'T23:59:59+03:00') - Date.now()) / 864e5))) : '٣', s: 'أيام وينتهي', p: o.price || '' },
+        season: { k: se.emoji || '✦', h: se.name ? `${se.name}` : 'كل عام وأنتم بخير', s: 'من كل قلب، فريق بيوتفريش' },
+        team: { k: 'تعرّفي على', h: tm.name || '', s: tm.n ? `★ ${tm.avg} من ${tm.n} رأي` : '' },
+        hours: { k: 'أوقات العمل', h: (pub.conf && pub.conf.hours) || 'يوميًا ١٠ص – ١٠م', s: (pub.conf && pub.conf.address) || 'الأحساء' },
+      };
+    };
+    let D0 = defaults();
+    view.innerHTML = `${head}
+      <div class="stu">
+        <div class="stu-side card">
+          <div class="field"><label>القالب</label><div class="chips wrap">${STU_T.map(([k, l]) => `<button type="button" class="chip ${k === st.t ? 'on' : ''}" data-t="${k}">${l}</button>`).join('')}</div></div>
+          <div class="field"><label>المقاس</label><div class="chips">${Object.entries(STU_SIZES).map(([k, v]) => `<button type="button" class="chip ${k === st.size ? 'on' : ''}" data-z="${k}">${v[2]}</button>`).join('')}</div></div>
+          <div class="field"><label>الألوان</label><div class="stu-sw">${Object.entries(STU_THEMES).map(([k, c]) => `<button type="button" class="${k === st.theme ? 'on' : ''}" data-th="${k}" style="background:linear-gradient(135deg,${c[0]},${c[1]})"></button>`).join('')}</div></div>
+          <div id="stu-fields"></div>
+          <div class="field"><label>صورة (اختياري)</label><input type="file" accept="image/*" class="input" id="stu-ph"></div>
+          <button class="btn primary" id="stu-dl" style="width:100%">نزّلي التصميم</button>
+        </div>
+        <div class="stu-stage"><div class="stu-scale" id="stu-scale"><div id="stu-art"></div></div></div>
+      </div>`;
+    const fieldsFor = (t) => {
+      const F = { offer: [['k', 'السطر الصغير'], ['h', 'العنوان'], ['s', 'الوصف'], ['p', 'السعر'], ['w', 'بدل']], review: [['k', 'فوق'], ['h', 'كلام العميلة'], ['s', 'الاسم والخدمة']], service: [['k', 'فوق'], ['h', 'الخدمة'], ['s', 'وصف'], ['p', 'السعر']], count: [['k', 'العرض'], ['h', 'الرقم'], ['s', 'تحت الرقم'], ['p', 'السعر']], season: [['k', 'رمز'], ['h', 'العنوان'], ['s', 'الكلمة']], team: [['k', 'فوق'], ['h', 'الاسم'], ['s', 'سطر تحت']], hours: [['k', 'فوق'], ['h', 'الأوقات'], ['s', 'المكان']] }[t];
+      const pick = t === 'review' ? `<div class="field"><label>اختاري رأي حقيقي</label><select class="input" id="stu-rv">${pub.reviews.slice(0, 40).map((r, i) => `<option value="${i}">${esc(r.name)}: ${esc(r.text.slice(0, 50))}</option>`).join('')}</select></div>`
+        : t === 'service' ? `<div class="field"><label>الخدمة</label><select class="input" id="stu-sv">${svcs.map((s, i) => `<option value="${i}">${esc(s.name)}</option>`).join('')}</select></div>`
+        : t === 'team' ? `<div class="field"><label>الأخصائية</label><select class="input" id="stu-tm">${pub.team.map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('')}</select></div>` : '';
+      $('#stu-fields', view).innerHTML = pick + F.map(([k, l]) => `<div class="field"><label>${l}</label>${k === 'h' && t === 'review' ? `<textarea class="input" rows="3" data-f="${k}">${esc(D0[t][k] || '')}</textarea>` : `<input class="input" data-f="${k}" value="${esc(D0[t][k] || '')}">`}</div>`).join('');
+      st.f = { ...D0[t] };
+      $$('[data-f]', view).forEach((x) => x.oninput = () => { st.f[x.dataset.f] = x.value; draw(); });
+      $('#stu-rv', view)?.addEventListener('change', (e) => { const r = pub.reviews[+e.target.value]; setF({ h: r.text, s: `${r.name}${r.service ? ' · ' + r.service : ''}` }); });
+      $('#stu-sv', view)?.addEventListener('change', (e) => { const s = svcs[+e.target.value]; setF({ h: s.name, s: (s.description || '').slice(0, 90), p: s.price ? `${Number(s.price)} ريال` : '' }); });
+      $('#stu-tm', view)?.addEventListener('change', (e) => { const x = pub.team[+e.target.value]; setF({ h: x.name, s: x.n ? `★ ${x.avg} من ${x.n} رأي` : '' }); });
+    };
+    const setF = (o) => { Object.assign(st.f, o); Object.entries(o).forEach(([k, v]) => { const el = $(`[data-f="${k}"]`, view); if (el) el.value = v; }); draw(); };
+    const draw = () => {
+      const [W, H] = STU_SIZES[st.size], [c1, c2, fg, ac] = STU_THEMES[st.theme], f = st.f, t = st.t;
+      const light = st.theme === 'cream' || st.theme === 'gold';
+      const logo = `../home/assets/Beautfresh-${light ? 'brown' : 'cream'}.svg`;
+      const big = t === 'count' ? `<div class="sa-num">${esc(f.h)}</div>` : t === 'review' ? `<div class="sa-q">“${esc(f.h)}”</div>` : `<div class="sa-h">${esc(f.h)}</div>`;
+      $('#stu-art', view).innerHTML = `<div class="sa sa-${t} ${st.photo ? 'has-ph' : ''}" style="width:${W}px;height:${H}px;--c1:${c1};--c2:${c2};--fg:${fg};--ac:${ac}">
+        <div class="sa-pat" style="${light ? '' : 'filter:brightness(0) invert(1)'}"></div>
+        ${st.photo ? `<div class="sa-ph" style="background-image:url('${st.photo}')"></div>` : ''}
+        <img class="sa-logo" src="${logo}" alt="">
+        <div class="sa-body"><div class="sa-k">${esc(f.k || '')}</div>${big}${t === 'review' ? '<div class="sa-st">★★★★★</div>' : ''}${f.s ? `<div class="sa-s">${esc(f.s)}</div>` : ''}
+          ${f.p ? `<div class="sa-p"><b>${esc(f.p)}</b>${f.w ? `<s>${esc(f.w)}</s>` : ''}</div>` : ''}</div>
+        <div class="sa-foot">beautfresh.com/book</div></div>`;
+      const stage = $('.stu-stage', view), k = Math.min((stage.clientWidth - 24) / W, 640 / H);
+      const sc = $('#stu-scale', view); sc.style.width = W * k + 'px'; sc.style.height = H * k + 'px'; $('#stu-art', view).style.transform = `scale(${k})`;
+    };
+    $$('[data-t]', view).forEach((b) => b.onclick = () => { st.t = b.dataset.t; $$('[data-t]', view).forEach((x) => x.classList.toggle('on', x === b)); fieldsFor(st.t); draw(); });
+    $$('[data-z]', view).forEach((b) => b.onclick = () => { st.size = b.dataset.z; $$('[data-z]', view).forEach((x) => x.classList.toggle('on', x === b)); draw(); });
+    $$('[data-th]', view).forEach((b) => b.onclick = () => { st.theme = b.dataset.th; $$('[data-th]', view).forEach((x) => x.classList.toggle('on', x === b)); draw(); });
+    $('#stu-ph', view).onchange = (e) => { const f = e.target.files[0]; if (!f) { st.photo = null; draw(); return; } const r = new FileReader(); r.onload = () => { st.photo = r.result; draw(); }; r.readAsDataURL(f); };
+    $('#stu-dl', view).onclick = (e) => busy(e.currentTarget, async () => {
+      try {
+        await stuLib(); const node = $('#stu-art .sa', view);
+        const prev = $('#stu-art', view).style.transform; $('#stu-art', view).style.transform = 'none';
+        const url = await window.htmlToImage.toPng(node, { pixelRatio: 1, fontEmbedCSS: await stuFonts(), cacheBust: true });
+        $('#stu-art', view).style.transform = prev;
+        const a = document.createElement('a'); a.href = url; a.download = `beautfresh-${st.t}-${st.size}.png`; a.click(); toast('نزل التصميم');
+      } catch (err) { toast('ما قدرت أنزّله، جربي مرة ثانية', true); }
+    });
+    window.addEventListener('resize', draw, { passive: true });
+    fieldsFor(st.t); draw();
+  }
+  let STU_FONT_CSS = null;
+  async function stuLib() { if (window.htmlToImage) return; await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+  async function stuFonts() {
+    if (STU_FONT_CSS) return STU_FONT_CSS;
+    const css = await (await fetch('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Aref+Ruqaa:wght@700&display=swap')).text();
+    let out = css.split('/*').filter((b) => /^\s*(arabic|latin)\s*\*\//.test(b)).map((b) => b.replace(/^[^*]*\*\//, '')).join('\n');
+    const urls = [...new Set([...out.matchAll(/url\((https:[^)]+)\)/g)].map((m) => m[1]))];
+    await Promise.all(urls.map(async (u) => { const bl = await (await fetch(u)).blob(); const d = await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(bl); }); out = out.split(u).join(d); }));
+    return (STU_FONT_CSS = out);
   }
 
   async function mktSeasons(view, alive, head) {
@@ -3579,14 +3753,16 @@
     view.innerHTML = head + `
       <div class="card"><div class="field"><label>أوقات العمل</label><input class="input" id="c-h" maxlength="120" value="${esc(c.hours || '')}"></div>
         <div class="field"><label>المدينة أو الحي</label><input class="input" id="c-a" maxlength="80" value="${esc(c.address || '')}"></div>
-        <div class="field"><label>رابط الموقع على خرائط Google</label><input class="input" id="c-m" dir="ltr" value="${esc(c.map_url || '')}" placeholder="https://maps.app.goo.gl/…"></div></div>
+        <div class="field"><label>رابط الموقع على خرائط Google <span class="muted small">(الصقي أي رابط، ونرتبه ونطلع الإحداثيات للخريطة)</span></label><input class="input" id="c-m" dir="ltr" value="${esc(c.map_url || '')}" placeholder="https://maps.app.goo.gl/…"></div></div>
       <div class="section-title"><h2>أقسام تطلع في الموقع</h2><span class="muted small">القسم الفاضي ما يطلع حتى لو مفعّل</span></div>
       <div class="card" id="c-secs">${drawSecs()}</div>
       <div class="actions end mt"><button class="btn primary" id="c-s">حفظ</button></div>`;
     $('#c-s', view).onclick = (e) => busy(e.currentTarget, async () => {
       secs = $$('[data-sec]', view).filter((x) => x.checked).map((x) => x.dataset.sec);
       const m = $('#c-m', view).value.trim(); if (m && !/^https:\/\//.test(m)) return toast('رابط الخريطة لازم يبدأ بـ https', true);
-      try { await q(sb.from('site_conf').update({ hours: $('#c-h', view).value.trim() || null, address: $('#c-a', view).value.trim() || null, map_url: m || null, sections: secs, updated_at: new Date().toISOString() }).eq('id', 1)); toast('انحفظ، والموقع تحدّث'); } catch (err) { toast(errMsg(err), true); }
+      let lat = c.lat, lng = c.lng, clean = m;
+      if (m) { const a = m.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) || m.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/); if (a) { lat = +a[1]; lng = +a[2]; } const cid = m.match(/0x[0-9a-f]+:0x([0-9a-f]+)/i); if (cid) clean = `https://maps.google.com/?cid=${BigInt('0x' + cid[1]).toString()}`; }
+      try { await q(sb.from('site_conf').update({ hours: $('#c-h', view).value.trim() || null, address: $('#c-a', view).value.trim() || null, map_url: clean || null, lat: lat || null, lng: lng || null, sections: secs, updated_at: new Date().toISOString() }).eq('id', 1)); toast('انحفظ، والموقع تحدّث'); } catch (err) { toast(errMsg(err), true); }
     });
   }
 

@@ -206,3 +206,7 @@ h1{font-size:30px;font-weight:800;color:var(--oud);margin:8px 0 2px;line-height:
 .danger{background:none;border:1px solid #D9A79C;color:#8C2C1B;border-radius:16px;padding:12px;font-weight:700;width:100%;margin-top:8px}
 .top a{display:block;line-height:0}
 .top a .logo{display:block}
+
+.giftban{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:20px;background:linear-gradient(150deg,#6A3229,#3F1D17);color:#F3EBDF;margin-bottom:14px;animation:gbIn .6s cubic-bezier(.2,.8,.2,1) both}
+.giftban img{width:44px;flex:none}.giftban b{display:block;font-size:15px}.giftban small{font-size:12.5px;color:#D9C6B7;line-height:1.6}
+@keyframes gbIn{from{opacity:0;transform:translateY(-8px)}}

@@ -1,0 +1,46 @@
+/* بطاقة إهداء بيوتفريش العمودية (مشتركة بين صفحة التصميم وصفحة الفتح) */
+.bfc{--c1:#6A3229;--c2:#3F1D17;--fg:#F3EBDF;--fg2:#D9C6B7;--ac:#C9A46A;position:relative;width:100%;aspect-ratio:10/16;perspective:1400px;font-family:Tajawal,system-ui,sans-serif}
+.bfc-in{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.2,.8,.2,1)}
+.bfc.flipped .bfc-in{transform:rotateY(180deg)}
+.bfc-f,.bfc-b{position:absolute;inset:0;border-radius:28px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;color:var(--fg);background:linear-gradient(160deg,var(--c1),var(--c2));box-shadow:0 40px 60px -34px rgba(40,18,14,.85),inset 0 0 0 1px rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;text-align:center;padding:9% 8% 7%}
+.bfc-b{transform:rotateY(180deg)}
+.bfc-pat{position:absolute;inset:0;pointer-events:none;opacity:.08}
+.p-rosette .bfc-pat{background:url(../home/assets/rosette-2.svg) 0 0/30px 30px;filter:brightness(0) invert(1)}
+.p-leaves .bfc-pat{background:url(../home/assets/gift-mark-cream.svg) center 8%/150% auto no-repeat;opacity:.09}
+.p-plain .bfc-pat{display:none}
+.bfc-glow{position:absolute;inset:-30%;background:radial-gradient(circle at var(--gx,30%) var(--gy,20%),rgba(255,255,255,.22),transparent 45%);pointer-events:none;transition:background .2s}
+.bfc-shine{position:absolute;inset:-50%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.18) 50%,transparent 58%);transform:translateX(var(--sx,-70%));pointer-events:none;transition:transform .2s ease-out}
+.bfc-f>*:not(.bfc-pat):not(.bfc-glow):not(.bfc-shine),.bfc-b>*:not(.bfc-pat):not(.bfc-shine){position:relative;z-index:1}
+.bfc-logo{width:30%;max-width:120px}
+.bfc-occ{margin-top:7%;font-family:"Aref Ruqaa",serif;font-size:clamp(20px,6.5cqw,30px);line-height:1.4;color:var(--ac)}
+.bfc{container-type:inline-size}
+.bfc-emo{font-size:clamp(26px,9cqw,40px);line-height:1;margin-top:3%;animation:bfcFloat 3.2s ease-in-out infinite}
+@keyframes bfcFloat{50%{transform:translateY(-6px) rotate(8deg)}}
+.bfc-to{margin-top:auto;font-size:clamp(13px,4cqw,16px);color:var(--fg2)}
+.bfc-name{font-size:clamp(26px,9cqw,40px);font-weight:700;line-height:1.25}
+.bfc-msg{margin:4% 0 0;font-size:clamp(14px,4.6cqw,19px);line-height:1.75;max-width:92%;color:var(--fg)}
+.f-ruqaa .bfc-msg{font-family:"Aref Ruqaa",serif;font-size:clamp(16px,5.4cqw,22px)}
+.f-naskh .bfc-msg{font-family:Amiri,serif;font-size:clamp(16px,5.2cqw,21px)}
+.f-modern .bfc-msg{font-family:Tajawal,sans-serif;font-weight:500}
+.bfc-from{margin-top:3%;font-size:clamp(12px,3.8cqw,15px);color:var(--fg2)}
+.bfc-val{margin-top:auto;display:flex;align-items:baseline;gap:6px;justify-content:center;border-top:1px solid color-mix(in srgb,var(--fg) 22%,transparent);padding-top:5%;width:100%}
+.bfc-val b{font-size:clamp(30px,11cqw,48px);font-weight:700;line-height:1}
+.bfc-val span{font-size:clamp(12px,4cqw,16px);color:var(--fg2)}
+.bfc-code{margin-top:3%;font-size:clamp(11px,3.4cqw,13px);letter-spacing:.2em;direction:ltr;color:var(--fg2)}
+/* الخلف */
+.bfc-b h4{margin:0;font-size:clamp(14px,4.4cqw,17px);font-weight:500;color:var(--fg2)}
+.bfc-qr{margin:6% 0 3%;width:46%;aspect-ratio:1;border-radius:18px;background:#FBF7F1;padding:4%;display:grid;place-items:center}
+.bfc-qr svg{width:100%;height:100%}
+.bfc-bcode{font-size:clamp(18px,6.4cqw,26px);font-weight:700;letter-spacing:.14em;direction:ltr}
+.bfc-rows{width:100%;margin-top:6%;display:grid;gap:6px}
+.bfc-rows div{display:flex;justify-content:space-between;font-size:clamp(12px,3.8cqw,14.5px);padding:6px 0;border-bottom:1px dashed color-mix(in srgb,var(--fg) 22%,transparent)}
+.bfc-rows span{color:var(--fg2)}
+.bfc-terms{margin-top:auto;font-size:clamp(10px,3cqw,11.5px);line-height:1.7;color:var(--fg2);opacity:.9}
+/* الألوان */
+.t-oud{--c1:#6A3229;--c2:#3F1D17;--fg:#F3EBDF;--fg2:#D9C6B7;--ac:#E3C690}
+.t-rose{--c1:#C99286;--c2:#7E4639;--fg:#FFF6F1;--fg2:#F2D9D0;--ac:#FFE3C2}
+.t-gold{--c1:#EBD5A4;--c2:#A8834C;--fg:#3F1D17;--fg2:#6B4A3A;--ac:#5A2A22}
+.t-sand{--c1:#FBF6EF;--c2:#DCCFBD;--fg:#4A2620;--fg2:#7A5D51;--ac:#9C6A45}
+.t-gold.p-rosette .bfc-pat,.t-sand.p-rosette .bfc-pat{filter:none}
+.t-gold.p-leaves .bfc-pat,.t-sand.p-leaves .bfc-pat{background-image:url(../home/assets/gift-mark.svg)}
+.t-gold .bfc-qr,.t-sand .bfc-qr{background:#fff}

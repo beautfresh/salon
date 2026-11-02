@@ -3568,7 +3568,8 @@
   }
 
   const genCode = () => 'BF-' + Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('');
-  const vState = (v) => (v.redeemed_on ? ['used', 'استُخدمت', ''] : v.expires_on && until(v.expires_on) < 0 ? ['exp', 'انتهت', 'danger'] : ['ok', 'سارية', 'ok']);
+  const vState = (v) => (v.status === 'pending' ? ['pend', 'طلب جديد', 'warn'] : v.status === 'cancelled' ? ['can', 'ملغي', ''] : v.status === 'used' || v.redeemed_on ? ['used', 'استُخدمت', ''] : v.expires_on && until(v.expires_on) < 0 ? ['exp', 'انتهت', 'danger'] : ['ok', 'سارية', 'ok']);
+  const giftLink = (v) => `https://beautfresh.com/gift/open/?t=${v.token}`;
   function voucherHTML(v, K) {
     return `<div class="voucher"><div class="vc-l"><img class="vc-logo" src="../home/assets/gift-logo.svg" alt="بيوتفريش للإهداء"><span class="vc-eb">قسيمة هدية</span><h2>${esc(v.value_text)}</h2>
       ${v.to_name ? `<span class="vc-to">إلى: <b>${esc(v.to_name)}</b></span>` : ''}${v.from_name ? `<span class="vc-to">من: <b>${esc(v.from_name)}</b></span>` : ''}${v.message ? `<p class="vc-msg">«${esc(v.message)}»</p>` : ''}
@@ -3579,13 +3580,14 @@
     const rows = await q(sb.from('gift_vouchers').select('*').order('created_at', { ascending: false }).limit(300));
     if (!alive()) return;
     const live = rows.filter((v) => vState(v)[0] === 'ok');
-    const out = live.filter((v) => v.paid).reduce((s, v) => s + Number(v.amount || 0), 0);
+    const out = live.filter((v) => v.paid).reduce((s, v) => s + Number(v.balance ?? v.amount ?? 0), 0);
+    const pend = rows.filter((v) => v.status === 'pending');
     view.innerHTML = `${head}
-      <div class="seg-tiles"><div class="seg-tile on"><b class="num">${live.length}</b><span>قسائم سارية</span></div><div class="seg-tile gold"><b class="num">${sar(out)}</b><span>قيمتها (التزام علينا)</span></div><div class="seg-tile"><b class="num">${rows.filter((v) => v.redeemed_on).length}</b><span>استُخدمت</span></div><div class="seg-tile"><b class="num">${rows.filter((v) => vState(v)[0] === 'exp').length}</b><span>انتهت</span></div></div>
+      <div class="seg-tiles"><div class="seg-tile on"><b class="num">${live.length}</b><span>قسائم سارية</span></div><div class="seg-tile gold"><b class="num">${sar(out)}</b><span>قيمتها (التزام علينا)</span></div><div class="seg-tile ${pend.length ? 'warn' : ''}"><b class="num">${pend.length}</b><span>طلبات من الموقع</span></div><div class="seg-tile"><b class="num">${rows.filter((v) => vState(v)[0] === 'exp').length}</b><span>انتهت</span></div></div>
       <div class="cl-bar mt"><input class="input" id="gv-q" placeholder="ابحث برقم القسيمة أو الاسم" dir="auto"><button class="btn primary" id="gv-new">${I.plus} قسيمة</button></div>
       <div class="list" id="gv-l"></div>`;
-    const draw = () => { const t = $('#gv-q').value.trim().toUpperCase(); const r = t ? rows.filter((v) => v.code.includes(t) || (v.to_name || '').includes(t) || (v.from_name || '').includes(t)) : rows;
-      $('#gv-l').innerHTML = r.map((v) => { const [st, l, c] = vState(v); return `<button class="row" data-v="${v.id}"><span class="gv-ic">🎁</span><div class="grow"><div class="title">${esc(v.value_text)} ${v.to_name ? `<span class="muted small">· ${esc(v.to_name)}</span>` : ''}</div><div class="meta"><span dir="ltr">${v.code}</span> · ${dShort(v.issued_on)}${v.redeemed_on ? ` · استُخدمت ${dShort(v.redeemed_on)}` : ''}</div></div><span class="badge ${c}">${l}</span></button>`; }).join('') || '<div class="empty">قسيمة الهدية أحلى هدية تنعطى، وأحلى إعلان للصالون. سوّوا أول وحدة.</div>';
+    const draw = () => { const t = $('#gv-q').value.trim().toUpperCase(); const r = (t ? rows.filter((v) => v.code.includes(t) || (v.to_name || '').includes(t) || (v.from_name || '').includes(t)) : rows).slice().sort((a, b) => (b.status === 'pending') - (a.status === 'pending'));
+      $('#gv-l').innerHTML = r.map((v) => { const [st, l, c] = vState(v); return `<button class="row" data-v="${v.id}"><span class="gv-ic">🎁</span><div class="grow"><div class="title">${esc(v.value_text)} ${v.to_name ? `<span class="muted small">· ${esc(v.to_name)}</span>` : ''}</div><div class="meta"><span dir="ltr">${v.code}</span> · ${dShort(v.issued_on)}${v.status === 'pending' ? ` · طلب #${v.id} من الموقع` : v.balance != null && v.amount != null && Number(v.balance) < Number(v.amount) ? ` · الرصيد ${sar(v.balance)}` : ''}${v.redeemed_on ? ` · استُخدمت ${dShort(v.redeemed_on)}` : ''}</div></div><span class="badge ${c}">${l}</span></button>`; }).join('') || '<div class="empty">قسيمة الهدية أحلى هدية تنعطى، وأحلى إعلان للصالون. سوّوا أول وحدة.</div>';
       $$('[data-v]', view).forEach((b) => b.onclick = () => voucherView(rows.find((x) => x.id === Number(b.dataset.v)), K)); };
     $('#gv-q').addEventListener('input', draw); draw();
     $('#gv-new').onclick = () => voucherForm(K);
@@ -3596,12 +3598,14 @@
       <div class="chips wrap" style="margin-bottom:10px">${['مانيكير وبديكير', 'جلسة استشوار', 'باقة دلّعي نفسك', '٢٠٠ ريال', '٥٠٠ ريال'].map((x) => `<button type="button" class="chip" data-s="${x}">${x}</button>`).join('')}</div>
       <div class="grid2"><div class="field"><label>الهدية</label><input class="input" id="gf-v" maxlength="80" placeholder="مانيكير وبديكير"></div><div class="field"><label>قيمتها (ر.س)</label><input class="input num" type="number" min="0" id="gf-a"></div></div>
       <div class="grid2"><div class="field"><label>إلى</label><input class="input" id="gf-t" maxlength="60"></div><div class="field"><label>من</label><input class="input" id="gf-f" maxlength="60"></div></div>
+      <div class="field"><label>جوالها (نرسل لها رابط البطاقة)</label><input class="input" id="gf-ph" inputmode="tel" dir="ltr" maxlength="14" placeholder="05xxxxxxxx"></div>
       <div class="field"><label>كلمة على القسيمة</label><input class="input" id="gf-m" maxlength="200" placeholder="كل عام وأنتِ بخير يا أحلى أخت"></div>
       <div class="grid2"><div class="field"><label>صالحة لين</label><input class="input" type="date" id="gf-e" value="${exp}"></div><label class="check" style="align-self:end;margin-bottom:14px"><input type="checkbox" id="gf-p" checked> مدفوعة</label></div>
       <div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="gf-s">إصدار</button></div>`, (el, close) => {
       $$('[data-s]', el).forEach((b) => b.onclick = () => { $('#gf-v', el).value = b.dataset.s; const n = b.dataset.s.match(/[٠-٩\d]+/); if (n) $('#gf-a', el).value = n[0].replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)); });
       $('#gf-s', el).onclick = (e) => busy(e.currentTarget, async () => {
         const row = { code: genCode(), value_text: $('#gf-v', el).value.trim(), amount: $('#gf-a', el).value === '' ? null : Number($('#gf-a', el).value), to_name: $('#gf-t', el).value.trim() || null, from_name: $('#gf-f', el).value.trim() || null, message: $('#gf-m', el).value.trim() || null, expires_on: $('#gf-e', el).value || null, paid: $('#gf-p', el).checked };
+        row.balance = row.amount; { const ph = $('#gf-ph', el).value.replace(/\D/g, ''); if (ph) { if (!/^05\d{8}$/.test(ph)) return toast('رقم الجوال غير صحيح', true); row.to_phone = ph; } }
         if (row.value_text.length < 2) return toast('اكتبوا الهدية', true);
         try { const v = await q(sb.from('gift_vouchers').insert(row).select('*').single()); close(); voucherView(v, K, true); } catch (err) { toast(errMsg(err), true); }
       });
@@ -3609,12 +3613,25 @@
   }
   function voucherView(v, K, fresh) {
     const [st] = vState(v);
-    const text = `هلا ${v.to_name ? firstName(v.to_name) : ''} 🤍\nوصلتك هدية${v.from_name ? ` من ${v.from_name}` : ''} في بيوتفريش!\nقسيمتك: ${v.value_text}\nرقمها: ${v.code}${v.expires_on ? `\nصالحة لين ${v.expires_on}` : ''}${K.booking ? `\nاحجزي من هنا: ${K.booking}` : ''}`;
-    paper('قسيمة هدية', `<div class="pp-wrap">${voucherHTML(v, K)}</div>`, {
-      extra: `<a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}">${I.wa} أرسلها</a>${st === 'ok' ? '<button class="btn sm" data-red>استُخدمت اليوم</button>' : ''}${isManager() ? '<button class="btn sm" data-del>حذف</button>' : ''}`,
+    const link = giftLink(v);
+    const text = `هلا ${v.to_name ? firstName(v.to_name) : ''} 🤍\nوصلتك هدية${v.from_name ? ` من ${v.from_name}` : ''} من بيوتفريش 🎁\nافتحيها من هنا:\n${link}`;
+    const to = v.to_phone ? `https://wa.me/${waNum(v.to_phone)}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    paper('قسيمة هدية', `<div class="pp-wrap">${voucherHTML(v, K)}${v.status === 'pending' ? `<div class="notice warn" style="margin-top:14px">طلب من الموقع بانتظار الدفع${v.from_phone ? ` · جوال المرسلة <span dir="ltr">${esc(v.from_phone)}</span>` : ''}${v.deliver_on ? ` · توصيل يوم ${esc(v.deliver_on)}` : ''}. بعد ما يتأكد الدفع فعّلوها وأرسلوها.</div>` : ''}${v.balance != null && st === 'ok' ? `<div class="notice info" style="margin-top:14px">الرصيد الحالي ${sar(v.balance)} من ${sar(v.amount)}${v.opened_at ? ' · فتحت البطاقة ✓' : ''}</div>` : ''}</div>`, {
+      extra: `${st === 'pend' ? '<button class="btn sm primary" data-act>تفعيل (تم الدفع)</button>' : `<a class="btn sm" target="_blank" rel="noopener" href="${to}">${I.wa} أرسليها لها</a><button class="btn sm" data-copy>نسخ الرابط</button><a class="btn sm" target="_blank" rel="noopener" href="${link}">معاينة</a>`}${st === 'ok' ? '<button class="btn sm" data-red>استخدام من الرصيد</button>' : ''}${isManager() ? '<button class="btn sm" data-del>حذف</button>' : ''}`,
       mount: (ov, close) => {
         if (fresh) toast('القسيمة جاهزة 🎁');
-        $('[data-red]', ov)?.addEventListener('click', (e) => busy(e.currentTarget, async () => { try { await q(sb.from('gift_vouchers').update({ redeemed_on: todayR() }).eq('id', v.id)); toast('تم تسجيل الاستخدام'); close(); route(); } catch (err) { toast(errMsg(err), true); } }));
+        $('[data-copy]', ov)?.addEventListener('click', () => copyTxt(link, 'رابط البطاقة'));
+        $('[data-act]', ov)?.addEventListener('click', (e) => busy(e.currentTarget, async () => { try { const nv = await q(sb.rpc('gift_activate', { p_id: v.id })); toast('تفعّلت البطاقة 🎁'); close(); voucherView(nv, K); } catch (err) { toast(errMsg(err), true); } }));
+        $('[data-red]', ov)?.addEventListener('click', () => {
+          const bal = v.balance != null ? Number(v.balance) : null;
+          modal(`<h3>استخدام من البطاقة</h3><p class="muted small" style="margin-top:-4px">${bal != null ? `الرصيد ${sar(bal)} ر.س` : 'قسيمة خدمة (بدون رصيد)'}</p>${bal != null ? `<div class="field"><label>قيمة الخدمة اللي انقدمت (ر.س)</label><input class="input num" id="rd-a" type="number" min="1" max="${bal}" value="${bal}"></div>` : ''}<div class="actions end"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="rd-s">تسجيل</button></div>`, (el, c2) => {
+            $('#rd-s', el).onclick = (ev) => busy(ev.currentTarget, async () => {
+              const a = bal != null ? Number($('#rd-a', el).value) : null;
+              if (bal != null && !(a > 0 && a <= bal)) return toast('المبلغ لازم يكون أقل من الرصيد أو يساويه', true);
+              try { const nv = await q(sb.rpc('gift_redeem', { p_id: v.id, p_amount: a })); toast(nv.status === 'used' ? 'خلص رصيد البطاقة' : `تم، باقي ${sar(nv.balance)} ر.س`); c2(); close(); route(); } catch (err) { toast(errMsg(err), true); }
+            });
+          });
+        });
         $('[data-del]', ov)?.addEventListener('click', async () => { try { await q(sb.from('gift_vouchers').delete().eq('id', v.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
         $('[data-x]', ov).addEventListener('click', () => { if (fresh) route(); });
       },

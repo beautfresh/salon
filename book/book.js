@@ -92,7 +92,8 @@ function s0() {
   const last = store.get();
   const pops = C.services.filter((s) => s.pop).slice(0, 8);
   return `<div class="screen${S.dir ? ' back' : ''}">` +
-    (last && last.name && last.items && last.items.length ? `<button class="again" id="again"><span><b>أهلًا ${esc(last.name)}، نرجع لنفس الطلّة؟</b><small>${esc(last.label || '')}</small></span><span class="arr">احجزيها ←</span></button>` : '') +
+    (S.gift ? `<div class="giftban"><img src="../home/assets/gift-mark-cream.svg" alt=""><span><b>أهلًا ${esc(S.gift.to)}، عندك بطاقة هدية 🎁</b><small>رصيدك ${sar(S.gift.balance)}. اختاري خدمتك ونحجز لك، والدفع من رصيدك بالصالون.</small></span></div>` : '') +
+    (!S.gift && last && last.name && last.items && last.items.length ? `<button class="again" id="again"><span><b>أهلًا ${esc(last.name)}، نرجع لنفس الطلّة؟</b><small>${esc(last.label || '')}</small></span><span class="arr">احجزيها ←</span></button>` : '') +
     `<h1>احجزي موعدك</h1><p class="sub">اختاري الخدمة والوقت، وخلاص. بدون حساب وبدون رمز.</p>` +
     `<label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="ابحثي: استشوار، جيل، رموش…" value="${esc(S.q)}" autocomplete="off" aria-label="بحث"></label>` +
     `<div class="chips"><button class="chip${S.g < 0 ? ' on' : ''}" data-g="-1">الكل</button>${GROUPS.map((g, i) => `<button class="chip${S.g === i ? ' on' : ''}" data-g="${i}">${g[1]}</button>`).join('')}</div>` +
@@ -169,7 +170,7 @@ async function submit() {
   if (S.busy) return; S.busy = true; bar();
   try {
     const r = C.settings.rekaz
-      ? await RK({ action: 'book', name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time })
+      ? await RK({ action: 'book', name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, gift: S.gift ? S.gift.token : undefined })
       : await rpc('sb_create', { p: { name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, member_id: S.staff || null, notes: S.notes.trim() } });
     if (C.settings.rekaz) { r.code = r.number ? String(r.number) : ''; r.pay = null; }
     S.res = r;
@@ -195,6 +196,7 @@ function s3() {
     `<h1>انحجز، يا ${esc(nm)}</h1><div class="when">${dayLabel(S.slot.day)} · ${tLabel(S.slot.time)}</div>${S.res.code ? `<span class="status">رقم الحجز ${esc(S.res.code)}</span>` : ''}` +
     `<div class="card ticket">${S.sel.map((x) => `<div class="sumrow"><span>${esc(x.name)}</span><span class="num">${sar(x.price)}</span></div>`).join('')}<div class="sumrow sumtot"><span>الإجمالي</span><span class="num">${sar(total())}</span></div><div class="sumrow"><span>المكان</span><span>بيوتفريش · الأحساء</span></div></div>` +
     (S.res.pay ? `<a class="primary" href="${esc(S.res.pay)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:12px">تفاصيل الحجز والدفع</a>` : '') +
+    (S.gift ? `<p class="note">🎁 حجزك مربوط ببطاقة هديتك <b dir="ltr">${esc(S.gift.code)}</b>، والدفع من رصيدك في الصالون.</p>` : '') +
     `<a class="waBtn" href="${waLink(msg)}" target="_blank" rel="noopener">أرسلي الحجز على واتساب الصالون</a>` +
     (C.settings.rekaz ? `<p class="note">تحتاجين تعدلين الموعد أو تلغينه؟ راسلينا على واتساب الصالون وحنا نرتبه لك.</p>` : `<p class="note">نأكد لك الموعد على الواتساب، ومن نفس الرابط تقدرين تعدلين أو تلغين.</p>`) +
     `<button class="primary" id="again2" style="margin-top:10px">احجزي موعد ثاني</button></div></div>`;
@@ -280,6 +282,7 @@ $('#veil').onclick = close;
   try { C = await rpc('sb_catalog', {}); C.services.forEach((s) => { s.price = +s.price; (s.opts || []).forEach((o) => o.price = +o.price); }); }
   catch { main.innerHTML = '<div class="screen"><h1>صار خطأ بسيط</h1><p class="sub">تأكدي من الإنترنت وحدّثي الصفحة.</p><button class="primary" onclick="location.reload()">حدّثي</button></div>'; return; }
   if (!C.settings.accepting) { main.innerHTML = `<div class="screen"><h1>الحجز متوقف مؤقتًا</h1><p class="sub">تواصلي معنا على الواتساب ونرتّب موعدك.</p><a class="waBtn" href="https://wa.me/${esc(C.settings.whatsapp)}" target="_blank" rel="noopener">واتساب الصالون</a></div>`; return; }
+  if (P.get('gift')) { try { const g = await rpc('gift_open', { p_token: P.get('gift') }); if (g && g.status === 'active') { S.gift = { token: P.get('gift'), to: g.to, code: g.code, balance: +g.balance }; S.name = g.to || ''; S.phone = String(g.phone || '').replace(/^0/, ''); } } catch {} }
   const pre = +P.get('s'); if (pre) { const s = svcById(pre); if (s && !(s.opts && s.opts.length)) toggle(s); }
   render();
 })();

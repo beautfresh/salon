@@ -173,6 +173,7 @@ Deno.serve(async (req) => {
       }, key);
       let number: number | null = null;
       try { const rv = await call('GET', `/reservations/${r.reservationIds[0]}`); number = rv?.number ?? null; } catch (_) { /* optional */ }
+      if (b.gift && number && /^[0-9a-f-]{36}$/i.test(String(b.gift))) { try { await db.rpc('gift_mark_booking', { p_token: b.gift, p_number: number }); } catch (_) { /* optional */ } }
       return out({ ok: true, number, orderId: r.orderId, paymentLink: r.paymentLink, lines: lines.map((l) => l.name) });
     }
     return out({ error: 'unknown_action' }, 400);

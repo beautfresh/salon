@@ -161,8 +161,8 @@ function s2() {
     `<div class="fld"><label for="ph">الجوال</label><div class="tel"><span>+966</span><input id="ph" inputmode="tel" autocomplete="tel-national" placeholder="5X XXX XXXX" value="${esc(fmtPhone(S.phone))}"></div></div>` +
     `<div class="fld"><label for="nt">ملاحظة <small style="color:var(--mute)">(اختياري)</small></label><input id="nt" maxlength="300" placeholder="مثلًا: أول مرة أصبغ" value="${esc(S.notes)}"></div>` +
     `<div class="lbl">الدفع</div><div class="pay"><button class="pm on" type="button"><span class="rd"></span><span><b>الدفع في الصالون</b><small>كاش أو مدى أو Apple Pay بعد الخدمة</small></span></button>` +
-    (C.settings.rekaz ? `<p class="note" style="text-align:right;margin:4px 0 0">بعد الحجز يطلع لك رابط «تفاصيل الحجز والدفع»، وتقدرين تدفعين منه أونلاين إذا كان متاح.</p></div>` : `<button class="pm" type="button" disabled><span class="rd"></span><span><b>ادفعي أونلاين</b><small>عربون يثبّت موعدك</small><span class="brands"><span>Apple Pay</span><span>mada</span><span>VISA</span></span></span><span class="soonb">قريبًا</span></button></div>`) +
-    `<div id="err"></div><p class="note">تقدرين تعدلين موعدك أو تلغينه من رابط الواتساب.</p></div>`;
+    (C.settings.rekaz ? `</div>` : `<button class="pm" type="button" disabled><span class="rd"></span><span><b>ادفعي أونلاين</b><small>عربون يثبّت موعدك</small><span class="brands"><span>Apple Pay</span><span>mada</span><span>VISA</span></span></span><span class="soonb">قريبًا</span></button></div>`) +
+    `<div id="err"></div><p class="note">${C.settings.rekaz ? 'تقدرين تعدلين موعدك أو تلغينه بالتواصل مع الصالون على الواتساب.' : 'تقدرين تعدلين موعدك أو تلغينه من رابط الواتساب.'}</p></div>`;
 }
 const fmtPhone = (d) => d.replace(/^(\d{2})(\d{0,3})(\d{0,4}).*/, (m, a, b, c) => [a, b, c].filter(Boolean).join(' '));
 async function submit() {
@@ -171,7 +171,7 @@ async function submit() {
     const r = C.settings.rekaz
       ? await RK({ action: 'book', name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time })
       : await rpc('sb_create', { p: { name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, member_id: S.staff || null, notes: S.notes.trim() } });
-    if (C.settings.rekaz) { r.code = r.number ? String(r.number) : ''; r.pay = r.paymentLink; }
+    if (C.settings.rekaz) { r.code = r.number ? String(r.number) : ''; r.pay = null; }
     S.res = r;
     store.set({ name: S.name.trim(), phone: S.phone, items: itemsArg(), label: S.sel.map((x) => x.name).join('، '), at: Date.now() });
     S.busy = false; go(3);
@@ -196,7 +196,7 @@ function s3() {
     `<div class="card ticket">${S.sel.map((x) => `<div class="sumrow"><span>${esc(x.name)}</span><span class="num">${sar(x.price)}</span></div>`).join('')}<div class="sumrow sumtot"><span>الإجمالي</span><span class="num">${sar(total())}</span></div><div class="sumrow"><span>المكان</span><span>بيوتفريش · الأحساء</span></div></div>` +
     (S.res.pay ? `<a class="primary" href="${esc(S.res.pay)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:12px">تفاصيل الحجز والدفع</a>` : '') +
     `<a class="waBtn" href="${waLink(msg)}" target="_blank" rel="noopener">أرسلي الحجز على واتساب الصالون</a>` +
-    `<p class="note">نأكد لك الموعد على الواتساب، ومن نفس الرابط تقدرين تعدلين أو تلغين.</p>` +
+    (C.settings.rekaz ? `<p class="note">تحتاجين تعدلين الموعد أو تلغينه؟ راسلينا على واتساب الصالون وحنا نرتبه لك.</p>` : `<p class="note">نأكد لك الموعد على الواتساب، ومن نفس الرابط تقدرين تعدلين أو تلغين.</p>`) +
     `<button class="primary" id="again2" style="margin-top:10px">احجزي موعد ثاني</button></div></div>`;
 }
 

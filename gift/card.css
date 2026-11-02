@@ -9,7 +9,7 @@
 .p-leaves .bfc-pat{background:url(../home/assets/gift-mark-cream.svg) center 8%/150% auto no-repeat;opacity:.09}
 .p-plain .bfc-pat{display:none}
 .bfc-glow{position:absolute;inset:-30%;background:radial-gradient(circle at var(--gx,30%) var(--gy,20%),rgba(255,255,255,.22),transparent 45%);pointer-events:none;transition:background .2s}
-.bfc-shine{position:absolute;inset:-50%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.18) 50%,transparent 58%);transform:translateX(var(--sx,-70%));pointer-events:none;transition:transform .2s ease-out}
+.bfc-shine{position:absolute;inset:-50%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.1) 50%,transparent 58%);transform:translateX(var(--sx,-70%));pointer-events:none;transition:transform .2s ease-out}
 .bfc-f>*:not(.bfc-pat):not(.bfc-glow):not(.bfc-shine),.bfc-b>*:not(.bfc-pat):not(.bfc-shine){position:relative;z-index:1}
 .bfc-logo{width:30%;max-width:120px}
 .bfc-occ{margin-top:7%;font-family:"Aref Ruqaa",serif;font-size:clamp(20px,6.5cqw,30px);line-height:1.4;color:var(--ac)}

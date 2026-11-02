@@ -15,7 +15,7 @@
 <link rel="icon" href="../../home/assets/gift-mark.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../card.css?v=1">
+<link rel="stylesheet" href="../card.css?v=2">
 <style>
 :root{--oud:#5A2A22;--on:#F3EBDF;--on2:#D9C6B7;--gold:#C9A46A;--ease:cubic-bezier(.2,.8,.2,1)}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%}
@@ -78,7 +78,7 @@ button,a{font:inherit;color:inherit;text-decoration:none;cursor:pointer}
 <div class="toast" id="toast"></div>
 <script src="../../vendor/qrcode.js"></script>
 <script src="../../assets/config.js"></script>
-<script src="../card.js?v=1"></script>
+<script src="../card.js?v=2"></script>
 <script>
 (async () => {
   const { html, interact, fmt, esc, dateAr } = window.BFCard;
@@ -120,7 +120,7 @@ button,a{font:inherit;color:inherit;text-decoration:none;cursor:pointer}
       intro.classList.add('gone');
       const cols = ['#C9A46A', '#F3EBDF', '#C99286', '#E3C690'];
       for (let i = 0; i < 40; i++) { const c = document.createElement('i'); c.className = 'conf'; const a = (i / 40) * 6.283, r = 120 + (i * 37) % 120; c.style.cssText = `background:${cols[i % 4]};--x:${Math.cos(a) * r}px;--y:${Math.sin(a) * r - 60}px;--dl:${(i % 6) * .03}s`; document.body.appendChild(c); setTimeout(() => c.remove(), 2200); }
-      setTimeout(() => { intro.remove(); $('#rev').classList.add('show'); navigator.vibrate?.(30); }, 380);
+      setTimeout(() => { intro.remove(); $('#rev').classList.add('show'); navigator.vibrate?.(30); setTimeout(() => prepare().catch(() => {}), 1800); }, 380);
     }, 650);
   };
   $('#env').onclick = open;
@@ -129,15 +129,26 @@ button,a{font:inherit;color:inherit;text-decoration:none;cursor:pointer}
   // حفظ صورة
   let h2i = null;
   const lib = () => h2i || (h2i = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js'; s.onload = () => res(window.htmlToImage); s.onerror = rej; document.head.appendChild(s); }));
-  const png = async () => { const H = await lib(); const box = $('#exp'); box.innerHTML = html(g); await document.fonts.ready; const node = box.querySelector('.bfc-f'); const url = await H.toPng(node, { pixelRatio: 2, cacheBust: true }); box.innerHTML = ''; return url; };
+  // الخطوط مضمّنة في الصورة (عشان تطلع نفس البطاقة بالضبط)
+  const fontCSS = async () => {
+    const href = [...document.querySelectorAll('link[rel=stylesheet]')].map((l) => l.href).find((h) => h.includes('fonts.googleapis'));
+    const css = await (await fetch(href)).text();
+    const blocks = css.split('/*').filter((b) => /^\s*(arabic|latin)\s*\*\//.test(b)).map((b) => b.replace(/^[^*]*\*\//, ''));
+    let out = blocks.join('\n');
+    const urls = [...new Set([...out.matchAll(/url\((https:[^)]+)\)/g)].map((m) => m[1]))];
+    await Promise.all(urls.map(async (u) => { const bl = await (await fetch(u)).blob(); const d = await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(bl); }); out = out.split(u).join(d); }));
+    return out;
+  };
+  let ready = null, readyUrl = null;
+  const png = async () => { const H = await lib(); const fcss = await fontCSS().catch(() => undefined); const box = $('#exp'); box.innerHTML = html(g); await document.fonts.ready; const node = box.querySelector('.bfc-f'); const url = await H.toPng(node, { pixelRatio: 2, cacheBust: true, fontEmbedCSS: fcss }); box.innerHTML = ''; return url; };
+  const prepare = () => ready || (ready = png().then(async (url) => { readyUrl = url; const bl = await (await fetch(url)).blob(); return new File([bl], 'هدية-بيوتفريش.png', { type: 'image/png' }); }).catch((e) => { ready = null; throw e; }));
+  const download = (url) => { const a = document.createElement('a'); a.href = url; a.download = 'هدية-بيوتفريش.png'; document.body.appendChild(a); a.click(); a.remove(); toast('انحفظت الصورة 🤍'); };
   $('#save').onclick = async (e) => {
-    const b = e.currentTarget; b.disabled = true; b.textContent = 'نجهّزها…';
-    try {
-      const url = await png();
-      const blob = await (await fetch(url)).blob(), file = new File([blob], 'هدية-بيوتفريش.png', { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'هديتي من بيوتفريش' });
-      else { const a = document.createElement('a'); a.href = url; a.download = 'هدية-بيوتفريش.png'; a.click(); toast('انحفظت الصورة 🤍'); }
-    } catch (err) { if (err?.name !== 'AbortError') toast('ما قدرنا نحفظها، جربي مرة ثانية'); }
+    const b = e.currentTarget;
+    // إذا الصورة جاهزة نشاركها فورًا (المتصفح يطلب إنها تصير مع الضغطة)
+    if (readyUrl) { try { const file = await ready; if (navigator.canShare?.({ files: [file] }) && /Android|iPhone|iPad/i.test(navigator.userAgent)) await navigator.share({ files: [file], title: 'هديتي من بيوتفريش' }); else download(readyUrl); } catch (err) { if (err?.name !== 'AbortError') download(readyUrl); } return; }
+    b.disabled = true; b.textContent = 'نجهّزها…';
+    try { await prepare(); download(readyUrl); } catch { toast('ما قدرنا نحفظها، جربي مرة ثانية'); }
     b.disabled = false; b.textContent = '⤓ احفظيها صورة';
   };
   $('#share').onclick = async () => {

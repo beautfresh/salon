@@ -4886,7 +4886,7 @@
       const M = G.milestones || [];
       if (M.length) {
         const nm = M.slice(0, 3).map((x) => esc(firstName(x.name) || 'عميلة')).join('، ');
-        out.push(['🎉', M.length === 1 ? `<b>${nm}</b> وصلت زيارتها رقم ${M[0].n} عندكم هالأسبوع. رسالة شكر صغيرة تخليها تحس إنها مميزة` : `<b>${sdN(M.length)} عميلات</b> وصلن محطة جديدة هالأسبوع (${nm}${M.length > 3 ? '…' : ''}): زيارة رقم 10 أو 20 أو أكثر. رسالة شكر صغيرة تفرق`, 'good', null, `<button class="sd-in-act" id="sd-ms">أرسلي لهن شكر ←</button>`]);
+        out.push(['🎉', M.length === 1 ? `<b>${nm}</b> وصلت زيارتها رقم ${M[0].n} عندكم هالأسبوع. رسالة شكر صغيرة تخليها تحس إنها مميزة` : `<b>${sdN(M.length)} عميلات</b> وصلن محطة جديدة هالأسبوع (${nm}${M.length > 3 ? '…' : ''}): زيارة رقم 10 أو 20 أو أكثر. رسالة شكر صغيرة تفرق`, 'good', null, `<button class="sd-in-act" id="sd-ms">${M.length === 1 ? 'أرسلي لها شكر' : 'أرسلي لهن شكر'} ←</button>`]);
       }
     }
     return out;

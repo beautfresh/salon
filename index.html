@@ -223,6 +223,8 @@
     .loc .go a.main { background: var(--oud); border-color: var(--oud); color: var(--on); }
     .loc .go a:hover, .loc .go button:hover { border-color: var(--oud); transform: translateY(-1px); }
     @media (max-width: 860px) { .loc { grid-template-columns: 1fr; } .loc .map { min-height: 240px; } .loc .txt { padding: 22px; } }
+    footer .legal { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; }
+    footer .legal .sep { opacity: .5; }
   </style>
 </head>
 <body>
@@ -337,6 +339,7 @@
       <img src="home/assets/Beautfresh-brown.svg" alt="بيوتفريش">
       <p>The Fresh Version of You</p>
       <div class="links"><a href="book/">الحجز في الصالون</a><span class="soonl">الخدمات المنزلية <em>قريبًا</em></span><a href="https://www.instagram.com/beautfresh" target="_blank" rel="noopener">إنستقرام</a></div>
+      <div class="legal">© <span id="yr">2026</span> بيوتفريش. جميع الحقوق محفوظة.<span class="sep">·</span>الأحساء، المملكة العربية السعودية</div>
     </div>
   </footer>
 
@@ -355,6 +358,7 @@
   <script src="assets/config.js"></script>
   <script>
     (async () => {
+      document.getElementById('yr').textContent = new Date().getFullYear();
       const C = window.APP_CONFIG; if (!C) return;
       const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
       const AR = (n) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);

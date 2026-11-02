@@ -154,8 +154,9 @@ Deno.serve(async (req) => {
       const { lines, branchId, maxOpen } = await resolve(b.items);
       const { count } = await db.from('rekaz_reservations').select('id', { count: 'exact', head: true }).eq('phone', phone).gt('start_at', new Date().toISOString()).not('status', 'in', '(cancelled,done)');
       if ((count || 0) >= maxOpen) throw new Error('too_many');
-      const start = new Date(`${b.day}T${b.time}:00+03:00`);
-      const p = await plans(lines, branchId, new Date(start.getTime() - 60_000), new Date(start.getTime() + 60_000), member);
+      // نفس نافذة البحث اللي طلعت منها الأوقات للعميلة (اليوم كامل)، ونطابق الوقت
+      const dayFrom = dayStartUTC(b.day), dayTo = new Date(dayFrom.getTime() + 86_400_000);
+      const p = await plans(lines, branchId, new Date(Math.max(dayFrom.getTime(), Date.now() + 5 * 60_000)), dayTo, member);
       const plan = p.find((x) => x.time === b.time && x.day === b.day);
       if (!plan) throw new Error('slot_taken');
       const intl = '966' + phone.slice(1);

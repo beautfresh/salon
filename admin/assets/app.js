@@ -532,7 +532,9 @@
     const yday = dk(lensShift('d', D(tk), -1));
     const M = isManager(), cnt = (pr) => pr.then((x) => x.count || 0, () => 0);
     // كل الطلبات مع بعض بدل وحدة ورا الثانية
-    const [expiring, drafts, moves, bkTd, bkPd, bkNx, spA, spB, spR, LZ, fr, tg, yc, cl, ocN, Ly, tpv, tms, tlv, mr, mIss, mPl, me] = await Promise.all([
+    const lzP = M ? q(sb.rpc('biz_lens')).catch(() => null) : Promise.resolve(null);
+    let LZ = null;
+    const [expiring, drafts, moves, bkTd, bkPd, bkNx, spA, spB, spR, _lz0, fr, tg, yc, cl, ocN, Ly, tpv, tms, tlv, mr, mIss, mPl, me] = await Promise.all([
       q(sb.rpc('get_expiring', { p_days: CFG.expiryWarningDays })).catch(() => []),
       q(sb.from('purchase_invoices').select('id', { count: 'exact', head: false }).eq('status', 'draft')).catch(() => []),
       q(sb.from('stock_movements').select('id,item_id,movement_type,qty,reason,created_by,created_at').order('created_at', { ascending: false }).limit(8)).catch(() => []),
@@ -542,7 +544,7 @@
       cnt(sb.from('salon_bookings').select('id', { count: 'exact', head: true }).gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()).not('status', 'in', '(cancelled,no_show)')),
       cnt(sb.from('salon_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending').gte('starts_at', new Date().toISOString())),
       cnt(sb.from('rekaz_reservations').select('id', { count: 'exact', head: true }).gte('start_at', dayStart.toISOString()).lt('start_at', dayEnd.toISOString()).not('status', 'ilike', '%cancel%')),
-      M ? q(sb.rpc('biz_lens')).catch(() => null) : null,
+      null,
       M ? q(sb.rpc('fin_range', { p_from: dk(hs), p_to: dk(he) })).catch(() => null) : null,
       M ? q(sb.from('fin_targets').select('revenue').eq('month', monthKey(D(tk))).maybeSingle()).catch(() => null) : null,
       M ? q(sb.from('fin_daily').select('day').eq('day', yday).maybeSingle()).catch(() => 'x') : 'x',
@@ -626,7 +628,7 @@
     const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
-      ${LZ ? lensHome(LZ, hl, autoLens()) : ''}
+      ${M ? `<section class="lz" id="lz-slot"><div class="lens lz-bar">${LENS.map(([k, l]) => `<a class="${k === hl ? 'on' : ''}">${l}</a>`).join('')}</div><div class="lz-card lz-skel"><span></span><span></span><span></span></div></section>` : ''}
       <a class="tour-banner" href="#/tour"><div class="tb-txt"><span>جديد في بيوتفريش ✦</span><b>جولة في كل المميزات</b><small>٢٢ ميزة، وحدة وحدة، في خمس دقايق</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-3.svg" alt=""></a>
       ${isManager() ? `<a class="tour-banner nq" href="#/naqla"><div class="tb-txt"><span>قبل وبعد ✦</span><b>نقلة بيوتفريش</b><small>الحجز من ركاز إلى موقعنا: المقارنة كاملة</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-1.svg" alt=""></a>` : ''}
       ${myShift}
@@ -673,8 +675,13 @@
     $('#ms-leave')?.addEventListener('click', async () => leaveForm(await teamData()));
     const expLink = $('a[href="#expiring"]', view);
     expLink.addEventListener('click', (e) => { e.preventDefault(); $('#expiring').scrollIntoView({ behavior: 'smooth' }); });
-    // تبديل العدسة فوري: بدون تحميل الصفحة من جديد
-    if (LZ) {
+    // العدسات تتحمّل بعد ما تطلع الصفحة، والتبديل بينها فوري
+    LZ = await lzP;
+    if (!alive()) return;
+    const slot = $('#lz-slot', view);
+    if (slot && !LZ) slot.remove();
+    if (slot && LZ) {
+      const tmp0 = document.createElement('div'); tmp0.innerHTML = lensHome(LZ, hl, autoLens()); slot.replaceWith(tmp0.firstElementChild);
       const pulseFor = async (k) => {
         const pb = $('.pulse-body', view); if (!pb) return;
         pb.classList.add('lz-busy');

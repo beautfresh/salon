@@ -162,6 +162,53 @@
     .way.home .new.soon { background: rgba(243, 235, 223, .16); color: var(--on); }
     .soonl { opacity: .75; cursor: default; white-space: nowrap; }
     .soonl em, .btn.is-soon em { font-style: normal; font-size: 11px; padding: 1px 8px; margin-inline-start: 4px; border-radius: 999px; border: 1px solid currentColor; opacity: .85; }
+
+    /* ── محتوى حي من الإدارة: العروض، الآراء، الفريق، المعرض ── */
+    .live[hidden] { display: none !important; }
+    .live { padding: 10px 0 90px; }
+    .rail { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px max(20px, calc((100vw - 1120px) / 2 + 20px)) 18px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .rail::-webkit-scrollbar { display: none; }
+    .rail > * { scroll-snap-align: start; flex: none; }
+    .of { width: min(340px, 82vw); border-radius: var(--r); padding: 26px; background: linear-gradient(160deg, #6A3229, #3F1D17); color: var(--on); display: grid; gap: 8px; position: relative; overflow: hidden; }
+    .of::after { content: ""; position: absolute; inset: 0; background: url("home/assets/rosette-2.svg") 0 0 / 26px 26px; opacity: .06; filter: brightness(0) invert(1); pointer-events: none; }
+    .of > * { position: relative; z-index: 1; }
+    .of .tag { justify-self: start; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(243, 235, 223, .14); color: var(--on-2); }
+    .of h3 { font-size: 24px; font-weight: 500; line-height: 1.35; }
+    .of p { color: var(--on-2); font-size: 15px; line-height: 1.7; }
+    .of .pr { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; }
+    .of .pr b { font-size: 28px; font-weight: 700; color: #fff; }
+    .of .pr s { color: var(--on-2); opacity: .8; }
+    .of img { width: calc(100% + 52px); margin: -26px -26px 6px; height: 170px; object-fit: cover; }
+    .of .btn { margin-top: 10px; justify-self: start; min-height: 46px; padding: 0 22px; }
+    .rv-top { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: -14px 0 22px; }
+    .rv-score { display: flex; align-items: baseline; gap: 10px; color: var(--oud); }
+    .rv-score b { font-size: 46px; font-weight: 700; line-height: 1; }
+    .stars { color: #C9A46A; letter-spacing: 2px; font-size: 18px; }
+    .rv-top small { color: var(--ink-2); font-size: 14px; }
+    .chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; padding: 0 20px; }
+    .chips button { font: inherit; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; transition: all .3s var(--ease); }
+    .chips button.on { background: var(--oud); border-color: var(--oud); color: var(--on); }
+    .rv { width: min(320px, 80vw); background: var(--paper); border-radius: 24px; padding: 22px; display: grid; gap: 10px; align-content: start; transition: opacity .35s var(--ease), transform .35s var(--ease); }
+    .rv .stars { font-size: 15px; }
+    .rv p { font-size: 16px; line-height: 1.8; color: var(--ink); }
+    .rv .who { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ink-2); border-top: 1px dashed var(--line); padding-top: 10px; margin-top: auto; }
+    .rv .who b { color: var(--oud); font-weight: 500; }
+    .rv .svc { color: var(--oud); font-size: 13px; background: var(--soft); border-radius: 999px; padding: 3px 10px; justify-self: start; }
+    .tm { width: 210px; background: var(--paper); border-radius: 24px; padding: 22px 18px; display: grid; justify-items: center; text-align: center; gap: 6px; }
+    .tm .av { width: 84px; height: 84px; border-radius: 50%; background: var(--soft); display: grid; place-items: center; font-size: 32px; color: var(--oud); overflow: hidden; margin-bottom: 6px; box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--line); }
+    .tm .av img { width: 100%; height: 100%; object-fit: cover; }
+    .tm h3 { font-size: 20px; font-weight: 500; }
+    .tm .t { color: var(--ink-2); font-size: 13px; min-height: 20px; }
+    .tm .sc { font-size: 14px; color: var(--ink-2); }
+    .tm .sc b { color: var(--oud); }
+    .tm a { margin-top: 8px; font-size: 14px; color: var(--oud); font-weight: 500; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; transition: all .3s var(--ease); }
+    .tm a:hover { background: var(--oud); color: var(--on); border-color: var(--oud); }
+    .gl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .gl a { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 5; background: var(--soft); }
+    .gl img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
+    .gl a:hover img { transform: scale(1.04); }
+    .gl span { position: absolute; inset: auto 0 0; padding: 30px 12px 10px; font-size: 13px; color: #fff; background: linear-gradient(transparent, rgba(40, 18, 14, .7)); }
+    @media (max-width: 860px) { .gl { grid-template-columns: repeat(2, 1fr); } .live { padding-bottom: 64px; } }
   </style>
 </head>
 <body>
@@ -226,6 +273,10 @@
     </section>
 
 
+    <section class="live" id="offers" hidden>
+      <div class="wrap sec-head reveal"><span class="label">Offers</span><h2>عروض هالفترة</h2></div>
+      <div class="rail" id="of-rail"></div>
+    </section>
     <section class="menu" id="menu">
       <div class="wrap sec-head reveal"><span class="label">The menu</span><h2>قائمة الخدمات</h2><p>أكثر من ٨٠ خدمة للشعر والأظافر والوجه، بمنتجات نختارها بعناية وأيادي تعرف شغلها.</p></div>
       <div class="wrap grid">
@@ -238,9 +289,23 @@
       </div>
       <div class="more"><a class="btn" href="book/">شوفي الأسعار كاملة واحجزي <i>←</i></a></div>
     </section>
+    <section class="live" id="reviews" hidden>
+      <div class="wrap sec-head reveal"><span class="label">Reviews</span><h2>وش يقولون عنا</h2></div>
+      <div class="rv-top reveal"><div class="rv-score"><b class="num" id="rv-avg"></b><span class="stars">★★★★★</span></div><small id="rv-n"></small></div>
+      <div class="chips" id="rv-chips"></div>
+      <div class="rail" id="rv-rail"></div>
+    </section>
+    <section class="live" id="team" hidden>
+      <div class="wrap sec-head reveal"><span class="label">Our team</span><h2>أيادي تعرف شغلها</h2><p>اختاري أخصائيتك، أو خلّينا نختار لك الأنسب.</p></div>
+      <div class="rail" id="tm-rail"></div>
+    </section>
+    <section class="live" id="gallery" hidden>
+      <div class="wrap sec-head reveal"><span class="label">Gallery</span><h2>من شغلنا</h2></div>
+      <div class="wrap gl" id="gl-grid"></div>
+    </section>
     <section class="info" id="contact">
       <div class="wrap grid">
-        <div class="card reveal"><img src="home/assets/clock.svg" alt=""><h3>أوقات العمل</h3><p>يوميًا من ١٠ الصبح إلى ١٠ الليل، في الأحساء.</p></div>
+        <div class="card reveal"><img src="home/assets/clock.svg" alt=""><h3>أوقات العمل</h3><p id="ct-hours">يوميًا من ١٠ الصبح إلى ١٠ الليل، في الأحساء.</p><a class="cbtn" id="ct-map" href="#" target="_blank" rel="noopener" hidden>الموقع على الخريطة ←</a></div>
         <div class="card reveal" style="--d:.08s"><img src="home/assets/message.svg" alt=""><h3>تواصلي معنا</h3><span class="big num">050 949 2224</span><div class="contact-btns"><a class="cbtn wa" href="https://wa.me/966509492224" target="_blank" rel="noopener" aria-label="واتساب"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5 5.1-1.34A9.9 9.9 0 1 0 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.03.8.81-2.95-.2-.31a8.2 8.2 0 1 1 6.9 3.79Zm4.5-6.13c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.79.97-.14.16-.29.18-.53.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.46-1.37-1.7-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.13-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47a.9.9 0 0 0-.66.31c-.23.25-.86.84-.86 2.05s.88 2.38 1 2.54c.12.17 1.73 2.64 4.2 3.7.58.25 1.04.4 1.4.52.59.19 1.12.16 1.54.1.47-.07 1.46-.6 1.66-1.17.21-.58.21-1.07.15-1.17-.06-.1-.23-.17-.47-.29Z"/></svg><span>واتساب</span></a><a class="cbtn" href="tel:+966509492224" aria-label="اتصال"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></svg><span>اتصال</span></a></div></div>
         <div class="card reveal" style="--d:.16s"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#82523D" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#82523D" stroke="none"/></svg><h3>تابعينا</h3><a class="big" href="https://www.instagram.com/beautfresh" target="_blank" rel="noopener">@beautfresh</a><p>جديدنا وشغلنا أول بأول على إنستقرام.</p></div>
       </div>
@@ -265,6 +330,54 @@
       if (!('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('in')); return; }
       const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
       els.forEach((e) => io.observe(e));
+    })();
+  </script>
+
+  <script src="assets/config.js"></script>
+  <script>
+    (async () => {
+      const C = window.APP_CONFIG; if (!C) return;
+      const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const AR = (n) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
+      let d; try { const r = await fetch(C.supabaseUrl + '/rest/v1/rpc/site_public', { method: 'POST', headers: { apikey: C.supabaseKey, 'Content-Type': 'application/json' }, body: '{}' }); if (!r.ok) return; d = await r.json(); } catch { return; }
+      const on = (d.conf && d.conf.sections) || ['offers', 'reviews', 'team', 'gallery'];
+      const show = (id) => { const el = document.getElementById(id); el.hidden = false; el.querySelectorAll('.reveal').forEach((e) => e.classList.add('in')); };
+      const book = (q) => 'book/' + (q ? '?' + q : '');
+      // العروض
+      if (on.includes('offers') && d.offers.length) {
+        document.getElementById('of-rail').innerHTML = d.offers.map((o) => {
+          const left = o.ends ? Math.ceil((new Date(o.ends + 'T23:59:59+03:00') - Date.now()) / 864e5) : null;
+          return `<article class="of">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy">` : ''}${left != null ? `<span class="tag">${left <= 1 ? 'آخر يوم' : 'باقي ' + AR(left) + ' أيام'}</span>` : ''}<h3>${esc(o.title)}</h3>${o.subtitle ? `<p>${esc(o.subtitle)}</p>` : ''}${o.price ? `<div class="pr"><b>${esc(o.price)}</b>${o.was ? `<s>${esc(o.was)}</s>` : ''}</div>` : ''}<a class="btn light" href="${book(o.services && o.services[0] ? 's=' + o.services[0] : '')}">احجزي العرض <i>←</i></a></article>`;
+        }).join('');
+        show('offers');
+      }
+      // الآراء
+      if (on.includes('reviews') && d.reviews.length && d.stats) {
+        document.getElementById('rv-avg').textContent = AR(Number(d.stats.avg).toFixed(1));
+        document.getElementById('rv-n').textContent = `من ${AR(Number(d.stats.n).toLocaleString('en'))} تقييم لعميلات زارونا`;
+        const cnt = {}; d.reviews.forEach((r) => { if (r.service) cnt[r.service] = (cnt[r.service] || 0) + 1; });
+        const top = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
+        const rail = document.getElementById('rv-rail'), chips = document.getElementById('rv-chips');
+        const draw = (f) => { rail.innerHTML = d.reviews.filter((r) => !f || r.service === f).slice(0, 24).map((r) => `<article class="rv"><span class="stars">${'★'.repeat(r.rating)}</span>${r.service ? `<span class="svc">${esc(r.service)}</span>` : ''}<p>${esc(r.text)}</p><div class="who"><b>${esc(r.name)}</b>${r.service_id ? `<a href="${book('s=' + r.service_id)}">احجزيها ←</a>` : ''}</div></article>`).join(''); rail.scrollTo({ left: 0 }); };
+        chips.innerHTML = ['<button class="on" data-f="">الكل</button>', ...top.map((t) => `<button data-f="${esc(t)}">${esc(t)}</button>`)].join('');
+        chips.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; chips.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); draw(b.dataset.f); });
+        draw(''); show('reviews');
+      }
+      // الفريق
+      if (on.includes('team') && d.team.length) {
+        document.getElementById('tm-rail').innerHTML = d.team.map((t) => `<article class="tm"><div class="av">${t.photo ? `<img src="${esc(t.photo)}" alt="" loading="lazy">` : esc((t.name || '؟').trim().charAt(0))}</div><h3>${esc(t.name)}</h3><div class="t">${esc(t.title || (t.top ? 'أكثر ما تسويه: ' + t.top : ''))}</div>${t.n ? `<div class="sc"><span class="stars" style="font-size:13px">★</span> <b class="num">${AR(t.avg)}</b> · ${AR(t.n)} رأي</div>` : ''}<a href="${book('pro=' + encodeURIComponent(t.id) + '&pn=' + encodeURIComponent(t.name))}">احجزي معها</a></article>`).join('');
+        show('team');
+      }
+      // المعرض
+      if (on.includes('gallery') && d.gallery.length) {
+        document.getElementById('gl-grid').innerHTML = d.gallery.slice(0, 12).map((g) => `<a href="${book(g.service_id ? 's=' + g.service_id : '')}"><img src="${esc(g.image)}" alt="${esc(g.caption || g.service || '')}" loading="lazy">${g.caption || g.service ? `<span>${esc(g.caption || g.service)}</span>` : ''}</a>`).join('');
+        show('gallery');
+      }
+      // الزيارة
+      if (d.conf) {
+        if (d.conf.hours) document.getElementById('ct-hours').textContent = d.conf.hours + (d.conf.address ? '، في ' + d.conf.address + '.' : '');
+        if (d.conf.map_url) { const m = document.getElementById('ct-map'); m.href = d.conf.map_url; m.hidden = false; }
+      }
     })();
   </script>
 </body>

@@ -280,7 +280,7 @@
     const M = isManager(), A = isAdmin();
     const G = [
       ['اليوم', [M && ['sales', 'المبيعات والأداء', I.chart], ['home', 'الرئيسية', I.home], ['appts', 'مواعيد الصالون', I.cal], ['bookings', 'الحجوزات المنزلية', I.home]]],
-      ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['finance', 'المالية', I.coin]]],
+      ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['site', 'الموقع', I.home], M && ['finance', 'المالية', I.coin]]],
       ['الفريق والتشغيل', [['team', 'الفريق', I.users], ['ops', 'التشغيل', I.check], ['assets', 'الأصول والصيانة', I.wrench], ['rules', 'قواعد بيوتفريش', I.shield]]],
       ['المخزون', [['items', 'الأصناف', I.box], ['issue', 'صرف من المخزون', I.out], ['invoices', 'فواتير الشراء', I.invoice], ['shopping', 'قائمة المشتريات', I.cart], ['movements', 'سجل الحركات', I.list], M && ['reports', 'التقارير', I.chart]]],
       ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
@@ -352,6 +352,7 @@
     team: { title: 'الفريق', nav: 'team', fn: pageTeam },
     member: { title: 'ملف الموظفة', nav: 'team', fn: pageMember },
     marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
+    site: { title: 'الموقع', nav: 'site', fn: pageSite, manager: true },
     sales: { title: 'المبيعات والأداء', nav: 'sales', fn: pageSales, manager: true },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
@@ -3417,6 +3418,176 @@
     $('[data-pr]', ov).onclick = () => { document.body.classList.add('printing-guide'); window.print(); setTimeout(() => document.body.classList.remove('printing-guide'), 500); };
     opts.mount && opts.mount(ov, close);
     return close;
+  }
+
+  /* ======================= الموقع العام: محتوى يتحكم فيه الصالون ======================= */
+  async function siteImg(file, folder) {
+    const blob = await new Promise((res) => {
+      const img = new Image(); img.onload = () => {
+        const m = 1600, k = Math.min(1, m / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob((b) => res(b || file), 'image/jpeg', 0.85); URL.revokeObjectURL(img.src);
+      }; img.onerror = () => res(file); img.src = URL.createObjectURL(file);
+    });
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+    const { error } = await sb.storage.from('site').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+    if (error) throw error;
+    return sb.storage.from('site').getPublicUrl(path).data.publicUrl;
+  }
+  const SITE_URL = 'https://beautfresh.com/';
+  const SITE_SECS = [['offers', 'العروض'], ['reviews', 'آراء العميلات'], ['team', 'الفريق'], ['gallery', 'المعرض']];
+
+  async function pageSite(view, _a, params, alive) {
+    const tab = params.get('t') || 'offers';
+    const T = [['offers', 'العروض'], ['reviews', 'الآراء'], ['team', 'الفريق'], ['gallery', 'المعرض'], ['visit', 'الزيارة والأقسام']];
+    const [pub, svcs] = await Promise.all([q(sb.rpc('site_public')), q(sb.from('salon_services').select('id,name').eq('is_active', true).order('name'))]);
+    if (!alive()) return;
+    const svcOpts = (sel) => `<option value="">— بدون —</option>${svcs.map((s) => `<option value="${s.id}" ${String(sel) === String(s.id) ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}`;
+    const head = `
+      <div class="site-hero card">
+        <div><h2>الموقع اللي تشوفه العميلة</h2><p class="muted">كل شي هنا يطلع في <b>beautfresh.com</b> مباشرة، بدون برمجة.</p></div>
+        <div class="site-stats"><div><b class="num">${pub.stats ? Number(pub.stats.avg).toFixed(1) : '—'}</b><span>متوسط التقييم</span></div><div><b class="num">${pub.offers.length}</b><span>عرض شغّال</span></div><div><b class="num">${pub.team.length}</b><span>أخصائية ظاهرة</span></div><div><b class="num">${pub.gallery.length}</b><span>صورة</span></div></div>
+        <a class="btn" href="${SITE_URL}" target="_blank" rel="noopener">شوفي الموقع ←</a>
+      </div>
+      <div class="chips" style="margin:14px 0">${T.map(([k, l]) => `<a class="chip ${k === tab ? 'on' : ''}" href="#/site?t=${k}">${l}</a>`).join('')}</div>`;
+
+    if (tab === 'offers') {
+      const rows = await q(sb.from('site_offers').select('*').order('sort').order('id', { ascending: false }));
+      if (!alive()) return;
+      const today = todayR();
+      const st = (o) => !o.active ? ['موقوف', ''] : o.ends_on && o.ends_on < today ? ['انتهى', ''] : o.starts_on && o.starts_on > today ? ['يبدأ ' + o.starts_on, 'warn'] : ['ظاهر الحين', 'ok'];
+      view.innerHTML = head + `
+        <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="of-new">${I.plus} عرض جديد</button></div>
+        ${rows.length ? `<div class="list">${rows.map((o) => { const [l, c] = st(o); return `<button class="row" data-id="${o.id}" style="text-align:start">
+          ${o.image_url ? `<img src="${esc(o.image_url)}" alt="" style="width:54px;height:54px;border-radius:14px;object-fit:cover;flex:none">` : ''}
+          <div class="grow"><div class="title">${esc(o.title)}</div><div class="meta">${esc(o.price_text || '')}${o.was_text ? ` بدل ${esc(o.was_text)}` : ''}${o.ends_on ? ` · لين ${o.ends_on}` : ''}</div></div>
+          <span class="chip-d ${c}">${l}</span></button>`; }).join('')}</div>`
+          : `<div class="empty card"><b>ما فيه عروض للحين</b><p class="muted">العرض يطلع أول شي في الموقع، ومعه عدّاد «باقي كم يوم»، وزر يفتح الحجز والخدمة جاهزة.</p></div>`}`;
+      const form = (o = {}) => modal(`<h3>${o.id ? 'تعديل العرض' : 'عرض جديد'}</h3>
+        <div class="field"><label>عنوان العرض</label><input class="input" id="o-t" maxlength="60" value="${esc(o.title || '')}" placeholder="باقة العروس"></div>
+        <div class="field"><label>وصف قصير</label><input class="input" id="o-s" maxlength="160" value="${esc(o.subtitle || '')}" placeholder="استشوار + مكياج + أظافر، في زيارة وحدة"></div>
+        <div class="grid2"><div class="field"><label>السعر</label><input class="input" id="o-p" maxlength="40" value="${esc(o.price_text || '')}" placeholder="٣٩٩ ريال"></div><div class="field"><label>بدل (اختياري)</label><input class="input" id="o-w" maxlength="40" value="${esc(o.was_text || '')}" placeholder="٥٢٠ ريال"></div></div>
+        <div class="field"><label>الخدمة اللي يفتحها زر الحجز</label><select class="input" id="o-v">${svcOpts((o.service_ids || [])[0])}</select></div>
+        <div class="grid2"><div class="field"><label>يبدأ</label><input class="input" type="date" id="o-a" value="${o.starts_on || ''}"></div><div class="field"><label>ينتهي</label><input class="input" type="date" id="o-e" value="${o.ends_on || ''}"></div></div>
+        <div class="field"><label>صورة (اختياري)</label><input type="file" accept="image/*" id="o-i" class="input">${o.image_url ? `<img src="${esc(o.image_url)}" alt="" style="margin-top:8px;max-height:120px;border-radius:12px">` : ''}</div>
+        <label class="check"><input type="checkbox" id="o-on" ${o.active === false ? '' : 'checked'}> ظاهر في الموقع</label>
+        <div class="actions end mt">${o.id ? '<button class="btn danger" id="o-del">حذف</button>' : ''}<button class="btn" data-close>إلغاء</button><button class="btn primary" id="o-save">حفظ</button></div>`, (el, close) => {
+        $('#o-save', el).onclick = (e) => busy(e.currentTarget, async () => {
+          const row = { title: $('#o-t', el).value.trim(), subtitle: $('#o-s', el).value.trim() || null, price_text: $('#o-p', el).value.trim() || null, was_text: $('#o-w', el).value.trim() || null,
+            service_ids: $('#o-v', el).value ? [Number($('#o-v', el).value)] : [], starts_on: $('#o-a', el).value || null, ends_on: $('#o-e', el).value || null, active: $('#o-on', el).checked };
+          if (row.title.length < 2) return toast('اكتبوا عنوان العرض', true);
+          if (row.starts_on && row.ends_on && row.ends_on < row.starts_on) return toast('تاريخ النهاية قبل البداية', true);
+          try { const f = $('#o-i', el).files[0]; if (f) row.image_url = await siteImg(f, 'offers');
+            if (o.id) await q(sb.from('site_offers').update(row).eq('id', o.id)); else await q(sb.from('site_offers').insert(row));
+            close(); toast('انحفظ العرض، وبيطلع في الموقع'); route(); } catch (err) { toast(errMsg(err), true); }
+        });
+        $('#o-del', el)?.addEventListener('click', async () => { if (!(await confirmBox('حذف العرض', 'يختفي من الموقع ومن هنا.', 'حذف', true))) return; try { await q(sb.from('site_offers').delete().eq('id', o.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+      });
+      $('#of-new', view).onclick = () => form();
+      $$('[data-id]', view).forEach((b) => b.onclick = () => form(rows.find((x) => String(x.id) === b.dataset.id)));
+      return;
+    }
+
+    if (tab === 'reviews') {
+      const all = await q(sb.rpc('site_reviews_admin'));
+      if (!alive()) return;
+      let f = params.get('f') || 'shown', qs = '';
+      view.innerHTML = head + `
+        <div class="notice">الموقع يعرض تلقائيًا آخر الآراء المكتوبة بأربع نجوم وفوق. ثبّتي اللي تبينها تطلع أول، وأخفي أي رأي ما يناسب.</div>
+        <div class="actions" style="margin:12px 0;gap:8px;flex-wrap:wrap">${[['shown', 'اللي تطلع في الموقع'], ['pin', 'المثبتة'], ['hide', 'المخفية'], ['low', 'أقل من ٤ نجوم'], ['all', 'الكل']].map(([k, l]) => `<button class="chip ${k === f ? 'on' : ''}" data-f="${k}">${l}</button>`).join('')}
+          <input class="input" id="rv-q" placeholder="ابحثي بالخدمة أو الأخصائية أو الكلام" style="flex:1;min-width:200px"></div>
+        <div id="rv-list"></div>`;
+      const shown = (r) => r.state !== 'hide' && (r.state === 'pin' || (r.rating >= 4 && (r.text || '').trim().length > 15));
+      const draw = () => {
+        const L = all.filter((r) => f === 'all' ? true : f === 'pin' ? r.state === 'pin' : f === 'hide' ? r.state === 'hide' : f === 'low' ? r.rating < 4 : shown(r))
+          .filter((r) => !qs || [r.text, r.service, r.by, r.name].join(' ').includes(qs)).slice(0, 120);
+        $('#rv-list', view).innerHTML = L.length ? `<div class="list">${L.map((r) => `<div class="row" style="align-items:flex-start">
+          <div class="grow"><div class="meta"><span style="color:#C9A46A">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span> · ${esc(r.name)} · ${esc(r.service || '')}${r.by ? ` · ${esc(r.by)}` : ''} · ${r.at}</div><div style="margin-top:6px;line-height:1.8">${esc(r.text)}</div></div>
+          <div class="actions" style="flex:none;gap:6px">${r.state === 'pin' ? `<button class="btn sm" data-m="${esc(r.id)}" data-s="">إلغاء التثبيت</button>` : `<button class="btn sm" data-m="${esc(r.id)}" data-s="pin">تثبيت</button>`}${r.state === 'hide' ? `<button class="btn sm" data-m="${esc(r.id)}" data-s="">إظهار</button>` : `<button class="btn sm" data-m="${esc(r.id)}" data-s="hide">إخفاء</button>`}</div></div>`).join('')}</div>` : '<div class="empty card">ما فيه آراء هنا</div>';
+        $$('[data-m]', view).forEach((b) => b.onclick = () => busy(b, async () => {
+          const id = b.dataset.m, s = b.dataset.s;
+          try { if (s) await q(sb.from('site_review_mod').upsert({ review_id: id, state: s })); else await q(sb.from('site_review_mod').delete().eq('review_id', id));
+            const r = all.find((x) => x.id === id); r.state = s || null; toast(s === 'pin' ? 'تثبّت، بيطلع أول' : s === 'hide' ? 'اختفى من الموقع' : 'رجع طبيعي'); draw(); } catch (err) { toast(errMsg(err), true); }
+        }));
+      };
+      $$('[data-f]', view).forEach((b) => b.onclick = () => { f = b.dataset.f; $$('[data-f]', view).forEach((x) => x.classList.toggle('on', x === b)); draw(); });
+      $('#rv-q', view).addEventListener('input', (e) => { qs = e.target.value.trim(); draw(); });
+      draw(); return;
+    }
+
+    if (tab === 'team') {
+      const [provs, over] = await Promise.all([q(sb.rpc('site_team_admin')), q(sb.from('site_team').select('*'))]);
+      if (!alive()) return;
+      const O = new Map(over.map((x) => [x.provider_id, x]));
+      view.innerHTML = head + `
+        <div class="notice">الأخصائيات من ركاز. اللي عندها ٥ آراء وفوق تطلع تلقائيًا، وتقدرين تظهرين أو تخفين أي وحدة، وتضيفين صورتها ووصفها. زر «احجزي معها» في الموقع يعرض أوقاتها هي بس.</div>
+        <div class="list" style="margin-top:12px">${provs.map((p) => { const o = O.get(p.id) || {}; const vis = o.visible == null ? (p.n >= 5) : o.visible; return `<button class="row" data-p="${esc(p.id)}" style="text-align:start">
+          <div class="avatar" style="${o.photo_url ? `background:url('${esc(o.photo_url)}') center/cover` : ''}">${o.photo_url ? '' : esc((o.display_name || p.name).charAt(0))}</div>
+          <div class="grow"><div class="title">${esc(o.display_name || p.name)}</div><div class="meta">${esc(o.title || (p.top ? 'أكثر ما تسويه: ' + p.top : ''))}${p.n ? ` · ★ ${p.avg} من ${p.n} رأي` : ' · ما عندها آراء'}</div></div>
+          <span class="chip-d ${vis ? 'ok' : ''}">${vis ? 'ظاهرة' : 'مخفية'}${o.visible == null ? ' (تلقائي)' : ''}</span></button>`; }).join('')}</div>`;
+      $$('[data-p]', view).forEach((b) => b.onclick = () => {
+        const p = provs.find((x) => x.id === b.dataset.p), o = O.get(p.id) || {};
+        modal(`<h3>${esc(p.name)} في الموقع</h3>
+          <div class="grid2"><div class="field"><label>الاسم الظاهر</label><input class="input" id="t-n" maxlength="40" value="${esc(o.display_name || '')}" placeholder="${esc(p.name)}"></div><div class="field"><label>الترتيب</label><input class="input" id="t-o" type="number" value="${o.sort || 0}"></div></div>
+          <div class="field"><label>وصف قصير</label><input class="input" id="t-t" maxlength="60" value="${esc(o.title || '')}" placeholder="خبيرة صبغات وبلياج"></div>
+          <div class="field"><label>صورتها (اختياري)</label><input type="file" accept="image/*" id="t-i" class="input"></div>
+          <div class="field"><label>الظهور</label><select class="input" id="t-v"><option value="" ${o.visible == null ? 'selected' : ''}>تلقائي (تظهر لو عندها ٥ آراء وفوق)</option><option value="1" ${o.visible === true ? 'selected' : ''}>ظاهرة دايم</option><option value="0" ${o.visible === false ? 'selected' : ''}>مخفية</option></select></div>
+          <div class="actions end mt"><button class="btn" data-close>إلغاء</button><button class="btn primary" id="t-s">حفظ</button></div>`, (el, close) => {
+          $('#t-s', el).onclick = (e) => busy(e.currentTarget, async () => {
+            const v = $('#t-v', el).value;
+            const row = { provider_id: p.id, display_name: $('#t-n', el).value.trim() || null, title: $('#t-t', el).value.trim() || null, sort: Number($('#t-o', el).value) || 0, visible: v === '' ? null : v === '1', photo_url: o.photo_url || null };
+            try { const f = $('#t-i', el).files[0]; if (f) row.photo_url = await siteImg(f, 'team'); await q(sb.from('site_team').upsert(row)); close(); toast('انحفظ'); route(); } catch (err) { toast(errMsg(err), true); }
+          });
+        });
+      });
+      return;
+    }
+
+    if (tab === 'gallery') {
+      const rows = await q(sb.from('site_gallery').select('*').order('sort').order('id', { ascending: false }));
+      if (!alive()) return;
+      const sv = new Map(svcs.map((s) => [s.id, s.name]));
+      view.innerHTML = head + `
+        <div class="notice">صور شغلكم الحقيقي. اربطي كل صورة بخدمتها، والضغط عليها في الموقع يفتح الحجز والخدمة جاهزة. الصور تتصغّر تلقائيًا عشان الموقع يبقى سريع.</div>
+        <label class="btn primary" style="margin:12px 0;display:inline-flex">${I.plus} أضيفي صور<input type="file" accept="image/*" multiple id="g-up" hidden></label>
+        ${rows.length ? `<div class="site-gl">${rows.map((g) => `<button class="site-gi ${g.active ? '' : 'off'}" data-g="${g.id}"><img src="${esc(g.image_url)}" alt="" loading="lazy"><span>${esc(g.caption || sv.get(g.service_id) || 'بدون خدمة')}</span></button>`).join('')}</div>` : '<div class="empty card"><b>المعرض فاضي</b><p class="muted">أول ما ترفعين صور، يطلع قسم «من شغلنا» في الموقع لحاله.</p></div>'}`;
+      $('#g-up', view).onchange = async (e) => {
+        const files = [...e.target.files].slice(0, 20); if (!files.length) return;
+        toast(`نرفع ${files.length} صورة…`);
+        try { for (const f of files) { const url = await siteImg(f, 'gallery'); await q(sb.from('site_gallery').insert({ image_url: url })); } toast('انرفعت، اربطيها بخدماتها'); route(); } catch (err) { toast(errMsg(err), true); }
+      };
+      $$('[data-g]', view).forEach((b) => b.onclick = () => {
+        const g = rows.find((x) => String(x.id) === b.dataset.g);
+        modal(`<h3>صورة في المعرض</h3><img src="${esc(g.image_url)}" alt="" style="width:100%;max-height:260px;object-fit:cover;border-radius:14px;margin-bottom:10px">
+          <div class="field"><label>الخدمة</label><select class="input" id="g-s">${svcOpts(g.service_id)}</select></div>
+          <div class="grid2"><div class="field"><label>تعليق (اختياري)</label><input class="input" id="g-c" maxlength="120" value="${esc(g.caption || '')}" placeholder="بلياج عسلي"></div><div class="field"><label>الترتيب</label><input class="input" type="number" id="g-o" value="${g.sort || 0}"></div></div>
+          <label class="check"><input type="checkbox" id="g-on" ${g.active ? 'checked' : ''}> ظاهرة في الموقع</label>
+          <div class="actions end mt"><button class="btn danger" id="g-del">حذف</button><button class="btn" data-close>إلغاء</button><button class="btn primary" id="g-sv">حفظ</button></div>`, (el, close) => {
+          $('#g-sv', el).onclick = (e) => busy(e.currentTarget, async () => { try { await q(sb.from('site_gallery').update({ service_id: $('#g-s', el).value ? Number($('#g-s', el).value) : null, caption: $('#g-c', el).value.trim() || null, sort: Number($('#g-o', el).value) || 0, active: $('#g-on', el).checked }).eq('id', g.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } });
+          $('#g-del', el).onclick = async () => { if (!(await confirmBox('حذف الصورة', 'تنحذف من الموقع.', 'حذف', true))) return; try { await q(sb.from('site_gallery').delete().eq('id', g.id)); close(); route(); } catch (err) { toast(errMsg(err), true); } };
+        });
+      });
+      return;
+    }
+
+    // الزيارة والأقسام
+    const c = await q(sb.from('site_conf').select('*').eq('id', 1).single());
+    if (!alive()) return;
+    let secs = Array.isArray(c.sections) ? c.sections.slice() : SITE_SECS.map(([k]) => k);
+    const drawSecs = () => SITE_SECS.slice().sort((a, b) => { const ia = secs.indexOf(a[0]), ib = secs.indexOf(b[0]); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); })
+      .map(([k, l]) => `<label class="check" style="justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--line)"><span><input type="checkbox" data-sec="${k}" ${secs.includes(k) ? 'checked' : ''}> ${l}</span></label>`).join('');
+    view.innerHTML = head + `
+      <div class="card"><div class="field"><label>أوقات العمل</label><input class="input" id="c-h" maxlength="120" value="${esc(c.hours || '')}"></div>
+        <div class="field"><label>المدينة أو الحي</label><input class="input" id="c-a" maxlength="80" value="${esc(c.address || '')}"></div>
+        <div class="field"><label>رابط الموقع على خرائط Google</label><input class="input" id="c-m" dir="ltr" value="${esc(c.map_url || '')}" placeholder="https://maps.app.goo.gl/…"></div></div>
+      <div class="section-title"><h2>أقسام تطلع في الموقع</h2><span class="muted small">القسم الفاضي ما يطلع حتى لو مفعّل</span></div>
+      <div class="card" id="c-secs">${drawSecs()}</div>
+      <div class="actions end mt"><button class="btn primary" id="c-s">حفظ</button></div>`;
+    $('#c-s', view).onclick = (e) => busy(e.currentTarget, async () => {
+      secs = $$('[data-sec]', view).filter((x) => x.checked).map((x) => x.dataset.sec);
+      const m = $('#c-m', view).value.trim(); if (m && !/^https:\/\//.test(m)) return toast('رابط الخريطة لازم يبدأ بـ https', true);
+      try { await q(sb.from('site_conf').update({ hours: $('#c-h', view).value.trim() || null, address: $('#c-a', view).value.trim() || null, map_url: m || null, sections: secs, updated_at: new Date().toISOString() }).eq('id', 1)); toast('انحفظ، والموقع تحدّث'); } catch (err) { toast(errMsg(err), true); }
+    });
   }
 
   async function pageKit(view, _a, params, alive) {

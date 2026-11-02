@@ -92,6 +92,7 @@ function s0() {
   const last = store.get();
   const pops = C.services.filter((s) => s.pop).slice(0, 8);
   return `<div class="screen${S.dir ? ' back' : ''}">` +
+    (S.pro ? `<div class="giftban pro"><span><b>حجزك مع ${esc(S.pro.name || 'أخصائيتك')}</b><small>نعرض لك أوقاتها هي بس.</small></span><button type="button" class="prox" id="pro-x">أي أخصائية</button></div>` : '') +
     (S.gift ? `<div class="giftban"><img src="../home/assets/gift-mark-cream.svg" alt=""><span><b>أهلًا ${esc(S.gift.to)}، عندك بطاقة هدية 🎁</b><small>رصيدك ${sar(S.gift.balance)}. اختاري خدمتك ونحجز لك، والدفع من رصيدك بالصالون.</small></span></div>` : '') +
     (!S.gift && last && last.name && last.items && last.items.length ? `<button class="again" id="again"><span><b>أهلًا ${esc(last.name)}، نرجع لنفس الطلّة؟</b><small>${esc(last.label || '')}</small></span><span class="arr">احجزيها ←</span></button>` : '') +
     `<h1>احجزي موعدك</h1><p class="sub">اختاري الخدمة والوقت، وخلاص. بدون حساب وبدون رمز.</p>` +
@@ -133,8 +134,8 @@ function s1() {
     `<div id="slotBox"><div class="part">المواعيد</div><div class="slots">${'<span class="skel"></span>'.repeat(8)}</div></div></div>`;
 }
 async function loadFirst() {
-  const key = JSON.stringify([itemsArg(), S.staff]);
-  try { const f = C.settings.rekaz ? (await RK({ action: 'first', items: itemsArg() })).first : await rpc('sb_first', { p_items: itemsArg(), p_member: S.staff || null }); if (key !== JSON.stringify([itemsArg(), S.staff]) || S.step !== 1) return; S.first = f; if (!S.dayPicked && f) S.day = f.day; }
+  const key = JSON.stringify([itemsArg(), S.staff, S.pro && S.pro.id]);
+  try { const f = C.settings.rekaz ? (await RK({ action: 'first', items: itemsArg(), member: S.pro ? S.pro.id : undefined })).first : await rpc('sb_first', { p_items: itemsArg(), p_member: S.staff || null }); if (key !== JSON.stringify([itemsArg(), S.staff, S.pro && S.pro.id]) || S.step !== 1) return; S.first = f; if (!S.dayPicked && f) S.day = f.day; }
   catch { S.first = null; }
   if (S.step === 1) { render(); }
 }
@@ -142,7 +143,7 @@ async function loadSlots() {
   const box = $('#slotBox'); if (!box) return;
   const day = S.day, key = JSON.stringify([itemsArg(), S.staff, day]);
   let rows = [];
-  try { rows = C.settings.rekaz ? (await RK({ action: 'slots', day, items: itemsArg() })).slots.slice().sort().map((slot) => ({ slot })) : await rpc('sb_slots', { p_day: day, p_items: itemsArg(), p_member: S.staff || null }) || []; } catch (e) { box.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+  try { rows = C.settings.rekaz ? (await RK({ action: 'slots', day, items: itemsArg(), member: S.pro ? S.pro.id : undefined })).slots.slice().sort().map((slot) => ({ slot })) : await rpc('sb_slots', { p_day: day, p_items: itemsArg(), p_member: S.staff || null }) || []; } catch (e) { box.innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
   if (key !== JSON.stringify([itemsArg(), S.staff, S.day]) || S.step !== 1) return;
   const parts = { 'الصباح': [], 'العصر': [], 'المساء': [] };
   rows.forEach((r) => { const h = +r.slot.slice(0, 2); parts[h < 13 ? 'الصباح' : h < 17 ? 'العصر' : 'المساء'].push(r.slot); });
@@ -170,7 +171,7 @@ async function submit() {
   if (S.busy) return; S.busy = true; bar();
   try {
     const r = C.settings.rekaz
-      ? await RK({ action: 'book', name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, gift: S.gift ? S.gift.token : undefined })
+      ? await RK({ action: 'book', name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, gift: S.gift ? S.gift.token : undefined, member: S.pro ? S.pro.id : undefined })
       : await rpc('sb_create', { p: { name: S.name.trim(), phone: '0' + S.phone, items: itemsArg(), day: S.slot.day, time: S.slot.time, member_id: S.staff || null, notes: S.notes.trim() } });
     if (C.settings.rekaz) { r.code = r.number ? String(r.number) : ''; r.pay = null; }
     S.res = r;
@@ -283,6 +284,8 @@ $('#veil').onclick = close;
   catch { main.innerHTML = '<div class="screen"><h1>صار خطأ بسيط</h1><p class="sub">تأكدي من الإنترنت وحدّثي الصفحة.</p><button class="primary" onclick="location.reload()">حدّثي</button></div>'; return; }
   if (!C.settings.accepting) { main.innerHTML = `<div class="screen"><h1>الحجز متوقف مؤقتًا</h1><p class="sub">تواصلي معنا على الواتساب ونرتّب موعدك.</p><a class="waBtn" href="https://wa.me/${esc(C.settings.whatsapp)}" target="_blank" rel="noopener">واتساب الصالون</a></div>`; return; }
   if (P.get('gift')) { try { const g = await rpc('gift_open', { p_token: P.get('gift') }); if (g && g.status === 'active') { S.gift = { token: P.get('gift'), to: g.to, code: g.code, balance: +g.balance }; S.name = g.to || ''; S.phone = String(g.phone || '').replace(/^0/, ''); } } catch {} }
+  if (P.get('pro') && C.settings.rekaz && /^[0-9a-f-]{36}$/i.test(P.get('pro'))) S.pro = { id: P.get('pro'), name: String(P.get('pn') || '').slice(0, 40) };
+  document.addEventListener('click', (e) => { if (e.target && e.target.id === 'pro-x') { S.pro = null; S.first = null; S.dayPicked = false; render(); } });
   const pre = +P.get('s'); if (pre) { const s = svcById(pre); if (s && !(s.opts && s.opts.length)) toggle(s); }
   render();
 })();

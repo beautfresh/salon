@@ -1392,3 +1392,18 @@ a.sd-in:hover .go { transform: translateX(-4px); color: var(--accent); }
 .sd-recon { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(90, 42, 34, .06); font-size: 12.5px; line-height: 1.75; }
 .sd-recon p { margin: 0; }
 .sd-recon .ic { opacity: .6; line-height: 1.75; }
+/* الموقع */
+.site-hero { display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: center; }
+.site-hero h2 { margin: 0 0 4px; font-size: 20px; }
+.site-hero p { margin: 0; }
+.site-stats { display: flex; gap: 18px; }
+.site-stats div { display: grid; text-align: center; }
+.site-stats b { font-size: 22px; color: var(--brand, #5A2A22); }
+.site-stats span { font-size: 12px; color: var(--muted, #8A6F66); }
+.notice:not(.warn):not(.ok):not(.err) { background: rgba(90, 42, 34, .06); }
+.site-gl { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.site-gi { position: relative; border: 0; padding: 0; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 5; cursor: pointer; background: #eee; }
+.site-gi img { width: 100%; height: 100%; object-fit: cover; }
+.site-gi span { position: absolute; inset: auto 0 0; padding: 22px 8px 8px; color: #fff; font-size: 12px; background: linear-gradient(transparent, rgba(40, 18, 14, .7)); text-align: start; }
+.site-gi.off { opacity: .45; }
+@media (max-width: 860px) { .site-hero { grid-template-columns: 1fr; } .site-stats { justify-content: space-between; } }

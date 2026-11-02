@@ -4405,17 +4405,17 @@
 
       const spark = (() => {
         const S = r.series.filter((x) => x.k <= tk); if (S.length < 2) return '';
-        const mx = Math.max(1, ...S.map((x) => Number(x.c)));
-        const pts = S.map((x, i) => [100 - (i / (S.length - 1)) * 100, 96 - (Number(x.c) / mx) * 86]);
+        const mx = Math.max(1, ...S.map((x) => Number(x.s)));
+        const pts = S.map((x, i) => [100 - (i / (S.length - 1)) * 100, 96 - (Number(x.s) / mx) * 86]);
         const line = pts.map((p) => p.join(',')).join(' ');
         return `<svg class="sd-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A5A45" stop-opacity=".22"/><stop offset="1" stop-color="#8A5A45" stop-opacity="0"/></linearGradient></defs><polygon points="100,100 ${line} 0,100" fill="url(#sdg)"/><polyline points="${line}" fill="none" stroke="#5A2A22" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
       })();
       const tgtHtml = (() => {
         if (!(lens === 'm' && isCurrent)) return '';
-        const T = Number(P.target || 0), mtd = Number(P.mtd.collected);
+        const T = Number(P.target || 0), mtd = Number(P.mtd.sales);
         const days = P.month_days; const hr = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', hour12: false })) % 24;
         const elapsed = Math.max(0.5, P.day_of_month - 1 + Math.min(1, Math.max(0, (hr - 9) / 14)));
-        const lmRate = Number(P.last_month.collected) / (new Date(s.getFullYear(), s.getMonth(), 0).getDate() || 30);
+        const lmRate = Number(P.last_month.sales) / (new Date(s.getFullYear(), s.getMonth(), 0).getDate() || 30);
         const rate = elapsed >= 7 ? mtd / elapsed : (mtd / elapsed + lmRate) / 2;
         const fc = Math.round(mtd + rate * Math.max(0, days - elapsed));
         if (!T) return `<div class="sd-fc"><span>المتوقع لنهاية الشهر</span><b class="num">${sdCu('fc', fc)} ر.س</b>${Number(P.rest_month.v) ? `<em>ومحجوز لباقي الشهر ${sar(P.rest_month.v)} ر.س</em>` : ''}<button class="tgt-empty sm" id="tgt-set">${I.plus} حطّوا هدف للشهر</button></div>`;
@@ -4427,8 +4427,8 @@
       })();
       const insights = (() => {
         const L = [];
-        const pc = sdPct(K.collected, KP.collected);
-        if (pc != null && Math.abs(pc) >= 3) L.push(['📈', `المحصّل ${pc > 0 ? 'زاد' : 'نقص'} <b>${Math.abs(Math.round(pc))}٪</b> عن ${r.partial ? 'نفس الوقت ' : ''}${SD_PREV[lens]} من ${sar(KP.collected)} إلى ${sar(K.collected)} ر.س`, pc > 0 ? 'good' : 'bad']);
+        const pc = sdPct(K.sales, KP.sales);
+        if (pc != null && Math.abs(pc) >= 3) L.push(['📈', `المبيعات ${pc > 0 ? 'زادت' : 'نقصت'} <b>${Math.abs(Math.round(pc))}٪</b> عن ${r.partial ? 'نفس الوقت ' : ''}${SD_PREV[lens]} من ${sar(KP.sales)} إلى ${sar(K.sales)} ر.س`, pc > 0 ? 'good' : 'bad']);
         const sv = r.services.filter((x) => x.pv > 300 && x.v > 0).map((x) => ({ ...x, g: x.v - x.pv }));
         const up = [...sv].sort((a, b) => b.g - a.g)[0], dn = [...sv].sort((a, b) => a.g - b.g)[0];
         if (up && up.g > 0) L.push(['🚀', `<b>${esc(up.name)}</b> أكثر خدمة نمت: +${sar(up.g)} ر.س عن ${SD_PREV[lens]}`, 'good', 'svc']);
@@ -4452,15 +4452,16 @@
       const A = $('#sd-a', view);
       A.innerHTML = `
         <div class="fin-hero sd-hero ${dir ? (dir > 0 ? 'from-l' : 'from-r') : ''}">
-          <div class="fin-hero-top"><span data-tip="المدفوعات اللي دخلت فعلًا في الفترة ناقص المسترجع، نفس رقم «صافي المبالغ المدفوعة» في ركاز">صافي المحصّل ⓘ</span>
-            <span class="sd-chips">${sdChip(K.collected, KP.collected, { tip: `${r.partial ? 'لين نفس الوقت من ' : ''}${SD_PREV[lens]}: ${sar(KP.collected)} ر.س` }).replace('</span>', ` عن ${vsTxt}</span>`)}${KY ? sdChip(K.collected, KY.collected, { tip: `السنة الماضية: ${sar(KY.collected)} ر.س` }).replace('</span>', ' عن السنة الماضية</span>') : ''}</span></div>
-          <div class="fin-net num">${sdCu('col', K.collected)} <small>ر.س</small></div>
+          <div class="fin-hero-top"><span data-tip="قيمة الطلبات المؤكدة شامل الضريبة، نفس «إجمالي المبيعات» في ركاز">إجمالي المبيعات ⓘ</span>
+            <span class="sd-chips">${sdChip(K.sales, KP.sales, { tip: `${r.partial ? 'لين نفس الوقت من ' : ''}${SD_PREV[lens]}: ${sar(KP.sales)} ر.س` }).replace('</span>', ` عن ${vsTxt}</span>`)}${KY ? sdChip(K.sales, KY.sales, { tip: `السنة الماضية: ${sar(KY.sales)} ر.س` }).replace('</span>', ' عن السنة الماضية</span>') : ''}</span></div>
+          <div class="fin-net num">${sdCu('sales', K.sales)} <small>ر.س</small></div>
+          <div class="sd-sub">${sdN(K.orders)} طلب مؤكد</div>
           ${spark}
           ${tgtHtml}
           <div class="fin-split sd-split">
-            <div data-tip="قيمة الطلبات المؤكدة شامل الضريبة، نفس «إجمالي المبيعات» في ركاز"><span>إجمالي المبيعات</span><b class="num">${sdCu('sales', K.sales)}</b><em>${sdN(K.orders)} طلب</em></div>
             <div data-tip="المبيعات بدون ضريبة القيمة المضافة"><span>صافي المبيعات</span><b class="num">${sdCu('net', K.net_sales)}</b><em>الضريبة ${sar(K.tax)}</em></div>
-            <div><span>الخصومات</span><b class="num">${sdCu('disc', K.discount)}</b><em>المسترجع ${sar(K.refunds)}</em></div>
+            <div data-tip="المدفوعات اللي دخلت فعلًا في الفترة ناقص المسترجع، نفس «صافي المبالغ المدفوعة» في ركاز"><span>صافي المحصّل</span><b class="num">${sdCu('col', K.collected)}</b><em>المسترجع ${sar(K.refunds)}</em></div>
+            <div><span>الخصومات</span><b class="num">${sdCu('disc', K.discount)}</b><em>${K.sales ? sdShare(K.discount, Number(K.sales) + Number(K.discount)) : 0}٪ من قبل الخصم</em></div>
             ${Number(K.home) ? `<div><span>الخدمات المنزلية</span><b class="num">${sdCu('home', K.home)}</b><em>من موقعنا</em></div>` : ''}
           </div>
         </div>`;
@@ -4503,7 +4504,7 @@
       $$('[data-go]', B).forEach((x) => x.addEventListener('click', (ev) => { ev.preventDefault(); show(x.dataset.go, true); tabsEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
       show(st.tab, false);
       requestAnimationFrame(() => sdSlide(tabsEl));
-      $('#tgt-set', A)?.addEventListener('click', () => targetForm(monthKey(s), P.target, P.last_month.collected));
+      $('#tgt-set', A)?.addEventListener('click', () => targetForm(monthKey(s), P.target, P.last_month.sales));
       drawPulse(isCurrent);
     }
 
@@ -4524,7 +4525,7 @@
         <div class="card sd-pulse ${firstPulse ? 'sd-up' : ''}">
           <div class="sd-pulse-h"><h3><i class="sd-dot"></i>اليوم لحظة بلحظة</h3><span class="muted small">يتحدث لحاله كل دقيقة</span></div>
           <div class="sd-pulse-g">
-            <div><span>المحصّل اليوم</span><b class="num">${sdCu('p1', k.collected)}</b><em>${sdChip(k.collected, kw.collected, { tip: `نفس الوقت ${WDAYS[new Date().getDay()]} الماضي: ${sar(kw.collected)} ر.س` })} عن نفس الوقت ${WDAYS[new Date().getDay()]} الماضي</em></div>
+            <div data-tip="قيمة الطلبات المؤكدة اليوم شامل الضريبة"><span>مبيعات اليوم</span><b class="num">${sdCu('p1', k.sales)}</b><em>${sdChip(k.sales, kw.sales, { tip: `نفس الوقت ${WDAYS[new Date().getDay()]} الماضي: ${sar(kw.sales)} ر.س` })} عن نفس الوقت ${WDAYS[new Date().getDay()]} الماضي · المحصّل ${sar(k.collected)}</em></div>
             <div><span>حجوزات اليوم</span><b class="num">${sdCu('p2', k.bookings)}</b><em>${sdN(k.clients)} عميلة${k.cancelled ? ` · ${k.cancelled} إلغاء` : ''}</em></div>
             <div><span>باقي اليوم</span><b class="num">${sdCu('p3', P.left_today.n)}</b><em>موعد بقيمة ${sar(P.left_today.v)} ر.س</em></div>
             <div data-tip="الحجوزات المؤكدة والمعلقة للسبعة أيام الجاية (يزيد كل ما حجزوا أكثر)"><span>محجوز للأسبوع الجاي</span><b class="num">${sdCu('p4', P.next7.v)}</b><em>${sdN(P.next7.n)} حجز</em></div>
@@ -4596,14 +4597,14 @@
     const src = r.sources.map((x) => ({ l: SD_SRC[x.s] || esc(x.s), v: x.v, sub: `${sdN(x.n)} طلب` }));
     const L = r.lead || {}, lead = [['نفس اليوم', L.same], ['قبلها بيوم أو يومين', L.d1_2], ['من 3 إلى 7 أيام', L.d3_7], ['قبل أكثر من أسبوع', L.d8]].map(([l, v]) => ({ l, v: Number(v || 0) }));
     const days = r.series.filter((x) => x.k <= todayR());
-    const best = [...days].sort((a, b) => b.c - a.c)[0];
-    const avgDay = days.length ? days.reduce((a, x) => a + Number(x.c), 0) / days.length : 0;
+    const best = [...days].sort((a, b) => b.s - a.s)[0];
+    const avgDay = days.length ? days.reduce((a, x) => a + Number(x.s), 0) / days.length : 0;
     return `
-      <div class="section-title"><h2>${o.monthly ? 'شهر بشهر' : 'يوم بيوم'}</h2><div class="chips" id="sd-metric">${[['c', 'المحصّل'], ['s', 'المبيعات'], ['v', 'قيمة الخدمات'], ['n', 'الحجوزات']].map(([k, l], i) => `<button class="chip ${i ? '' : 'on'}" data-k="${k}">${l}</button>`).join('')}</div></div>
-      <div class="card"><div id="sd-chart">${sdChart(r, 'c', o.cmpName, o.monthly)}</div>
+      <div class="section-title"><h2>${o.monthly ? 'شهر بشهر' : 'يوم بيوم'}</h2><div class="chips" id="sd-metric">${[['s', 'المبيعات'], ['c', 'المحصّل'], ['v', 'قيمة الخدمات'], ['n', 'الحجوزات']].map(([k, l], i) => `<button class="chip ${i ? '' : 'on'}" data-k="${k}">${l}</button>`).join('')}</div></div>
+      <div class="card"><div id="sd-chart">${sdChart(r, 's', o.cmpName, o.monthly)}</div>
         <div class="sd-legend"><span><i class="b"></i>${o.lens === 'c' ? 'الفترة المختارة' : 'هذي الفترة'}</span>${r.cmp?.length > 1 ? `<span><i class="w"></i>${o.cmpName}</span>` : ''}</div>
         <div class="dinsights">
-          ${best && Number(best.c) > 0 ? `<div><span>${o.monthly ? 'أفضل شهر' : 'أفضل يوم'}</span><b>${o.monthly ? MONTHS_AR[D(best.k).getMonth()] : `${WDAYS[D(best.k).getDay()]} ${D(best.k).getDate()} ${MONTHS_AR[D(best.k).getMonth()]}`} · ${sar(best.c)} ر.س</b></div>` : ''}
+          ${best && Number(best.s) > 0 ? `<div><span>${o.monthly ? 'أفضل شهر' : 'أفضل يوم'}</span><b>${o.monthly ? MONTHS_AR[D(best.k).getMonth()] : `${WDAYS[D(best.k).getDay()]} ${D(best.k).getDate()} ${MONTHS_AR[D(best.k).getMonth()]}`} · ${sar(best.s)} ر.س</b></div>` : ''}
           ${avgDay ? `<div><span>${o.monthly ? 'متوسط الشهر' : 'متوسط اليوم'}</span><b class="num">${sar(avgDay)} ر.س</b></div>` : ''}
           <div><span>متوسط الطلب</span><b class="num">${sar(K.orders ? K.sales / K.orders : 0)} ر.س</b></div>
         </div>

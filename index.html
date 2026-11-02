@@ -328,7 +328,7 @@
         <div class="card reveal" style="--d:.16s"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#82523D" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#82523D" stroke="none"/></svg><h3>تابعينا</h3><a class="big" href="https://www.instagram.com/beautfresh" target="_blank" rel="noopener">@beautfresh</a><p>جديدنا وشغلنا أول بأول على إنستقرام.</p></div>
       </div>
       <div class="wrap"><div class="loc reveal" id="loc" hidden>
-        <div class="map"><iframe id="loc-map" title="موقع بيوتفريش على الخريطة" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe><span class="pin"><img src="home/assets/rosette-1.svg" alt=""></span></div>
+        <div class="map"><iframe id="loc-map" title="موقع بيوتفريش على الخريطة" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
         <div class="txt"><span class="label">Visit us</span><h3>تعالي زورينا</h3><p id="loc-txt"></p>
           <div class="go"><a class="main" id="loc-g" target="_blank" rel="noopener">خرائط Google</a><a id="loc-a" target="_blank" rel="noopener">خرائط Apple</a><a id="loc-w" target="_blank" rel="noopener">Waze</a><button type="button" id="loc-s">شاركي الموقع</button></div></div>
       </div></div>
@@ -405,7 +405,7 @@
       // الزيارة
       if (d.conf) {
         if (d.conf.hours) document.getElementById('ct-hours').textContent = d.conf.hours + (d.conf.address ? '، في ' + d.conf.address + '.' : '');
-        if (d.conf.map_url) { const m = document.getElementById('ct-map'); m.href = d.conf.map_url; m.hidden = false; }
+        if (d.conf.map_url && !(d.conf.lat && d.conf.lng)) { const m = document.getElementById('ct-map'); m.href = d.conf.map_url; m.hidden = false; }
         if (d.conf.lat && d.conf.lng) {
           const la = d.conf.lat, ln = d.conf.lng, L = document.getElementById('loc');
           document.getElementById('loc-map').src = `https://maps.google.com/maps?q=${la},${ln}&z=17&hl=ar&output=embed`;

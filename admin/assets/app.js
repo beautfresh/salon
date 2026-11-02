@@ -4818,6 +4818,90 @@
     if (!why.length) return '';
     return `<div class="sd-recon"><span class="ic">ⓘ</span><p>المحصّل ${diff > 0 ? 'أكثر' : 'أقل'} من المبيعات بـ<b>${sar(Math.abs(diff))} ر.س</b> لأن المبيعات تنحسب بيوم فتح الطلب والمحصّل بيوم دخول الفلوس: ${why.join('، و')}.</p></div>`;
   };
+  // ===== لمحات ذكية إضافية (sales_glimpses) =====
+  const SD_HF = (() => { try { return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day: 'numeric', month: 'numeric', year: 'numeric' }); } catch { return null; } })();
+  const sdHParts = (d) => { const o = {}; SD_HF.formatToParts(d).forEach((p) => { o[p.type] = p.value; }); return o; };
+  function sdHijriOff(s) {
+    if (!SD_HF) return null;
+    try {
+      const h = sdHParts(s);
+      for (let k = 350; k <= 360; k++) { const d = new Date(s); d.setDate(d.getDate() - k); const x = sdHParts(d); if (x.day === h.day && x.month === h.month && Number(x.year) === Number(h.year) - 1) return k; }
+    } catch {}
+    return null;
+  }
+  const sdHijriName = (d) => { try { return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'long' }).format(d); } catch { return ''; } };
+  const sdDays = (n) => (n === 1 ? 'يوم' : n === 2 ? 'يومين' : n <= 10 ? `${n} أيام` : `${n} يوم`);
+  const SD_ORD = ['', 'أعلى', 'ثاني أعلى', 'ثالث أعلى', 'رابع أعلى', 'خامس أعلى', 'سادس أعلى', 'سابع أعلى', 'ثامن أعلى', 'تاسع أعلى', 'عاشر أعلى'];
+  const sdFmtD = (d) => { const x = D(String(d).slice(0, 10)); return `${x.getDate()} ${MONTHS_AR[x.getMonth()]} ${x.getFullYear()}`; };
+  const sdVs = (a, b) => { a = Number(a); b = Number(b); if (!(b > 0)) return ''; const pc = Math.round((a / b - 1) * 100); if (Math.abs(pc) < 2) return ' <span class="sd-d">≈ نفسه</span>'; return ` <span class="sd-d ${pc > 0 ? 'up' : 'down'}">${pc > 0 ? '▲' : '▼'} ${Math.abs(pc)}٪</span>`; };
+
+  function sdGlimpses(G, K, lens, s, e, tk, isCur) {
+    if (!G) return [];
+    const out = []; const sales = Number(K.sales);
+    const per = { d: 'هاليوم', w: 'هالأسبوع', m: 'هالشهر', q: 'هالربع', y: 'هالسنة', c: 'هالفترة' }[lens] || 'هالفترة';
+    const day = WDAYS[s.getDay()];
+
+    // 1) نفس اليوم من الأسابيع الماضية
+    if (lens === 'd' && Array.isArray(G.wk) && G.wk.length >= 4) {
+      const W = G.wk.map((x) => Number(x.s)); const avg = W.reduce((a, b) => a + b, 0) / W.length; const mx = Math.max(sales, ...W, 1);
+      const above = W.filter((v) => sales > v).length; const pc = avg ? Math.round((sales / avg - 1) * 100) : 0;
+      const bars = `<div class="sd-mem">${G.wk.slice().reverse().map((x) => `<i style="height:${Math.max(6, (Number(x.s) / mx) * 100)}%" data-tip="${WDAYS[s.getDay()]} ${sdFmtD(x.d)}\n${sar(x.s)} ر.س${isCur ? ' (لين نفس الساعة)' : ''}"></i>`).join('')}<i class="now" style="height:${Math.max(6, (sales / mx) * 100)}%" data-tip="${isCur ? 'اليوم لين الحين' : sdFmtD(dk(s))}\n${sar(sales)} ر.س"></i></div>`;
+      const txt = `${isCur ? 'لين هالساعة، ' : ''}${isCur ? 'اليوم' : `${day} هذا`} ${Math.abs(pc) < 3 ? `قريب من متوسط آخر ${W.length} أيام ${day}` : `${pc > 0 ? 'أعلى' : 'أقل'} من متوسط آخر ${W.length} أيام ${day} بـ<b>${Math.abs(pc)}٪</b>`} (${sar(avg)} ر.س${isCur ? ' لنفس الساعة' : ''})${above === W.length ? '، وأعلى منها كلها 🔥' : above === 0 && sales > 0 ? '، وأقل منها كلها' : ''}`;
+      out.push(['🗓', txt, pc >= 3 ? 'good' : pc <= -3 ? 'bad' : '', null, bars]);
+    }
+
+    // 2) مثل هالفترة السنة الماضية (ميلادي) وبالهجري، تشتغل لحالها لما تكتمل بيانات السنة الماضية
+    const H = (G.hist || []).filter((h) => (lens === 'd' ? h.k !== 'ly' : h.k !== 'lw'));
+    H.forEach((h) => {
+      const lbl = h.k === 'hj' ? `نفس ${per.replace('هال', 'ال')} بالهجري (${sdHijriName(s)}) السنة الماضية` : h.k === 'lw' ? `نفس ${day} السنة الماضية (${sdFmtD(h.from)})` : `مثل ${per} السنة الماضية`;
+      const cmp = h.s != null ? `مبيعات <b>${sar(h.s)} ر.س</b>، و${isCur ? 'لين الحين ' : ''}هالسنة <b>${sar(sales)}</b>${sdVs(sales, h.s)}` : `<b>${sdN(h.n)}</b> حجز بقيمة ${sar(h.v)} ر.س، و${isCur ? 'لين الحين ' : ''}هالسنة <b>${sdN(G.cur_n)}</b> بقيمة ${sar(G.cur_v)}${sdVs(G.cur_v, h.v)}`;
+      out.push([h.k === 'hj' ? '🌙' : '📅', `${lbl}: ${cmp}`, '', null]);
+    });
+
+    // 3) الأرقام القياسية
+    const best = G.best_day;
+    if (lens === 'd' && best) {
+      if (!isCur && G.day_rank && G.day_rank <= 10 && sales > 0) out.push(['🏆', G.day_rank === 1 ? `<b>أعلى يوم مبيعات في تاريخكم</b> من ${sdN(G.days_n)} يوم مسجّل` : `<b>${SD_ORD[G.day_rank]} يوم مبيعات</b> من ${sdN(G.days_n)} يوم مسجّل. الأعلى كان ${sdFmtD(best.d)} (${sar(best.v)} ر.س)`, 'good', null]);
+      else if (isCur && sales > Number(best.v)) out.push(['🏆', `<b>اليوم كسرتوا الرقم القياسي!</b> أعلى من أفضل يوم سابق (${sdFmtD(best.d)}: ${sar(best.v)} ر.س)`, 'good', null]);
+      else if (isCur && sales >= Number(best.v) * 0.75) out.push(['🏁', `قربتوا من أعلى يوم في تاريخكم (${sar(best.v)} ر.س)، باقي <b>${sar(Number(best.v) - sales)} ر.س</b>`, 'good', null]);
+    }
+    const bm = G.best_month;
+    if (lens === 'm' && bm) {
+      const bmn = `${MONTHS_AR[D(bm.m).getMonth()]} ${D(bm.m).getFullYear()}`;
+      if (isCur && Number(G.mtd) > Number(bm.v)) out.push(['🏆', `<b>هالشهر صار أفضل شهر في تاريخكم</b>، تعدّى ${bmn} (${sar(bm.v)} ر.س)`, 'good', null]);
+      else if (isCur && Number(G.mtd) >= Number(bm.v) * 0.5) out.push(['🏁', `باقي <b>${sar(Number(bm.v) - Number(G.mtd))} ر.س</b> وتتعدّون أفضل شهر في تاريخكم (${bmn}: ${sar(bm.v)} ر.س)`, 'good', null]);
+      else if (!isCur && G.months_n >= 3 && G.month_rank <= 3) out.push(['🏆', G.month_rank === 1 ? `<b>أفضل شهر في تاريخكم</b> من ${sdN(G.months_n)} شهر` : `<b>${SD_ORD[G.month_rank]} شهر</b> من ${sdN(G.months_n)} شهر. الأفضل ${bmn} (${sar(bm.v)} ر.س)`, 'good', null]);
+    }
+
+    if (isCur && ['d', 'w', 'm'].includes(lens)) {
+      // 4) السلسلة
+      if (G.streak >= 2) out.push(['🔥', `<b>${sdDays(G.streak)}</b> ورا بعض مبيعاتكم فوق متوسطكم اليومي (${sar(G.avg60)} ر.س). كمّلوا!`, 'good', null]);
+      // 5) الراتب
+      const dom = D(tk).getDate(), pin = Number(G.payday?.in), pout = Number(G.payday?.out), up = pout ? Math.round((pin / pout - 1) * 100) : 0;
+      if (up >= 5) {
+        if (dom >= 20 && dom <= 26) out.push(['💰', `الراتب بعد <b>${sdDays(27 - dom)}</b>. من 27 لين 3 مبيعاتكم اليومية أعلى بـ<b>${up}٪</b> من باقي الشهر، فرسالة أو عرض قبلها بيومين يستغلها`, '', 'clients']);
+        else if (dom >= 27 || dom <= 3) out.push(['💰', `أيام الراتب الحين: مبيعاتكم فيها عادة أعلى بـ<b>${up}٪</b> من باقي الشهر. وقت مناسب لتذكير العميلات`, 'good', 'clients']);
+      }
+      // 6) محطات العميلات
+      const M = G.milestones || [];
+      if (M.length) {
+        const nm = M.slice(0, 3).map((x) => esc(firstName(x.name) || 'عميلة')).join('، ');
+        out.push(['🎉', M.length === 1 ? `<b>${nm}</b> وصلت زيارتها رقم ${M[0].n} عندكم هالأسبوع. رسالة شكر صغيرة تخليها تحس إنها مميزة` : `<b>${sdN(M.length)} عميلات</b> وصلن محطة جديدة هالأسبوع (${nm}${M.length > 3 ? '…' : ''}): زيارة رقم 10 أو 20 أو أكثر. رسالة شكر صغيرة تفرق`, 'good', null, `<button class="sd-in-act" id="sd-ms">أرسلي لهن شكر ←</button>`]);
+      }
+    }
+    return out;
+  }
+
+  function sdMilestones(M) {
+    if (!M || !M.length) return;
+    const msg = (x) => `هلا ${firstName(x.name) || ''} 🤍\nحبينا نقول لك شكرًا! هذي زيارتك رقم ${x.n} عندنا في بيوتفريش، ووجودك يفرق معنا.\nننتظرك دايم 🌸`;
+    modal(`
+      <h3>محطات العميلات هالأسبوع 🎉</h3>
+      <p class="muted small" style="margin:-4px 0 12px">عدد الزيارات محسوب من بداية التسجيل في ركاز. اضغطي واتساب وتطلع الرسالة جاهزة.</p>
+      <div class="sd-ms-list">${M.map((x) => `<div class="sd-ms-r"><span class="sd-ms-n">${x.n}</span><span><b>${esc(x.name || 'عميلة')}</b><small>الزيارة رقم ${x.n} · ${sdFmtD(x.d)}</small></span>${x.phone ? `<a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/${waNum(x.phone)}?text=${encodeURIComponent(msg(x))}">واتساب</a>` : ''}</div>`).join('')}</div>
+      <div class="actions end" style="margin-top:14px"><button class="btn" data-close>تم</button></div>`);
+  }
+
   const sdShare = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : 0);
   const sdN = (v) => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
   function sdChip(cur, prev, { inv = false, tip = '' } = {}) {
@@ -4876,7 +4960,13 @@
       tab: SD_TABS.some((x) => x[0] === params.get('tab')) ? params.get('tab') : 'sales',
     };
     const cache = new Map();
-    let P = null, R = null, seq = 0;
+    let P = null, R = null, G = null, seq = 0;
+    const gcache = new Map();
+    const fetchGl = (s, e) => {
+      const k = `${dk(s)}|${dk(e)}`;
+      if (!gcache.has(k)) gcache.set(k, q(sb.rpc('sales_glimpses', { p_from: dk(s), p_to: dk(e), p_hoff: ['d', 'w', 'm'].includes(st.lens) ? sdHijriOff(s) : null })).catch(() => { gcache.delete(k); return null; }));
+      return gcache.get(k);
+    };
     const range = (o = st) => {
       if (o.lens === 'c') {
         let s = D(o.f || dk(lensShift('d', D(tk), -29))), e = D(o.t || tk);
@@ -4940,12 +5030,12 @@
       const hit = cache.has(`${dk(s)}|${dk(e)}`);
       if (!hit) { a.classList.add('sd-busy'); b.classList.add('sd-busy'); prog.classList.add('on'); }
       try {
-        const [r, p] = await Promise.all([fetchDash(s, e), P ? Promise.resolve(P) : q(sb.rpc('sales_pulse'))]);
+        const [r, p, g] = await Promise.all([fetchDash(s, e), P ? Promise.resolve(P) : q(sb.rpc('sales_pulse')), fetchGl(s, e)]);
         if (!alive() || my !== seq) return;
-        P = p; R = r; retried = false;
+        P = p; R = r; G = g; retried = false;
         render(r, s, e, dir);
         // نجهّز الفترة اللي قبل بالخلفية عشان تفتح فورًا
-        if (['d', 'w', 'm'].includes(st.lens)) { const [ps, pe] = lensRange(st.lens, lensShift(st.lens, st.at, -1)); setTimeout(() => fetchDash(ps, pe).catch(() => {}), 600); }
+        if (['d', 'w', 'm'].includes(st.lens)) { const [ps, pe] = lensRange(st.lens, lensShift(st.lens, st.at, -1)); setTimeout(() => { fetchDash(ps, pe).catch(() => {}); fetchGl(ps, pe); }, 600); }
       } catch (err) {
         if (my !== seq || !alive()) return;
         if (!retried) { retried = true; return go(dir); }
@@ -5005,7 +5095,7 @@
         const web = r.sources.find((x) => x.s === 'website'), allO = r.sources.reduce((a, x) => a + x.n, 0);
         if (allO) L.push(['🌐', `${web ? `<b>${sdShare(web.n, allO)}٪</b> من الطلبات جات من الموقع` : 'ولا طلب جا من الموقع'}. لما ننقل الحجز لموقعنا تزيد هالنسبة ويخف الضغط على الاستقبال`, '']);
         const ret = K.clients - K.new_clients; if (K.clients) L.push(['🤍', `<b>${sdShare(ret, K.clients)}٪</b> من العميلات رجعوا لكم من قبل، و<b>${sdN(K.new_clients)}</b> أول مرة يجون`, 'good', 'clients']);
-        return L.slice(0, 6);
+        return [...sdGlimpses(G, K, lens, s, e, tk, isCurrent), ...L].slice(0, 8);
       })();
       const vsTxt = `${r.partial ? 'نفس الوقت ' : ''}${SD_PREV[lens]}`;
 
@@ -5043,7 +5133,7 @@
           ].map(([l, v, c, sub, tip]) => `<div class="sd-kpi" data-tip="${esc(tip)}"><span>${l}</span><b class="num">${v}</b><em>${c}${sub}</em></div>`).join('')}
         </div>
         ${insights.length ? `<div class="section-title"><h2>لمحات ذكية</h2><span class="muted small">تطلع لحالها من أرقامكم</span></div>
-        <div class="sd-ins">${insights.map(([ic, t, k, g]) => `<${g ? `a href="#" data-go="${g}"` : 'div'} class="sd-in ${k || ''}"><i>${ic}</i><p>${t}</p>${g ? '<span class="go">‹</span>' : ''}</${g ? 'a' : 'div'}>`).join('')}</div>` : ''}
+        <div class="sd-ins">${insights.map(([ic, t, k, g, x]) => `<${g ? `a href="#" data-go="${g}"` : 'div'} class="sd-in ${k || ''}"><i>${ic}</i><div class="sd-in-b"><p>${t}</p>${x || ''}</div>${g ? '<span class="go">‹</span>' : ''}</${g ? 'a' : 'div'}>`).join('')}</div>` : ''}
         <div class="sd-tabs" role="tablist"><i class="sd-ind"></i>${SD_TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" class="${k === st.tab ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div id="sd-body"></div>`;
 
@@ -5062,6 +5152,7 @@
         if (animate) { body.classList.add('out'); setTimeout(paint, 160); } else paint();
       };
       $$('button', tabsEl).forEach((x) => x.addEventListener('click', () => { if (x.dataset.tab !== st.tab) show(x.dataset.tab, true); }));
+      $('#sd-ms', B)?.addEventListener('click', () => sdMilestones(G.milestones));
       $$('[data-go]', B).forEach((x) => x.addEventListener('click', (ev) => { ev.preventDefault(); show(x.dataset.go, true); tabsEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
       show(st.tab, false);
       requestAnimationFrame(() => sdSlide(tabsEl));

@@ -1520,3 +1520,18 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .src-mix i { height: 10px; border-radius: 6px; background: #F1E9DE; overflow: hidden; } .src-mix i b { display: block; height: 100%; background: #9C6A45; border-radius: 6px; }
 .src-mix em { font-style: normal; color: #8A6F66; text-align: left; }
 .src-row { flex-wrap: wrap; } .src-chips { gap: 4px; }
+/* لمحات ذكية إضافية */
+.sd-in-b { flex: 1; min-width: 0; }
+.sd-in .sd-d { display: inline-flex; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: rgba(90, 42, 34, .07); vertical-align: 1px; }
+.sd-in .sd-d.up { color: #3F7A4C; background: #E6F0E6; } .sd-in .sd-d.down { color: #A4442F; background: #F6E3DD; }
+.sd-mem { display: flex; align-items: flex-end; gap: 4px; height: 38px; margin-top: 10px; }
+.sd-mem i { flex: 1; min-height: 3px; border-radius: 4px 4px 1px 1px; background: rgba(90, 42, 34, .16); transition: height .6s cubic-bezier(.2, .8, .2, 1), background .2s; cursor: default; }
+.sd-mem i:hover { background: rgba(90, 42, 34, .32); }
+.sd-mem i.now { background: #5A2A22; }
+.sd-in-act { margin-top: 8px; border: 0; background: #5A2A22; color: #F3EBDF; font: inherit; font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.sd-in-act:hover { background: #6A3229; }
+.sd-ms-list { display: grid; gap: 8px; max-height: 55vh; overflow: auto; }
+.sd-ms-r { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; }
+.sd-ms-r > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sd-ms-r small { color: var(--muted, #8A6F66); font-size: 12px; }
+.sd-ms-n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #F3EBDF; color: #5A2A22; font-weight: 700; font-size: 13px; flex: none; }

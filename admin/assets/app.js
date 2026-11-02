@@ -2296,7 +2296,7 @@
 
   async function pageMarketing(view, _a, params, alive) {
     const tab = params.get('t') || 'seasons';
-    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['advisor', 'المستشار'], ['sources', 'كيف عرفتنا؟'], ['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
+    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ['sources', 'كيف عرفتنا؟'], ...(isManager() ? [['advisor', 'المستشار'], ['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
     const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/marketing?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
     if (tab === 'content') return mktContent(view, params, alive, head);
     if (tab === 'compass') return mktCompass(view, alive, head);

@@ -11,169 +11,320 @@
 <meta property="og:title" content="أهديها بيوتفريش">
 <meta property="og:description" content="هدية تفرّحها فعلًا. اختاري القيمة، واكتبي كلمتك، ونوصّلها لها.">
 <meta property="og:image" content="https://beautfresh.com/assets/og-salon.jpg">
-<link rel="icon" href="../home/assets/rosette-1.svg">
+<link rel="icon" href="../home/assets/gift-mark.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Aref+Ruqaa&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#E8DFD1;--paper:#F3EDE4;--soft:#DED2C1;--oud:#5A2A22;--oud2:#3F1D17;--ink:#4A2620;--ink2:#7A5D51;--line:#D3C3AE;--on:#F3EBDF;--on2:#D9C6B7;--gold:#C9A46A;--ease:cubic-bezier(.2,.7,.2,1)}
+:root{--bg:#E8DFD1;--paper:#F6F0E7;--soft:#DED2C1;--oud:#5A2A22;--oud2:#3F1D17;--ink:#4A2620;--ink2:#7A5D51;--mute:#9A8172;--line:#D7C8B4;--on:#F3EBDF;--on2:#D9C6B7;--gold:#C9A46A;--ease:cubic-bezier(.2,.8,.2,1)}
 *{box-sizing:border-box}html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:Tajawal,system-ui,sans-serif;font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}
-.top{display:flex;align-items:center;justify-content:space-between;max-width:1120px;margin:0 auto;padding:18px 20px}
-.top img{height:40px}.top a.back{font-size:14px;color:var(--ink2)}
-.layout{max-width:1120px;margin:0 auto;padding:10px 20px 60px;display:grid;grid-template-columns:1fr 440px;gap:40px;align-items:start}
-.intro .label{font-size:12px;letter-spacing:.28em;color:var(--ink2);text-transform:uppercase}
-.intro h1{margin:6px 0 6px;font-size:clamp(32px,4vw,46px);font-weight:500;line-height:1.25}
-.intro p{margin:0;color:var(--ink2);max-width:46ch}
-.steps{display:flex;gap:8px;margin:26px 0 18px}
-.steps span{flex:1;height:4px;border-radius:4px;background:var(--line);transition:background .4s}
-.steps span.on{background:var(--oud)}
-.panel{background:var(--paper);border-radius:26px;padding:24px;border:1px solid var(--line);animation:in .5s var(--ease) both}
-.panel h2{margin:0 0 4px;font-size:20px;font-weight:500}.panel .hint{margin:0 0 16px;color:var(--ink2);font-size:14px}
+body{background:radial-gradient(1200px 600px at 85% -10%,#F1E8DC 0%,transparent 60%),var(--bg);color:var(--ink);font-family:Tajawal,system-ui,sans-serif;font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer;color:inherit}
+.top{display:flex;align-items:center;justify-content:space-between;max-width:1160px;margin:0 auto;padding:16px 20px}
+.top img{height:38px}.top a.back{font-size:14px;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;background:#fff6}
+.layout{max-width:1160px;margin:0 auto;padding:6px 20px 70px;display:grid;grid-template-columns:1fr 470px;grid-template-areas:'intro stage' 'flow stage';column-gap:44px;align-items:start}
+.intro-w{grid-area:intro}.flow{grid-area:flow}.stage{grid-area:stage}
+.intro{display:flex;gap:16px;align-items:center;margin-bottom:6px}
+.intro .mk{width:74px;height:74px;flex:none;border-radius:22px;background:var(--paper);border:1px solid var(--line);display:grid;place-items:center;animation:bob 4s ease-in-out infinite}
+.intro .mk img{width:52px}
+@keyframes bob{50%{transform:translateY(-5px) rotate(-3deg)}}
+.intro .label{font-size:11.5px;letter-spacing:.3em;color:var(--mute);text-transform:uppercase}
+.intro h1{margin:0;font-size:clamp(30px,4vw,44px);font-weight:500;line-height:1.2}
+.lead{margin:6px 0 0;color:var(--ink2);max-width:48ch}
+.steps{display:flex;gap:6px;margin:26px 0 16px}
+.steps button{flex:1;border:0;background:none;padding:0;text-align:start}
+.steps i{display:block;height:4px;border-radius:4px;background:var(--line);overflow:hidden;position:relative}
+.steps i::after{content:"";position:absolute;inset:0;background:var(--oud);transform:scaleX(0);transform-origin:right;transition:transform .5s var(--ease)}
+.steps button.on i::after{transform:none}
+.steps small{display:block;margin-top:6px;font-size:12px;color:var(--mute);transition:color .3s}
+.steps button.on small{color:var(--ink);font-weight:500}
+.panel{background:var(--paper);border-radius:28px;padding:24px;border:1px solid var(--line);box-shadow:0 1px 2px rgba(95,62,48,.05),0 20px 40px -32px rgba(95,62,48,.45)}
+.panel.enter{animation:pin .5s var(--ease) both}
+@keyframes pin{from{opacity:0;transform:translateY(14px)}}
+.panel h2{margin:0 0 2px;font-size:20px;font-weight:600}.hint{margin:0 0 16px;color:var(--ink2);font-size:14px}
+.sec{margin-top:22px}.sec>label,.sec>.lbl{display:block;font-size:13px;color:var(--ink2);margin-bottom:8px;font-weight:500}
+/* amounts */
 .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.opt{position:relative;border:1.5px solid var(--line);background:#fff8;border-radius:18px;padding:16px 10px;text-align:center;transition:all .25s}
-.opt b{display:block;font-size:22px;font-weight:500}.opt span{font-size:12px;color:var(--ink2)}
-.opt.on{border-color:var(--oud);background:var(--oud);color:var(--on)}.opt.on span{color:var(--on2)}
-.opt .pop{position:absolute;top:-9px;inset-inline-start:50%;transform:translateX(50%);background:var(--gold);color:var(--oud2);font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:999px;white-space:nowrap}
-.custom{margin-top:12px;display:flex;align-items:center;gap:10px}
-.field{margin-bottom:14px}.field label{display:block;font-size:13px;color:var(--ink2);margin-bottom:5px}
-.in{width:100%;height:50px;border-radius:14px;border:1.5px solid var(--line);background:#fff;padding:0 14px;font:inherit;color:var(--ink);outline:none;transition:border-color .2s}
-.in:focus{border-color:var(--oud)}textarea.in{height:auto;padding:12px 14px;resize:none}
+.opt{position:relative;border:1.5px solid var(--line);background:#fff9;border-radius:18px;padding:14px 8px 12px;text-align:center;transition:transform .25s var(--ease),background .25s,border-color .25s,box-shadow .25s}
+.opt:hover{transform:translateY(-2px);border-color:#C4A88F}
+.opt b{display:block;font-size:24px;font-weight:600;line-height:1.3}.opt span{font-size:12px;color:var(--ink2)}
+.opt.on{border-color:var(--oud);background:var(--oud);color:var(--on);box-shadow:0 14px 24px -16px rgba(90,42,34,.9)}.opt.on span{color:var(--on2)}
+.opt .pop{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--oud2);font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.slide{margin-top:14px;padding:14px 16px;border-radius:18px;border:1.5px dashed var(--line);display:none}
+.slide.show{display:block;animation:pin .4s var(--ease) both}
+.slide .v{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink2)}
+.slide .v b{font-size:24px;color:var(--ink);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--oud);margin-top:6px}
+/* occasions */
+.occs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.occ{border:1.5px solid var(--line);background:#fff9;border-radius:16px;padding:10px 6px;text-align:center;font-size:13.5px;transition:all .25s var(--ease)}
+.occ em{display:block;font-style:normal;font-size:22px;line-height:1.3;transition:transform .35s var(--ease)}
+.occ:hover em{transform:scale(1.18) rotate(-6deg)}
+.occ.on{background:var(--oud);border-color:var(--oud);color:var(--on)}
+.themes{display:flex;gap:12px;flex-wrap:wrap}
+.theme{width:56px;height:56px;border-radius:18px;border:3px solid transparent;box-shadow:0 0 0 1px var(--line);transition:transform .25s var(--ease),box-shadow .25s;position:relative}
+.theme:hover{transform:translateY(-2px)}
+.theme.on{border-color:#fff;box-shadow:0 0 0 2px var(--oud);transform:scale(1.07)}
+.theme small{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;font-size:11px;color:var(--mute);white-space:nowrap}
+/* fields */
+.field{margin-bottom:14px}.field label{display:block;font-size:13px;color:var(--ink2);margin-bottom:5px;font-weight:500}
+.in{width:100%;height:52px;border-radius:16px;border:1.5px solid var(--line);background:#fff;padding:0 14px;font:inherit;color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s}
+.in:focus{border-color:var(--oud);box-shadow:0 0 0 4px rgba(90,42,34,.08)}textarea.in{height:auto;padding:12px 14px;resize:none;line-height:1.7}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:7px 14px;font-size:14px;color:var(--ink);transition:all .2s}
-.chip.on{background:var(--oud);border-color:var(--oud);color:var(--on)}
-.themes{display:flex;gap:12px}
-.theme{width:54px;height:54px;border-radius:16px;border:3px solid transparent;box-shadow:0 0 0 1px var(--line);transition:transform .2s}
-.theme.on{border-color:#fff;box-shadow:0 0 0 2px var(--oud);transform:scale(1.06)}
-.nav{display:flex;gap:10px;margin-top:20px}
-.btn{flex:1;min-height:54px;border-radius:999px;border:1.5px solid var(--oud);background:var(--oud);color:var(--on);font-weight:500;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .2s,opacity .2s}
-.btn:active{transform:scale(.98)}.btn.ghost{background:transparent;color:var(--oud);flex:0 0 auto;padding:0 22px}
-.btn[disabled]{opacity:.55;cursor:not-allowed}
-/* preview */
-.stage{position:sticky;top:20px}
-.gcard{position:relative;overflow:hidden;aspect-ratio:1.58;border-radius:24px;padding:24px 26px;display:flex;flex-direction:column;color:var(--on);box-shadow:0 40px 60px -36px rgba(63,29,23,.9);transition:background .5s,transform .6s var(--ease);transform:rotate(-2deg)}
-.gcard:hover{transform:rotate(0)}
-.gcard::after{content:"";position:absolute;inset:0;background:url(../home/assets/rosette-2.svg) 0 0/28px 28px;opacity:.07;filter:brightness(0) invert(1);pointer-events:none}
-.gcard.t-oud{background:linear-gradient(150deg,#6A3229,#3F1D17)}
-.gcard.t-gold{background:linear-gradient(150deg,#E3C890,#A8834C);color:#3F1D17}.gcard.t-gold::after{filter:none;opacity:.08}
-.gcard.t-sand{background:linear-gradient(150deg,#F3EDE4,#DCCFBD);color:#4A2620}.gcard.t-sand::after{filter:none;opacity:.07}
-.gcard .row{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
-.gcard .lg{height:32px;filter:brightness(0) invert(94%) sepia(9%) saturate(380%) hue-rotate(335deg)}
-.gcard.t-gold .lg,.gcard.t-sand .lg{filter:none}
-.gcard .occ{font-size:12px;padding:3px 10px;border-radius:999px;background:rgba(243,235,223,.14)}
-.gcard.t-gold .occ,.gcard.t-sand .occ{background:rgba(90,42,34,.1)}
-.gcard .val{position:relative;z-index:1;margin-top:auto;font-size:34px;font-weight:500;line-height:1.2}
-.gcard .to{position:relative;z-index:1;font-size:14px;opacity:.85}
-.gcard .msg{position:relative;z-index:1;font-size:13.5px;opacity:.8;font-style:italic;max-height:3.2em;overflow:hidden}
-.gcard .code{position:absolute;bottom:20px;inset-inline-start:24px;z-index:1;font-size:12px;letter-spacing:.14em;opacity:.7;direction:ltr}
-.under{text-align:center;color:var(--ink2);font-size:13px;margin-top:18px}
-.perks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}
-.perks div{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center;font-size:12.5px;color:var(--ink2)}
-.perks b{display:block;color:var(--ink);font-size:14px;font-weight:500}
+.chip{border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:7px 14px;font-size:13.5px;transition:all .2s}
+.chip:hover{border-color:#C4A88F}.chip.on{background:var(--oud);border-color:var(--oud);color:var(--on)}
+.sugg{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-top:8px}.sugg::-webkit-scrollbar{display:none}
+.sugg button{flex:none;border:1px dashed #C4A88F;background:#fff8;border-radius:12px;padding:6px 12px;font-size:12.5px;color:var(--ink2);transition:all .2s}
+.sugg button:hover{background:#fff;color:var(--ink)}
+.count{float:left;font-size:11.5px;color:var(--mute)}
+.nav{display:flex;gap:10px;margin-top:22px}
+.btn{flex:1;min-height:56px;border-radius:999px;border:1.5px solid var(--oud);background:var(--oud);color:var(--on);font-weight:600;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .2s,box-shadow .25s,opacity .2s;box-shadow:0 14px 24px -16px rgba(90,42,34,.9)}
+.btn:hover{transform:translateY(-1px)}.btn:active{transform:scale(.98)}
+.btn.ghost{background:transparent;color:var(--oud);flex:0 0 auto;padding:0 22px;box-shadow:none}
+.btn.soft{background:#fff;color:var(--oud);border-color:var(--line);box-shadow:none}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+.err{color:#A33A2B;font-size:13px;margin:-6px 0 8px;min-height:0;transition:all .2s}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+/* the card */
+.stage{position:sticky;top:18px;perspective:1300px}
+.flip{position:relative;transition:transform .9s var(--ease);transform-style:preserve-3d}
+.flip.back{transform:rotateY(180deg)}
+.tilt{transition:transform .25s ease-out;transform-style:preserve-3d}
+.gcard{position:relative;overflow:hidden;aspect-ratio:1.58;border-radius:26px;padding:22px 24px;display:flex;flex-direction:column;color:var(--on);box-shadow:0 44px 60px -38px rgba(63,29,23,.95),0 0 0 1px rgba(255,255,255,.06) inset;transition:background .6s;backface-visibility:hidden}
+.gcard.b{position:absolute;inset:0;transform:rotateY(180deg)}
+.gcard::before{content:"";position:absolute;inset:0;background:url(../home/assets/rosette-2.svg) 0 0/28px 28px;opacity:.07;filter:brightness(0) invert(1);pointer-events:none}
+.gcard .shine{position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%);transform:translateX(var(--sx,-60%));transition:transform .2s ease-out;pointer-events:none;z-index:2}
+.gcard .big{position:absolute;inset-inline-start:-34px;bottom:-46px;width:210px;opacity:.13;pointer-events:none;transition:transform .8s var(--ease)}
+.t-oud .gcard{background:linear-gradient(150deg,#6A3229,#3F1D17)}
+.t-gold .gcard{background:linear-gradient(150deg,#E9D2A0,#A8834C);color:#3F1D17}
+.t-sand .gcard{background:linear-gradient(150deg,#F7F1E8,#DCCFBD);color:#4A2620}
+.t-rose .gcard{background:linear-gradient(150deg,#C99286,#7E4639)}
+.t-gold .gcard::before,.t-sand .gcard::before{filter:none;opacity:.08}
+.gcard .row{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1}
+.gcard .lg{height:44px}
+.gcard .occ-t{font-size:12.5px;padding:4px 12px;border-radius:999px;background:rgba(243,235,223,.16);backdrop-filter:blur(4px)}
+.t-gold .occ-t,.t-sand .occ-t{background:rgba(90,42,34,.1)}
+.gcard .val{position:relative;z-index:1;margin-top:auto;font-size:40px;font-weight:600;line-height:1.1;letter-spacing:-.01em}
+.gcard .val small{font-size:15px;font-weight:400;opacity:.8}
+.gcard .to{position:relative;z-index:1;font-size:14.5px;opacity:.9}
+.gcard .code{position:absolute;bottom:18px;inset-inline-start:24px;z-index:1;font-size:12px;letter-spacing:.16em;opacity:.65;direction:ltr}
+.gcard .emo{position:absolute;top:58px;inset-inline-start:22px;font-size:26px;z-index:1;animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-6px) rotate(8deg)}}
+.gcard.b .msgx{position:relative;z-index:1;margin:auto 0;font-family:"Aref Ruqaa",Tajawal,serif;font-size:22px;line-height:1.7;text-align:center}
+.gcard.b .sig{position:relative;z-index:1;text-align:center;font-size:13.5px;opacity:.8}
+.gcard.b .use{position:relative;z-index:1;display:flex;justify-content:space-between;font-size:11.5px;opacity:.7;border-top:1px solid currentColor;padding-top:8px;margin-top:10px}
+.pulse-val{animation:pv .45s var(--ease)}
+@keyframes pv{40%{transform:scale(1.08)}}
+.under{display:flex;justify-content:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+.under button{border:1px solid var(--line);background:#fff8;border-radius:999px;padding:7px 14px;font-size:13px;color:var(--ink2);display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.under button:hover{background:#fff;color:var(--ink)}
+.perks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}
+.perks div{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:12px;text-align:center;font-size:12.5px;color:var(--ink2)}
+.perks b{display:block;color:var(--ink);font-size:14px;font-weight:600}
 /* checkout */
 .sum{border-radius:18px;background:#fff;border:1px solid var(--line);padding:6px 16px;margin-bottom:16px}
 .sum div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14.5px}.sum div:last-child{border:0;font-weight:700;font-size:17px}
 .sum span:first-child{color:var(--ink2)}
 .pay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.pm{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;height:56px;border-radius:14px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:500;opacity:.75}
+.pm{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border-radius:14px;border:1.5px solid var(--line);background:#fff;font-weight:600;opacity:.7}
 .pm .soon{position:absolute;top:-8px;inset-inline-end:10px;font-size:10px;font-weight:700;background:var(--gold);color:var(--oud2);padding:1px 8px;border-radius:999px}
 .pm.apple{background:#111;color:#fff;border-color:#111}
-.note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:#EFE2CF;font-size:13.5px;margin-bottom:14px}
-.alt{display:block;text-align:center;margin-top:14px;font-size:14px;color:var(--oud);text-decoration:underline}
+.note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:#EFE2CF;font-size:13.5px;margin-bottom:14px}
+.wa{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;min-height:54px;border-radius:999px;background:#E3F4E8;color:#1E6B3B;border:1px solid #BFE3CB;font-weight:600;transition:transform .2s}
+.wa:hover{transform:translateY(-1px)}
 .secure{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;color:var(--ink2)}
-.err{color:#A33A2B;font-size:13px;margin-top:-8px;margin-bottom:10px;display:none}
-@keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-@media (max-width:900px){.layout{grid-template-columns:1fr;gap:18px}.stage{position:static;order:-1}.intro{order:-2}.perks{display:none}}
-@media (max-width:420px){.opts{grid-template-columns:repeat(2,1fr)}.row2{grid-template-columns:1fr}}
+/* unwrap preview */
+.veil{position:fixed;inset:0;z-index:50;background:rgba(40,20,16,.72);backdrop-filter:blur(6px);display:none;place-items:center;padding:20px}
+.veil.show{display:grid;animation:fade .3s both}
+@keyframes fade{from{opacity:0}}
+.phone{width:min(360px,92vw);border-radius:38px;background:#ECE5DD;padding:14px;box-shadow:0 30px 70px -20px rgba(0,0,0,.6);position:relative}
+.phone .bar{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;border-bottom:1px solid #d7cfc5;margin-bottom:12px;font-size:14px}
+.phone .bar img{width:36px;height:36px;border-radius:50%;background:var(--oud);padding:6px}
+.bubble{background:#fff;border-radius:16px 16px 4px 16px;padding:10px;max-width:92%;font-size:13.5px;line-height:1.7;box-shadow:0 1px 1px rgba(0,0,0,.08);animation:pop .5s var(--ease) both}
+.bubble+.bubble{margin-top:8px;animation-delay:.9s}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.96)}}
+.gift{position:relative;height:190px;display:grid;place-items:center;cursor:pointer}
+.gift .box{position:relative;width:150px;height:110px;margin-top:40px;border-radius:14px;background:linear-gradient(150deg,#6A3229,#3F1D17);box-shadow:0 20px 30px -18px rgba(0,0,0,.6);transition:transform .5s var(--ease),opacity .4s}
+.gift .lid{position:absolute;left:-8px;right:-8px;top:-26px;height:30px;border-radius:10px;background:linear-gradient(150deg,#7A3A2F,#4A231C);transition:transform .7s var(--ease)}
+.gift .rib{position:absolute;left:50%;top:-26px;bottom:0;width:18px;transform:translateX(-50%);background:var(--gold)}
+.gift .bow{position:absolute;left:50%;top:-58px;transform:translateX(-50%);width:62px;transition:transform .7s var(--ease)}
+.gift.open .lid,.gift.open .bow{transform:translate(-30%,-120px) rotate(-24deg);opacity:0;transition:transform .8s var(--ease),opacity .6s .3s}
+.gift.open .box{transform:translateY(40px) scale(.9);opacity:0;transition-delay:.25s}
+.gift .tap{position:absolute;bottom:-4px;font-size:12px;color:#7a6a5e;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.4}}
+.gift .mini{position:absolute;width:260px;transform:translateY(60px) scale(.6);opacity:0;transition:transform .9s .35s var(--ease),opacity .5s .35s;pointer-events:none}
+.gift.open .mini{transform:none;opacity:1}
+.gift.open .tap{display:none}
+.conf{position:absolute;width:8px;height:12px;border-radius:2px;opacity:0;top:50%;left:50%}
+.gift.open .conf{animation:conf 1.2s var(--ease) forwards;animation-delay:var(--dl)}
+@keyframes conf{0%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(540deg)}}
+.close{position:absolute;top:-14px;inset-inline-end:-6px;width:40px;height:40px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 16px -6px rgba(0,0,0,.5);font-size:20px}
+@media (max-width:900px){.layout{grid-template-columns:1fr;grid-template-areas:'intro' 'stage' 'flow';row-gap:14px}.stage{position:relative;top:0}.perks{display:none}.gcard .val{font-size:34px}.steps{margin-top:6px}}
+@media (max-width:420px){.opts{grid-template-columns:repeat(2,1fr)}.row2{grid-template-columns:1fr}.occs{grid-template-columns:repeat(3,1fr)}.gcard{padding:18px 20px}.gcard .lg{height:36px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <header class="top"><a href="../"><img src="../home/assets/Beautfresh-brown.svg" alt="بيوتفريش"></a><a class="back" href="../">الرئيسية ←</a></header>
 <main class="layout">
-  <div>
-    <div class="intro"><span class="label">Gift Card</span><h1>أهديها بيوتفريش</h1><p>هدية تفرّحها فعلًا. تستخدمها في أي خدمة بالصالون أو في بيتها، وتوصلها على جوالها بقسيمة باسمها.</p></div>
-    <div class="steps"><span class="on"></span><span></span><span></span></div>
+  <div class="intro-w">
+    <div class="intro"><span class="mk"><img src="../home/assets/gift-mark.svg" alt=""></span><div><span class="label">Gift Card</span><h1>أهديها بيوتفريش</h1></div></div>
+    <p class="lead">هدية تفرّحها فعلًا. تستخدمها في أي خدمة بالصالون، وتوصلها على جوالها بقسيمة باسمها وبكلمتك.</p>
+  </div>
+  <div class="flow">
+    <div class="steps" id="steps"><button data-s="1"><i></i><small>الهدية</small></button><button data-s="2"><i></i><small>لمين؟</small></button><button data-s="3"><i></i><small>المراجعة</small></button></div>
     <div id="step"></div>
   </div>
-  <aside class="stage">
-    <div class="gcard t-oud" id="card">
-      <div class="row"><img class="lg" src="../home/assets/Beautfresh-brown.svg" alt=""><span class="occ" id="c-occ">قسيمة هدية</span></div>
-      <div class="val" id="c-val">٥٠٠ ريال</div>
-      <div class="to" id="c-to">إلى: <b>اسمها</b></div>
-      <div class="msg" id="c-msg"></div>
-      <span class="code">BF-•••••</span>
-    </div>
-    <p class="under">هذي قسيمتها، تتصمم وأنتِ تكتبين ✨</p>
-    <div class="perks"><div><b>٦ أشهر</b>صلاحية القسيمة</div><div><b>أي خدمة</b>بالصالون أو البيت</div><div><b>توصل فورًا</b>أو بالموعد اللي تختارينه</div></div>
+  <aside class="stage" id="stage">
+    <div class="tilt" id="tilt"><div class="flip t-oud" id="flip">
+      <div class="gcard f">
+        <span class="shine"></span><img class="big" src="../home/assets/gift-mark-cream.svg" alt="">
+        <div class="row"><img class="lg" id="c-lg" src="../home/assets/gift-logo-cream.svg" alt="بيوتفريش للإهداء"><span class="occ-t" id="c-occ">قسيمة هدية</span></div>
+        <span class="emo" id="c-emo"></span>
+        <div class="val" id="c-val">٥٠٠ <small>ريال</small></div>
+        <div class="to" id="c-to">إلى: <b>اسمها</b></div>
+        <span class="code">BF-•••••</span>
+      </div>
+      <div class="gcard b">
+        <span class="shine"></span>
+        <div class="msgx" id="c-msg">اكتبي كلمتك لها، وتطلع هنا بخط جميل</div>
+        <div class="sig" id="c-sig"></div>
+        <div class="use"><span>صالحة ٦ أشهر</span><span>بيوتفريش · الأحساء</span></div>
+      </div>
+    </div></div>
+    <div class="under"><button id="flipBtn">↻ اقلبي القسيمة</button><button id="prevBtn">🎁 شوفي كيف توصلها</button></div>
+    <div class="perks"><div><b>٦ أشهر</b>صلاحية القسيمة</div><div><b>أي خدمة</b>في الصالون</div><div><b>توصل فورًا</b>أو بالموعد اللي تختارينه</div></div>
   </aside>
 </main>
+<div class="veil" id="veil"><div class="phone"><button class="close" id="vx" aria-label="إغلاق">×</button>
+  <div class="bar"><img src="../home/assets/gift-mark-cream.svg" alt=""><div><b>بيوتفريش</b><br><small style="color:#7a6a5e">رسالة على واتساب</small></div></div>
+  <div class="bubble" id="v-txt"></div>
+  <div class="bubble"><div class="gift" id="gift"><div class="box"><div class="lid"></div><div class="rib"></div><img class="bow" src="../home/assets/gift-mark.svg" alt=""></div><img class="mini" id="v-card" alt=""><span class="tap">اضغطي على الهدية 🤍</span></div></div>
+</div></div>
 <script>
 (() => {
   const AR = (n) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
-  const fmt = (n) => AR(Number(n).toLocaleString('en-US'));
+  const fmt = (n) => AR(Math.round(Number(n)).toLocaleString('en-US'));
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const WA = '966509492224';
+  const PRESETS = [[200, 'مانيكير وبديكير'], [300, 'استشوار وأظافر'], [500, 'دلّعي نفسك', 1], [750, 'يوم كامل'], [1000, 'تجربة فاخرة'], [0, 'مبلغ ثاني']];
+  const OCC = [['عيد ميلاد', '🎂', 'كل عام وأنتِ بخير', ['كل عام وأنتِ بخير يا أحلى وحدة', 'عمرك كله فرح، وهذي بداية دلع السنة']], ['عيد', '✨', 'عيدك مبارك', ['عيدك مبارك، دلّعي نفسك على حسابي', 'كل عام وأنتِ بخير وعيدك سعيد']], ['يوم الأم', '🤍', 'لأحلى أم', ['لأحلى أم في الدنيا، تستاهلين كل الدلع', 'يا أمي، هذي لك وحدك']], ['مبروك', '🎉', 'مبروك', ['ألف مبروك، تستاهلين كل خير', 'مبروك من القلب، وهذي هديتي']], ['شكرًا', '🌿', 'شكرًا لك', ['شكرًا على كل شي، هذي منّي لك', 'وجودك يفرق، شكرًا']], ['بدون مناسبة', '🎁', 'قسيمة هدية', ['ما تحتاجين مناسبة عشان تتدلعين', 'هدية صغيرة لأنك تستاهلين']]];
+  const THEMES = [['oud', 'عودي', 'linear-gradient(150deg,#6A3229,#3F1D17)', 1], ['rose', 'وردي', 'linear-gradient(150deg,#C99286,#7E4639)', 1], ['gold', 'ذهبي', 'linear-gradient(150deg,#E9D2A0,#A8834C)', 0], ['sand', 'رملي', 'linear-gradient(150deg,#F7F1E8,#DCCFBD)', 0]];
   const S = { amount: 500, theme: 'oud', occ: 'بدون مناسبة', to: '', from: '', msg: '', toPhone: '', when: 'now', date: '', fromPhone: '' };
-  const OCC = ['عيد ميلاد', 'عيد', 'يوم الأم', 'مبروك', 'شكرًا', 'بدون مناسبة'];
-  const OCC_CARD = { 'عيد ميلاد': 'كل عام وأنتِ بخير 🎂', 'عيد': 'عيدك مبارك ✨', 'يوم الأم': 'لأحلى أم 🤍', 'مبروك': 'مبروك 🤍', 'شكرًا': 'شكرًا لك 🤍', 'بدون مناسبة': 'قسيمة هدية' };
-  const card = document.getElementById('card'), stepEl = document.getElementById('step');
-  let step = 1;
-  const paint = () => {
-    card.className = 'gcard t-' + S.theme;
-    document.getElementById('c-occ').textContent = OCC_CARD[S.occ];
-    document.getElementById('c-val').textContent = `${fmt(S.amount || 0)} ريال`;
-    document.getElementById('c-to').innerHTML = `إلى: <b>${esc(S.to || 'اسمها')}</b>${S.from ? ` · من: <b>${esc(S.from)}</b>` : ''}`;
-    document.getElementById('c-msg').textContent = S.msg ? `«${S.msg}»` : '';
-    document.querySelectorAll('.steps span').forEach((s, i) => s.classList.toggle('on', i < step));
+  let step = 1, shown = 500;
+  const occ = () => OCC.find((o) => o[0] === S.occ);
+  const flip = $('#flip'), stepEl = $('#step');
+
+  /* القسيمة */
+  const countTo = (to) => {
+    const from = shown, t0 = performance.now(), el = $('#c-val');
+    el.classList.remove('pulse-val'); void el.offsetWidth; el.classList.add('pulse-val');
+    const tick = (t) => { const p = Math.min(1, (t - t0) / 600), k = 1 - Math.pow(1 - p, 3); shown = from + (to - from) * k; el.innerHTML = `${fmt(shown)} <small>ريال</small>`; if (p < 1) requestAnimationFrame(tick); else shown = to; };
+    requestAnimationFrame(tick);
   };
+  const paint = () => {
+    const th = THEMES.find((t) => t[0] === S.theme), dark = th[3];
+    flip.className = `flip t-${S.theme}${flip.classList.contains('back') ? ' back' : ''}`;
+    $('#c-lg').src = `../home/assets/gift-logo${dark ? '-cream' : ''}.svg`;
+    $('.big').src = `../home/assets/gift-mark${dark ? '-cream' : ''}.svg`;
+    $('#c-occ').textContent = occ()[2];
+    $('#c-emo').textContent = S.occ === 'بدون مناسبة' ? '' : occ()[1];
+    $('#c-to').innerHTML = `إلى: <b>${esc(S.to || 'اسمها')}</b>${S.from ? ` · من: <b>${esc(S.from)}</b>` : ''}`;
+    $('#c-msg').textContent = S.msg || 'اكتبي كلمتك لها، وتطلع هنا بخط جميل';
+    $('#c-sig').textContent = S.from ? `— ${S.from}` : '';
+    if (Math.round(shown) !== Math.round(S.amount || 0)) countTo(S.amount || 0);
+    $$('#steps button').forEach((b) => b.classList.toggle('on', +b.dataset.s <= step));
+  };
+  const showBack = (on) => flip.classList.toggle('back', on);
+
+  // ميلان مع الماوس / الجوال + لمعة
+  const tilt = $('#tilt'), stage = $('#stage');
+  const setTilt = (x, y) => { tilt.style.transform = `rotateY(${x * 12}deg) rotateX(${-y * 10}deg)`; $$('.shine').forEach((s) => s.style.setProperty('--sx', `${-60 + (x + 1) * 60}%`)); };
+  stage.addEventListener('pointermove', (e) => { if (e.pointerType !== 'mouse') return; const r = tilt.getBoundingClientRect(); setTilt(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1); });
+  stage.addEventListener('pointerleave', () => setTilt(0, 0));
+  addEventListener('deviceorientation', (e) => { if (e.gamma == null) return; setTilt(Math.max(-1, Math.min(1, e.gamma / 30)), Math.max(-1, Math.min(1, (e.beta - 45) / 40))); });
+  $('#flipBtn').onclick = () => showBack(!flip.classList.contains('back'));
+  tilt.onclick = () => showBack(!flip.classList.contains('back'));
+
+  /* الخطوات */
   const views = {
-    1: () => `<div class="panel"><h2>كم قيمة الهدية؟</h2><p class="hint">تقدر تستخدمها في أي خدمة، وإذا زادت الخدمة تكمّل الفرق.</p>
-      <div class="opts">${[[200, 'مانيكير وبديكير'], [300, 'استشوار وأظافر'], [500, 'دلّعي نفسك', 1], [750, 'يوم كامل'], [1000, 'تجربة فاخرة'], [0, 'مبلغ آخر']].map(([v, l, p]) => `<button class="opt ${S.amount === v || (v === 0 && ![200, 300, 500, 750, 1000].includes(S.amount)) ? 'on' : ''}" data-v="${v}">${p ? '<span class="pop">الأكثر طلبًا</span>' : ''}<b>${v ? fmt(v) : '✎'}</b><span>${v ? 'ريال · ' + l : l}</span></button>`).join('')}</div>
-      <div class="custom" id="cust" style="${[200, 300, 500, 750, 1000].includes(S.amount) ? 'display:none' : ''}"><input class="in" id="amt" type="number" inputmode="numeric" min="100" max="5000" placeholder="المبلغ (من ١٠٠ ريال)" value="${[200, 300, 500, 750, 1000].includes(S.amount) ? '' : S.amount || ''}"></div>
-      <div class="field" style="margin-top:18px"><label>المناسبة</label><div class="chips">${OCC.map((o) => `<button class="chip ${o === S.occ ? 'on' : ''}" data-o="${o}">${o}</button>`).join('')}</div></div>
-      <div class="field"><label>تصميم القسيمة</label><div class="themes">${[['oud', 'linear-gradient(150deg,#6A3229,#3F1D17)'], ['gold', 'linear-gradient(150deg,#E3C890,#A8834C)'], ['sand', 'linear-gradient(150deg,#F3EDE4,#DCCFBD)']].map(([k, g]) => `<button class="theme ${k === S.theme ? 'on' : ''}" data-t="${k}" style="background:${g}" aria-label="${k}"></button>`).join('')}</div></div>
-      <div class="nav"><button class="btn" data-next>التالي ←</button></div></div>`,
-    2: () => `<div class="panel"><h2>لمين الهدية؟</h2><p class="hint">نكتب اسمها على القسيمة، ونرسلها لها على واتساب.</p>
-      <div class="row2"><div class="field"><label>اسمها</label><input class="in" id="to" maxlength="40" value="${esc(S.to)}" placeholder="مثلًا: نورة"></div><div class="field"><label>جوالها</label><input class="in" id="toPhone" inputmode="tel" dir="ltr" maxlength="14" value="${esc(S.toPhone)}" placeholder="05xxxxxxxx"></div></div>
-      <div class="field"><label>من (اسمك على القسيمة)</label><input class="in" id="from" maxlength="40" value="${esc(S.from)}" placeholder="مثلًا: أختك سارة"></div>
-      <div class="field"><label>كلمتك لها</label><textarea class="in" id="msg" rows="3" maxlength="140" placeholder="كل عام وأنتِ بخير يا أحلى أخت">${esc(S.msg)}</textarea></div>
+    1: () => `<div class="panel enter"><h2>كم قيمة الهدية؟</h2><p class="hint">تستخدمها في أي خدمة، وإذا زادت الخدمة تكمّل الفرق.</p>
+      <div class="opts">${PRESETS.map(([v, l, p]) => { const on = v ? S.amount === v : !PRESETS.some((x) => x[0] && x[0] === S.amount); return `<button class="opt ${on ? 'on' : ''}" data-v="${v}">${p ? '<span class="pop">الأكثر طلبًا</span>' : ''}<b>${v ? fmt(v) : '✎'}</b><span>${v ? l : l}</span></button>`; }).join('')}</div>
+      <div class="slide ${PRESETS.some((x) => x[0] && x[0] === S.amount) ? '' : 'show'}" id="cust"><div class="v"><span>حركي واختاري المبلغ</span><b id="sv">${fmt(S.amount)} ريال</b></div><input type="range" id="amt" min="100" max="3000" step="50" value="${S.amount}"></div>
+      <div class="sec"><span class="lbl">المناسبة</span><div class="occs">${OCC.map(([o, e]) => `<button class="occ ${o === S.occ ? 'on' : ''}" data-o="${o}"><em>${e}</em>${o}</button>`).join('')}</div></div>
+      <div class="sec" style="margin-bottom:18px"><span class="lbl">لون القسيمة</span><div class="themes">${THEMES.map(([k, l, g]) => `<button class="theme ${k === S.theme ? 'on' : ''}" data-t="${k}" style="background:${g}" aria-label="${l}"><small>${l}</small></button>`).join('')}</div></div>
+      <div class="nav"><button class="btn" data-next>التالي: لمين الهدية؟ ←</button></div></div>`,
+    2: () => `<div class="panel enter"><h2>لمين الهدية؟</h2><p class="hint">نكتب اسمها على القسيمة، ونرسلها لها على واتساب.</p>
+      <div class="row2"><div class="field"><label>اسمها</label><input class="in" id="to" maxlength="30" value="${esc(S.to)}" placeholder="مثلًا: نورة"></div><div class="field"><label>جوالها</label><input class="in" id="toPhone" inputmode="tel" dir="ltr" maxlength="14" value="${esc(S.toPhone)}" placeholder="05xxxxxxxx"></div></div>
+      <div class="field"><label>من (اسمك على القسيمة)</label><input class="in" id="from" maxlength="30" value="${esc(S.from)}" placeholder="مثلًا: أختك سارة"></div>
+      <div class="field"><label>كلمتك لها <span class="count" id="cnt">${AR(S.msg.length)}/١٢٠</span></label><textarea class="in" id="msg" rows="3" maxlength="120" placeholder="اكتبي من قلبك…">${esc(S.msg)}</textarea>
+        <div class="sugg">${occ()[3].map((t) => `<button type="button" data-sg="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
       <div class="field"><label>متى توصلها؟</label><div class="chips"><button class="chip ${S.when === 'now' ? 'on' : ''}" data-w="now">الحين</button><button class="chip ${S.when === 'date' ? 'on' : ''}" data-w="date">في يوم معيّن</button></div>
         <input class="in" id="date" type="date" style="margin-top:10px;${S.when === 'date' ? '' : 'display:none'}" value="${S.date}"></div>
       <p class="err" id="err"></p>
-      <div class="nav"><button class="btn ghost" data-back>→</button><button class="btn" data-next>التالي ←</button></div></div>`,
-    3: () => `<div class="panel"><h2>مراجعة ودفع</h2><p class="hint">تأكدي من التفاصيل، وبعدها الدفع.</p>
-      <div class="sum"><div><span>الهدية</span><span>قسيمة ${fmt(S.amount)} ريال</span></div><div><span>إلى</span><span>${esc(S.to)} · <span dir="ltr">${esc(S.toPhone)}</span></span></div><div><span>التوصيل</span><span>${S.when === 'now' ? 'فور الدفع' : esc(S.date)}</span></div><div><span>الإجمالي</span><span>${fmt(S.amount)} ريال</span></div></div>
-      <div class="field"><label>جوالك (نرسل لك إيصال الدفع)</label><input class="in" id="fromPhone" inputmode="tel" dir="ltr" maxlength="14" value="${esc(S.fromPhone)}" placeholder="05xxxxxxxx"></div>
+      <div class="nav"><button class="btn ghost" data-back>→</button><button class="btn" data-next>راجعي الهدية ←</button></div></div>`,
+    3: () => `<div class="panel enter"><h2>مراجعة ودفع</h2><p class="hint">تأكدي من التفاصيل، وشوفي كيف بتوصلها قبل الدفع.</p>
+      <div class="sum"><div><span>الهدية</span><span>قسيمة ${fmt(S.amount)} ريال · ${esc(S.occ)}</span></div><div><span>إلى</span><span>${esc(S.to)} · <span dir="ltr">${esc(S.toPhone)}</span></span></div><div><span>التوصيل</span><span>${S.when === 'now' ? 'فور الدفع' : esc(S.date)}</span></div><div><span>الإجمالي</span><span>${fmt(S.amount)} ريال</span></div></div>
+      <button class="btn soft" id="see" style="width:100%;margin-bottom:14px">🎁 شوفي كيف بتوصلها</button>
       <div class="pay"><div class="pm apple"><span class="soon">قريبًا</span>Apple Pay</div><div class="pm"><span class="soon">قريبًا</span>مدى</div><div class="pm"><span class="soon">قريبًا</span>Visa · Mastercard</div><div class="pm"><span class="soon">قريبًا</span>تابي · تمارا</div></div>
-      <div class="note">✨ <span>الدفع الإلكتروني يوصل قريب جدًا. لين ذاك الوقت، كمّلي طلبك على واتساب ونرتّب الدفع معك، والقسيمة توصلها بنفس الشكل.</span></div>
-      <button class="btn" disabled>ادفعي ${fmt(S.amount)} ريال · قريبًا</button>
-      <a class="alt" id="wa" target="_blank" rel="noopener">كمّلي الطلب الحين على واتساب ←</a>
-      <div class="secure">🔒 الدفع آمن ومشفّر</div>
+      <div class="note">✨ <span>الدفع الإلكتروني يوصل قريب. لين ذاك الوقت، كمّلي طلبك على واتساب ونرتّب الدفع معك، والقسيمة توصلها بنفس الشكل.</span></div>
+      <a class="wa" id="wa" target="_blank" rel="noopener">كمّلي الطلب على واتساب ←</a>
+      <div class="secure">🔒 بياناتك محفوظة وما تنشارك</div>
       <div class="nav"><button class="btn ghost" data-back>→ رجوع</button></div></div>`,
   };
-  const waText = () => `السلام عليكم 🤍\nأبي أطلب قسيمة هدية من بيوتفريش:\n• القيمة: ${S.amount} ريال\n• المناسبة: ${S.occ}\n• إلى: ${S.to} (${S.toPhone})\n• من: ${S.from || '—'}\n• الكلمة: ${S.msg || '—'}\n• التوصيل: ${S.when === 'now' ? 'الحين' : S.date}\n• التصميم: ${{ oud: 'عودي', gold: 'ذهبي', sand: 'رملي' }[S.theme]}`;
+  const waText = () => `السلام عليكم 🤍\nأبي أطلب قسيمة هدية من بيوتفريش:\n• القيمة: ${S.amount} ريال\n• المناسبة: ${S.occ}\n• إلى: ${S.to} (${S.toPhone})\n• من: ${S.from || '—'}\n• الكلمة: ${S.msg || '—'}\n• التوصيل: ${S.when === 'now' ? 'الحين' : S.date}\n• لون القسيمة: ${THEMES.find((t) => t[0] === S.theme)[1]}`;
   const normPhone = (v) => { let p = String(v || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, ''); if (p.startsWith('966')) p = '0' + p.slice(3); if (/^5\d{8}$/.test(p)) p = '0' + p; return p; };
+  const fail = (m) => { const e = $('#err'); e.textContent = m; const p = $('.panel'); p.classList.remove('shake'); void p.offsetWidth; p.classList.add('shake'); };
+  const go = (n) => { step = n; render(); if (innerWidth < 900) scrollTo({ top: stepEl.offsetTop - 120, behavior: 'smooth' }); };
   const render = () => {
     stepEl.innerHTML = views[step](); paint();
-    const $ = (s) => stepEl.querySelector(s), $$ = (s) => stepEl.querySelectorAll(s);
-    $$('[data-v]').forEach((b) => b.onclick = () => { const v = +b.dataset.v; $$('[data-v]').forEach((x) => x.classList.toggle('on', x === b)); $('#cust').style.display = v ? 'none' : ''; if (v) S.amount = v; else { S.amount = +($('#amt').value || 0); $('#amt').focus(); } paint(); });
-    $('#amt')?.addEventListener('input', (e) => { S.amount = Math.min(5000, +e.target.value || 0); paint(); });
-    $$('[data-o]').forEach((b) => b.onclick = () => { S.occ = b.dataset.o; $$('[data-o]').forEach((x) => x.classList.toggle('on', x === b)); paint(); });
-    $$('[data-t]').forEach((b) => b.onclick = () => { S.theme = b.dataset.t; $$('[data-t]').forEach((x) => x.classList.toggle('on', x === b)); paint(); });
-    ['to', 'from', 'msg', 'toPhone', 'fromPhone'].forEach((k) => $('#' + k)?.addEventListener('input', (e) => { S[k] = e.target.value.trim(); paint(); if ($('#wa')) $('#wa').href = `https://wa.me/${WA}?text=${encodeURIComponent(waText())}`; }));
-    $$('[data-w]').forEach((b) => b.onclick = () => { S.when = b.dataset.w; $$('[data-w]').forEach((x) => x.classList.toggle('on', x === b)); $('#date').style.display = S.when === 'date' ? '' : 'none'; });
-    $('#date')?.addEventListener('input', (e) => { S.date = e.target.value; });
-    if ($('#date')) $('#date').min = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
-    if ($('#wa')) $('#wa').href = `https://wa.me/${WA}?text=${encodeURIComponent(waText())}`;
-    $('[data-back]')?.addEventListener('click', () => { step--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    $('[data-next]')?.addEventListener('click', () => {
-      if (step === 1 && !(S.amount >= 100)) { alertMsg('القيمة أقل شي ١٠٠ ريال'); return; }
-      if (step === 2) { const e = $('#err'); S.toPhone = normPhone(S.toPhone); if (S.to.length < 2) { e.textContent = 'اكتبي اسمها'; e.style.display = 'block'; return; } if (!/^05\d{8}$/.test(S.toPhone)) { e.textContent = 'رقم جوالها غير صحيح'; e.style.display = 'block'; return; } if (S.when === 'date' && !S.date) { e.textContent = 'اختاري يوم التوصيل'; e.style.display = 'block'; return; } }
-      step++; render(); if (innerWidth < 900) window.scrollTo({ top: 0, behavior: 'smooth' });
+    showBack(step === 2);
+    $$('[data-v]', stepEl).forEach((b) => b.onclick = () => { const v = +b.dataset.v; $$('[data-v]', stepEl).forEach((x) => x.classList.toggle('on', x === b)); $('#cust').classList.toggle('show', !v); if (v) S.amount = v; else S.amount = +$('#amt').value; $('#sv') && ($('#sv').textContent = `${fmt(S.amount)} ريال`); paint(); });
+    $('#amt')?.addEventListener('input', (e) => { S.amount = +e.target.value; $('#sv').textContent = `${fmt(S.amount)} ريال`; paint(); });
+    $$('[data-o]', stepEl).forEach((b) => b.onclick = () => { S.occ = b.dataset.o; $$('[data-o]', stepEl).forEach((x) => x.classList.toggle('on', x === b)); paint(); });
+    $$('[data-t]', stepEl).forEach((b) => b.onclick = () => { S.theme = b.dataset.t; $$('[data-t]', stepEl).forEach((x) => x.classList.toggle('on', x === b)); paint(); });
+    ['to', 'from', 'msg', 'toPhone'].forEach((k) => $('#' + k, stepEl)?.addEventListener('input', (e) => { S[k] = e.target.value; if (k === 'msg') $('#cnt').textContent = `${AR(S.msg.length)}/١٢٠`; paint(); }));
+    $('#to', stepEl)?.addEventListener('focus', () => showBack(false));
+    $('#msg', stepEl)?.addEventListener('focus', () => showBack(true));
+    $$('[data-sg]', stepEl).forEach((b) => b.onclick = () => { S.msg = b.dataset.sg; $('#msg').value = S.msg; $('#cnt').textContent = `${AR(S.msg.length)}/١٢٠`; showBack(true); paint(); });
+    $$('[data-w]', stepEl).forEach((b) => b.onclick = () => { S.when = b.dataset.w; $$('[data-w]', stepEl).forEach((x) => x.classList.toggle('on', x === b)); $('#date').style.display = S.when === 'date' ? '' : 'none'; });
+    $('#date', stepEl)?.addEventListener('input', (e) => { S.date = e.target.value; });
+    if ($('#date', stepEl)) $('#date', stepEl).min = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
+    if ($('#wa', stepEl)) $('#wa', stepEl).href = `https://wa.me/${WA}?text=${encodeURIComponent(waText())}`;
+    $('#see', stepEl)?.addEventListener('click', openPreview);
+    $('[data-back]', stepEl)?.addEventListener('click', () => go(step - 1));
+    $('[data-next]', stepEl)?.addEventListener('click', () => {
+      if (step === 1 && !(S.amount >= 100)) return fail('القيمة أقل شي ١٠٠ ريال');
+      if (step === 2) { S.to = S.to.trim(); S.from = S.from.trim(); S.toPhone = normPhone(S.toPhone); if (S.to.length < 2) return fail('اكتبي اسمها'); if (!/^05\d{8}$/.test(S.toPhone)) return fail('رقم جوالها غير صحيح، لازم يبدأ بـ ٠٥'); if (S.when === 'date' && !S.date) return fail('اختاري يوم التوصيل'); }
+      go(step + 1);
     });
   };
-  const alertMsg = (m) => { const c = document.getElementById('cust'); c.style.display = ''; const i = document.getElementById('amt'); i.placeholder = m; i.focus(); };
+  $$('#steps button').forEach((b) => b.onclick = () => { const n = +b.dataset.s; if (n < step) go(n); });
+
+  /* معاينة: كيف توصلها */
+  function openPreview() {
+    $('#v-txt').innerHTML = `هلا <b>${esc(S.to || 'نورة')}</b> 🤍<br>${esc(S.from || 'شخص يحبك')} أهداك قسيمة من <b>بيوتفريش</b> بقيمة ${fmt(S.amount)} ريال.${S.msg ? `<br><i>«${esc(S.msg)}»</i>` : ''}<br>افتحي هديتك 👇`;
+    const g = $('#gift'); g.classList.remove('open');
+    $$('.conf', g).forEach((c) => c.remove());
+    const cols = ['#C9A46A', '#5A2A22', '#E8DFD1', '#C99286'];
+    for (let i = 0; i < 22; i++) { const c = document.createElement('i'); c.className = 'conf'; const a = (i / 22) * 6.28, r = 90 + (i * 23) % 60; c.style.cssText = `background:${cols[i % 4]};--x:${Math.cos(a) * r}px;--y:${Math.sin(a) * r - 30}px;--dl:${.3 + (i % 5) * .03}s`; g.appendChild(c); }
+    $('#v-card').src = cardImage();
+    $('#veil').classList.add('show');
+  }
+  $('#gift').onclick = () => $('#gift').classList.add('open');
+  const closeV = () => $('#veil').classList.remove('show');
+  $('#vx').onclick = closeV; $('#veil').addEventListener('click', (e) => { if (e.target.id === 'veil') closeV(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') closeV(); });
+  // صورة مصغرة للقسيمة داخل المعاينة
+  function cardImage() {
+    const th = THEMES.find((t) => t[0] === S.theme), dark = th[3], fg = dark ? '#F3EBDF' : '#3F1D17';
+    const stops = th[2].match(/#[0-9A-F]{6}/gi);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 316 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${stops[0]}"/><stop offset="1" stop-color="${stops[1]}"/></linearGradient></defs><rect width="316" height="200" rx="22" fill="url(#g)"/><text x="292" y="38" text-anchor="end" font-family="Tajawal,sans-serif" font-size="13" fill="${fg}" opacity=".85">${esc(occ()[2])}</text><text x="292" y="150" text-anchor="end" font-family="Tajawal,sans-serif" font-size="34" font-weight="700" fill="${fg}">${fmt(S.amount)} ريال</text><text x="292" y="176" text-anchor="end" font-family="Tajawal,sans-serif" font-size="13" fill="${fg}" opacity=".9">إلى: ${esc(S.to || 'نورة')}</text><text x="24" y="182" font-family="monospace" font-size="10" fill="${fg}" opacity=".6">BF-•••••</text></svg>`;
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+  $('#prevBtn').onclick = openPreview;
   render();
 })();
 </script>

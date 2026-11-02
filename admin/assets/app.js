@@ -466,6 +466,57 @@
   }
 
   /* ======================= pages ======================= */
+  /* ======================= العدسات الخمس ======================= */
+  const LENS = [['d', 'اليوم', 'التشغيل'], ['w', 'الأسبوع', 'التنفيذ'], ['m', 'الشهر', 'المطابقة'], ['q', 'الربع', 'المواسم والاتجاه'], ['y', 'السنة', 'الاستراتيجية']];
+  const LADDER = ['موجود', 'معروف', 'مطلوب', 'مقيس', 'مُدار'];
+  function lensHome(L, hl, auto) {
+    const pc = (a, b) => (Number(b) > 0 ? Math.round(((Number(a) - Number(b)) / Number(b)) * 100) : null);
+    const chip = (v, txt) => v == null ? '' : `<em class="lz-d ${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(v)}٪ ${txt}</em>`;
+    const tile = (lbl, val, sub = '', href = '', cls = '') => `<${href ? `a href="${href}"` : 'div'} class="lz-t ${cls}"><span>${lbl}</span><b class="num">${val}</b>${sub ? `<small>${sub}</small>` : ''}</${href ? 'a' : 'div'}>`;
+    const todo = (items) => items.filter(Boolean).length ? `<div class="lz-todo">${items.filter(Boolean).map(([t, h, c]) => `<a href="${h}" class="${c || ''}">${t}<i>←</i></a>`).join('')}</div>` : '<div class="lz-todo"><span class="lz-ok">كل شي تمام في هالعدسة 🤍</span></div>';
+    let body = '';
+    if (hl === 'd') {
+      const d = L.d, lists = d.lists || [];
+      body = `<div class="lz-grid">${tile('مواعيد اليوم', d.appts, d.left ? `باقي ${d.left}` : 'خلصت مواعيد اليوم', '#/appts')}
+        ${lists.filter((x) => x.kind !== 'weekly').map((x) => tile(x.name, `${x.done}/${x.total}`, x.done >= x.total && x.total ? 'مكتملة ✓' : 'لسه', '#/ops', x.done >= x.total && x.total ? 'ok' : '')).join('')}
+        ${tile('حجوزات موقع معلّقة', d.web_pending, 'تنتظر الدفع', '#/sales', d.web_pending ? 'warn' : '')}</div>
+        ${todo([d.complaints && [`${d.complaints} شكوى مفتوحة، ردّوا عليها اليوم`, '#/feedback', 'bad'], d.maint && [`${d.maint} عطل مفتوح`, '#/assets?t=maint', 'warn'], d.web_pending && [`${d.web_pending} حجز من الموقع ما دفع، تواصلوا معهن`, '#/sales', 'warn']])}`;
+    } else if (hl === 'w') {
+      const w = L.w, p = w.posts || {}, k = w.kpi || {}, kp = w.kpi_prev || {};
+      body = `<div class="lz-grid">${tile('مبيعات الأسبوع', sar(k.sales), chip(pc(k.sales, kp.sales), 'عن نفس الوقت الأسبوع الماضي'), '#/sales?l=w')}
+        ${tile('محتوى الأسبوع', `${p.posted || 0}/${p.n || 0}`, p.n ? 'منشور من المخطط' : 'ما فيه محتوى مخطط', '#/marketing?t=content', p.n ? '' : 'warn')}
+        ${tile('محجوز للأسبوع الجاي', sar(w.next7?.v), `${w.next7?.n || 0} حجز`, '#/appts')}
+        ${tile('عميلات جدد', k.new_clients || 0, 'هالأسبوع', '#/sales?l=w&tab=clients')}</div>
+        ${todo([!p.n && ['خططوا ٣ منشورات للأسبوع، الكاتب الذكي يعطيكم أفكار جاهزة', '#/marketing?t=writer'], p.ready && [`${p.ready} منشور ينتظر اعتمادكم`, '#/marketing?t=content', 'warn'], p.late && [`${p.late} منشور فات موعده`, '#/marketing?t=content', 'bad'], w.leaves && [`${w.leaves} طلب إجازة ينتظر`, '#/team', 'warn']])}`;
+    } else if (hl === 'm') {
+      const m = L.m, k = m.kpi || {}, kp = m.kpi_prev || {}, T = Number(m.target || 0), fc = m.day ? Math.round((Number(k.sales) / Math.max(1, m.day - 0.5)) * m.days) : 0;
+      body = `<div class="lz-grid">${tile('مبيعات الشهر', sar(k.sales), chip(pc(k.sales, kp.sales), 'عن نفس الوقت الشهر الماضي'), '#/sales?l=m')}
+        ${tile(T ? 'من هدف الشهر' : 'المتوقع لنهاية الشهر', T ? `${Math.round((Number(k.sales) / T) * 100)}٪` : sar(fc), T ? `الهدف ${sar(T)} · المتوقع ${sar(fc)}` : 'على المعدل الحالي', '#/sales?l=m')}
+        ${tile('تقييمات الشهر', m.reviews?.n ? `★ ${m.reviews.avg}` : '—', m.reviews?.n ? `${m.reviews.n} تقييم${m.reviews.low ? ` · ${m.reviews.low} أقل من ٤` : ''}` : 'لسه ما فيه', '#/site?t=reviews', m.reviews?.low ? 'warn' : '')}
+        ${tile('عميلات جدد', k.new_clients || 0, chip(pc(k.new_clients, kp.new_clients), ''), '#/sales?l=m&tab=clients')}</div>
+        ${todo([!T && ['حطّوا هدف للشهر عشان نقيس عليه', '#/sales?l=m'], !m.campaigns && ['ما فيه حملة شغالة هالشهر', '#/marketing?t=campaigns', 'warn'], m.reviews?.low && [`${m.reviews.low} تقييم منخفض، شوفوا وش صار`, '#/site?t=reviews&f=low', 'bad']])}`;
+    } else if (hl === 'q') {
+      const qq = L.q, k = qq.kpi || {}, ly = qq.kpi_ly, se = qq.seasons || [];
+      body = `<div class="lz-grid">${tile('مبيعات الربع', sar(k.sales), ly ? chip(pc(k.sales, ly.sales), 'عن نفس الوقت السنة الماضية') : 'أول ربع نقارنه', '#/sales?l=q')}
+        ${tile('عميلات الربع', k.clients || 0, `منهم ${k.new_clients || 0} جدد`, '#/sales?l=q&tab=clients')}</div>
+        <div class="lz-seasons">${se.length ? se.map((x) => { const st = x.campaign ? ['ok', 'حملته جاهزة'] : x.in <= x.prep ? ['bad', 'دخلتوا وقت التجهيز وما فيه حملة'] : ['', `التجهيز يبدأ بعد ${x.in - x.prep} يوم`]; return `<a href="#/marketing" class="lz-se ${st[0]}"><span class="e">${esc(x.emoji || '✦')}</span><div><b>${esc(x.name)}</b><small>${st[1]}</small></div><span class="in num">${x.in}<small>يوم</small></span></a>`; }).join('') : '<div class="muted">ما فيه مواسم في الـ١٠٠ يوم الجاية</div>'}</div>`;
+    } else {
+      const y = L.y, lad = L.ladder || { level: 0, crit: [] }, nxt = Math.min(5, lad.level + 1);
+      const miss = lad.crit.filter((c) => c.lv === nxt && !c.ok);
+      const mx = Math.max(1, ...y.months.map((x) => Number(x.v)));
+      body = `<div class="lz-ladder"><div class="lz-steps">${LADDER.map((n, i) => `<div class="${i < lad.level ? 'done' : i === lad.level ? 'next' : ''}"><i>${i + 1}</i><span>${n}</span></div>`).join('')}</div>
+          <p>${lad.level ? `تسويقكم في درجة <b>«${LADDER[lad.level - 1]}»</b>.` : 'تسويقكم قبل الدرجة الأولى.'} ${lad.level < 5 ? `عشان تصعدون إلى <b>«${LADDER[nxt - 1]}»</b> ينقصكم:` : 'وصلتوا أعلى درجة 🤍'}</p>
+          ${miss.length ? `<div class="lz-todo">${miss.map((c) => `<a href="${c.go}">${esc(c.t)}<i>←</i></a>`).join('')}</div>` : ''}</div>
+        <div class="lz-grid">${tile('عميلات السنة', y.clients, `${Math.round((y.returning / Math.max(1, y.clients)) * 100)}٪ رجعوا أكثر من مرة`, '#/sales?l=y&tab=clients')}</div>
+        <div class="lz-bars">${y.months.slice(-12).map((x) => `<div title="${x.m}: ${sar(x.v)} ر.س"><i style="height:${Math.max(4, (Number(x.v) / mx) * 100)}%"></i><span>${MONTHS_AR[Number(x.m.slice(5)) - 1].slice(0, 3)}</span></div>`).join('')}</div>`;
+    }
+    const cur = LENS.find((x) => x[0] === hl);
+    return `<section class="lz">
+      <div class="lens lz-bar">${LENS.map(([k, l]) => `<a href="#/home?l=${k}" class="${k === hl ? 'on' : ''}">${l}${k === auto ? '<i class="lz-auto" title="عدسة هالوقت"></i>' : ''}</a>`).join('')}</div>
+      <div class="lz-card"><div class="lz-h"><span class="lz-eb">عدسة ${cur[1]}</span><h3>${cur[2]}</h3></div>${body}</div>
+    </section>`;
+  }
+
   async function pageHome(view, _a, _p, alive) {
     const low = S.items.filter((i) => i.is_active && isLow(i));
     const [expiring, drafts, moves] = await Promise.all([
@@ -497,9 +548,12 @@
     } catch (_) { /* salon bookings unavailable */ }
     if (!alive()) return;
     const tk = todayR();
-    let hl = _p.get('l') || (() => { try { return localStorage.getItem('bf-home-lens'); } catch { return null; } })() || 'd';
-    if (!['d', 'w', 'm'].includes(hl)) hl = 'd';
-    try { localStorage.setItem('bf-home-lens', hl); } catch {}
+    // العدسة تنفتح لحالها حسب الوقت، ولو اخترتوا وحدة تبقى لين نهاية اليوم
+    const autoLens = () => { const t = D(tk), dd = t.getDate(), mo = t.getMonth(), wd = t.getDay(); if (mo === 0 && dd <= 7) return 'y'; if (mo % 3 === 0 && dd <= 5) return 'q'; if (dd <= 3) return 'm'; if (wd === 6) return 'w'; return 'd'; };
+    let hl = _p.get('l') || (() => { try { return sessionStorage.getItem('bf-lens-' + tk); } catch { return null; } })() || autoLens();
+    if (!['d', 'w', 'm', 'q', 'y'].includes(hl)) hl = 'd';
+    if (_p.get('l')) { try { sessionStorage.setItem('bf-lens-' + tk, hl); } catch {} }
+    const LZ = isManager() ? await q(sb.rpc('biz_lens')).catch(() => null) : null;
     const [hs, he] = lensRange(hl, D(tk));
     const yday = dk(lensShift('d', D(tk), -1));
     const [fr, tg, yc, cl, oc, L] = await Promise.all([
@@ -537,13 +591,12 @@
     bdays.slice(0, 3).forEach(([c, d]) => alerts.push(['gold', '🎂', `ميلاد ${esc(firstName(c.name))} ${d === 0 ? 'اليوم' : d === 1 ? 'بكرة' : d === 2 ? 'بعد يومين' : `بعد ${d} أيام`}`, 'رسالة تهنئة صغيرة تفرق', `#/client/${c.id}`]));
     if (ready) alerts.push(['ok', `<img src="${ROSETTE}" alt="">`, `${ready === 1 ? 'عميلة وصلت' : ready + ' عميلات وصلوا'} لمكافأة الولاء`, 'بلغوهم عشان يستلمونها', '#/clients?s=reward']);
     if (away) alerts.push(['', I.heart, `${away} ${away === 1 ? 'عميلة غابت' : away <= 10 ? 'عميلات غابوا' : 'عميلة غابوا'} أكثر من ٤٥ يوم`, 'رسالة «وحشتينا» ممكن ترجّعهم', '#/clients?s=away']);
-    const HL = { d: 'اليوم', w: 'الأسبوع', m: 'الشهر' };
+    const HL = { d: 'اليوم', w: 'الأسبوع', m: 'الشهر', q: 'الربع', y: 'السنة' };
     const fdelta = fr && fr.prev_revenue > 0 ? Math.round(((fr.revenue - fr.prev_revenue) / fr.prev_revenue) * 100) : null;
     const tpct = tg && mrev != null ? Math.min(100, (mrev / Number(tg.revenue)) * 100) : null;
     const pulse = !fr ? '' : `<div class="pulse">
-        <div class="lens sm">${Object.entries(HL).map(([k, l]) => `<a href="#/home?l=${k}" class="${k === hl ? 'on' : ''}">${l}</a>`).join('')}</div>
         <a class="pulse-body" href="#/sales?l=${hl}&at=${tk}">
-          <div><span>مبيعات ${HL[hl] === 'اليوم' ? 'اليوم' : 'هذا ' + HL[hl]}</span><b class="num">${sar(fr.revenue)}</b>${fdelta != null ? `<em class="${fdelta >= 0 ? 'up' : 'down'}">${fdelta >= 0 ? '▲' : '▼'} ${Math.abs(fdelta)}٪</em>` : ''}</div>
+          <div><span>مبيعات ${hl === 'd' ? 'اليوم' : hl === 'y' ? 'هذي السنة' : 'هذا ' + HL[hl]}</span><b class="num">${sar(fr.revenue)}</b>${fdelta != null ? `<em class="${fdelta >= 0 ? 'up' : 'down'}">${fdelta >= 0 ? '▲' : '▼'} ${Math.abs(fdelta)}٪</em>` : ''}</div>
           <div><span>صافي الربح</span><b class="num">${sar(fr.net)}</b></div>
           ${tpct != null ? `<div class="pulse-ring" style="--p:${tpct}"><b class="num">${Math.round(tpct)}٪</b><span>من هدف الشهر</span></div>` : `<div class="pulse-ring empty"><span>حطّوا هدف للشهر</span></div>`}
         </a>
@@ -583,6 +636,7 @@
     const greet = hourNow >= 4 && hourNow < 12 ? 'صباح الخير' : 'مساء الخير';
     view.innerHTML = `
       <div class="hello"><div><span class="eyebrow">${greet}</span><h2>${esc(hello || 'أهلًا')}</h2></div><img src="../home/assets/rosette-1.svg" alt=""></div>
+      ${LZ ? lensHome(LZ, hl, autoLens()) : ''}
       <a class="tour-banner" href="#/tour"><div class="tb-txt"><span>جديد في بيوتفريش ✦</span><b>جولة في كل المميزات</b><small>٢٢ ميزة، وحدة وحدة، في خمس دقايق</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-3.svg" alt=""></a>
       ${isManager() ? `<a class="tour-banner nq" href="#/naqla"><div class="tb-txt"><span>قبل وبعد ✦</span><b>نقلة بيوتفريش</b><small>الحجز من ركاز إلى موقعنا: المقارنة كاملة</small></div><span class="tb-play">▶</span><img src="../home/assets/rosette-1.svg" alt=""></a>` : ''}
       ${myShift}

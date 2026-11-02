@@ -2327,7 +2327,7 @@
       const [W, H] = STU_SIZES[st.size], [c1, c2, fg, ac] = STU_THEMES[st.theme], f = st.f, t = st.t;
       const light = st.theme === 'cream' || st.theme === 'gold';
       const logo = `../home/assets/Beautfresh-${light ? 'brown' : 'cream'}.svg`;
-      const big = t === 'count' ? `<div class="sa-num">${esc(f.h)}</div>` : t === 'review' ? `<div class="sa-q">“${esc(f.h)}”</div>` : `<div class="sa-h">${esc(f.h)}</div>`;
+      const big = t === 'count' ? `<div class="sa-num">${esc(f.h)}</div>` : t === 'review' ? `<div class="sa-q">«${esc(f.h)}»</div>` : `<div class="sa-h">${esc(f.h)}</div>`;
       $('#stu-art', view).innerHTML = `<div class="sa sa-${t} ${st.photo ? 'has-ph' : ''}" style="width:${W}px;height:${H}px;--c1:${c1};--c2:${c2};--fg:${fg};--ac:${ac}">
         <div class="sa-pat" style="${light ? '' : 'filter:brightness(0) invert(1)'}"></div>
         ${st.photo ? `<div class="sa-ph" style="background-image:url('${st.photo}')"></div>` : ''}

@@ -1492,3 +1492,8 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .lz-bars div:last-child i { background: #5A2A22; }
 .lz-bars span { font-size: 10.5px; color: #8A6F66; }
 .lz-busy { opacity: .5; transition: opacity .2s; }
+.lz-bar { position: relative; isolation: isolate; }
+.lz-bar a { position: relative; z-index: 1; transition: color .3s ease; }
+.lz-bar a.on { background: transparent !important; box-shadow: none !important; }
+.lz-ind { position: absolute; top: 4px; bottom: 4px; left: 0; right: auto; border-radius: 999px; background: #5A2A22; z-index: 0; transition: transform .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1); box-shadow: 0 6px 14px -8px rgba(90, 42, 34, .6); }
+.lz-card { overflow: hidden; }

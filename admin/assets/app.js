@@ -512,65 +512,57 @@
     }
     const cur = LENS.find((x) => x[0] === hl);
     return `<section class="lz">
-      <div class="lens lz-bar">${LENS.map(([k, l]) => `<a href="#/home?l=${k}" class="${k === hl ? 'on' : ''}">${l}${k === auto ? '<i class="lz-auto" title="عدسة هالوقت"></i>' : ''}</a>`).join('')}</div>
+      <div class="lens lz-bar"><span class="lz-ind" aria-hidden="true"></span>${LENS.map(([k, l]) => `<a href="#/home?l=${k}" class="${k === hl ? 'on' : ''}">${l}${k === auto ? '<i class="lz-auto" title="عدسة هالوقت"></i>' : ''}</a>`).join('')}</div>
       <div class="lz-card"><div class="lz-h"><span class="lz-eb">عدسة ${cur[1]}</span><h3>${cur[2]}</h3></div>${body}</div>
     </section>`;
   }
 
   async function pageHome(view, _a, _p, alive) {
     const low = S.items.filter((i) => i.is_active && isLow(i));
-    const [expiring, drafts, moves] = await Promise.all([
-      q(sb.rpc('get_expiring', { p_days: CFG.expiryWarningDays })),
-      q(sb.from('purchase_invoices').select('id', { count: 'exact', head: false }).eq('status', 'draft')),
-      q(sb.from('stock_movements').select('id,item_id,movement_type,qty,reason,created_by,created_at').order('created_at', { ascending: false }).limit(8)),
-    ]);
-    if (!alive()) return;
     const pendingUsers = isAdmin() ? [...S.profiles.values()].filter((p) => !p.is_active && !p.approved_at).length : 0;
     const hello = (S.profile.full_name || '').split(' ')[0];
-    const dayStart = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }) + 'T00:00:00+03:00');
-    let bk = { today: [], pending: 0, next: null };
-    try {
-      const [td, pd, nx] = await Promise.all([
-        q(sb.from('home_bookings').select('id,customer_name,starts_at,status').gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 86400000).toISOString()).neq('status', 'cancelled').order('starts_at')),
-        sb.from('home_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        q(sb.from('home_bookings').select('id,customer_name,starts_at,district_name').gte('starts_at', new Date().toISOString()).in('status', ['pending', 'confirmed']).order('starts_at').limit(1)),
-      ]);
-      bk = { today: td, pending: pd.count || 0, next: nx[0] || null };
-    } catch (_) { /* bookings unavailable */ }
-    let sp = { today: 0, pending: 0 };
-    try {
-      const [a, b] = await Promise.all([
-        sb.from('salon_bookings').select('id', { count: 'exact', head: true }).gte('starts_at', dayStart.toISOString()).lt('starts_at', new Date(dayStart.getTime() + 86400000).toISOString()).not('status', 'in', '(cancelled,no_show)'),
-        sb.from('salon_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending').gte('starts_at', new Date().toISOString()),
-      ]);
-      const rk = await sb.from('rekaz_reservations').select('id', { count: 'exact', head: true }).gte('start_at', dayStart.toISOString()).lt('start_at', new Date(dayStart.getTime() + 86400000).toISOString()).not('status', 'ilike', '%cancel%');
-      sp = { today: (a.count || 0) + (rk.count || 0), pending: b.count || 0 };
-    } catch (_) { /* salon bookings unavailable */ }
-    if (!alive()) return;
     const tk = todayR();
+    const dayStart = new Date(tk + 'T00:00:00+03:00'), dayEnd = new Date(dayStart.getTime() + 86400000);
     // العدسة تنفتح لحالها حسب الوقت، ولو اخترتوا وحدة تبقى لين نهاية اليوم
     const autoLens = () => { const t = D(tk), dd = t.getDate(), mo = t.getMonth(), wd = t.getDay(); if (mo === 0 && dd <= 7) return 'y'; if (mo % 3 === 0 && dd <= 5) return 'q'; if (dd <= 3) return 'm'; if (wd === 6) return 'w'; return 'd'; };
     let hl = _p.get('l') || (() => { try { return sessionStorage.getItem('bf-lens-' + tk); } catch { return null; } })() || autoLens();
     if (!['d', 'w', 'm', 'q', 'y'].includes(hl)) hl = 'd';
     if (_p.get('l')) { try { sessionStorage.setItem('bf-lens-' + tk, hl); } catch {} }
-    const LZ = isManager() ? await q(sb.rpc('biz_lens')).catch(() => null) : null;
-    const [hs, he] = lensRange(hl, D(tk));
+    const [hs, he] = lensRange(hl, D(tk)), [ms0, me0] = lensRange('m', D(tk));
     const yday = dk(lensShift('d', D(tk), -1));
-    const [fr, tg, yc, cl, oc, L] = await Promise.all([
-      isManager() ? q(sb.rpc('fin_range', { p_from: dk(hs), p_to: dk(he) })).catch(() => null) : null,
-      isManager() ? q(sb.from('fin_targets').select('revenue').eq('month', monthKey(D(tk))).maybeSingle()).catch(() => null) : null,
-      isManager() ? q(sb.from('fin_daily').select('day').eq('day', yday).maybeSingle()).catch(() => 'x') : 'x',
+    const M = isManager(), cnt = (pr) => pr.then((x) => x.count || 0, () => 0);
+    // كل الطلبات مع بعض بدل وحدة ورا الثانية
+    const [expiring, drafts, moves, bkTd, bkPd, bkNx, spA, spB, spR, LZ, fr, tg, yc, cl, ocN, Ly, tpv, tms, tlv, mr, mIss, mPl, me] = await Promise.all([
+      q(sb.rpc('get_expiring', { p_days: CFG.expiryWarningDays })).catch(() => []),
+      q(sb.from('purchase_invoices').select('id', { count: 'exact', head: false }).eq('status', 'draft')).catch(() => []),
+      q(sb.from('stock_movements').select('id,item_id,movement_type,qty,reason,created_by,created_at').order('created_at', { ascending: false }).limit(8)).catch(() => []),
+      q(sb.from('home_bookings').select('id,customer_name,starts_at,status').gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()).neq('status', 'cancelled').order('starts_at')).catch(() => []),
+      cnt(sb.from('home_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+      q(sb.from('home_bookings').select('id,customer_name,starts_at,district_name').gte('starts_at', new Date().toISOString()).in('status', ['pending', 'confirmed']).order('starts_at').limit(1)).catch(() => []),
+      cnt(sb.from('salon_bookings').select('id', { count: 'exact', head: true }).gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()).not('status', 'in', '(cancelled,no_show)')),
+      cnt(sb.from('salon_bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending').gte('starts_at', new Date().toISOString())),
+      cnt(sb.from('rekaz_reservations').select('id', { count: 'exact', head: true }).gte('start_at', dayStart.toISOString()).lt('start_at', dayEnd.toISOString()).not('status', 'ilike', '%cancel%')),
+      M ? q(sb.rpc('biz_lens')).catch(() => null) : null,
+      M ? q(sb.rpc('fin_range', { p_from: dk(hs), p_to: dk(he) })).catch(() => null) : null,
+      M ? q(sb.from('fin_targets').select('revenue').eq('month', monthKey(D(tk))).maybeSingle()).catch(() => null) : null,
+      M ? q(sb.from('fin_daily').select('day').eq('day', yday).maybeSingle()).catch(() => 'x') : 'x',
       q(sb.from('clients_overview').select('id,name,phone,birthday,segment,stamps,last_visit').limit(3000)).catch(() => []),
-      sb.from('client_feedback').select('id', { count: 'exact', head: true }).eq('kind', 'complaint').eq('status', 'open').then((x) => ({ count: x.count || 0 }), () => ({ count: 0 })),
+      cnt(sb.from('client_feedback').select('id', { count: 'exact', head: true }).eq('kind', 'complaint').eq('status', 'open')),
       loyalty().catch(() => ({ active: false })),
+      M ? q(sb.from('team_private').select('*')).catch(() => []) : [],
+      M ? q(sb.from('team_members').select('id,name,active')).catch(() => []) : [],
+      M ? cnt(sb.from('team_leaves').select('id', { count: 'exact', head: true }).eq('status', 'pending')) : 0,
+      M && hl !== 'm' ? q(sb.rpc('fin_range', { p_from: dk(ms0), p_to: dk(me0) })).catch(() => null) : null,
+      q(sb.from('maint_issues').select('id,title,created_at').eq('status', 'open')).catch(() => []),
+      q(sb.from('maint_plans').select('*')).catch(() => []),
+      q(sb.from('team_members').select('*').eq('profile_id', S.profile.id).maybeSingle()).catch(() => null),
     ]);
-    const [tpv, tms, tlv] = isManager() ? await Promise.all([
-      q(sb.from('team_private').select('*')).catch(() => []),
-      q(sb.from('team_members').select('id,name,active')).catch(() => []),
-      sb.from('team_leaves').select('id', { count: 'exact', head: true }).eq('status', 'pending').then((x) => x.count || 0, () => 0),
-    ]) : [[], [], 0];
+    if (!alive()) return;
+    const bk = { today: bkTd, pending: bkPd, next: bkNx[0] || null };
+    const sp = { today: spA + spR, pending: spB };
+    const oc = { count: ocN }, L = Ly;
     let mrev = null;
-    if (isManager() && tg && hl !== 'm') { const [ms, me] = lensRange('m', D(tk)); const mr = await q(sb.rpc('fin_range', { p_from: dk(ms), p_to: dk(me) })).catch(() => null); mrev = mr?.revenue; }
+    if (M && tg && hl !== 'm') mrev = mr?.revenue;
     else if (fr && hl === 'm') mrev = fr.revenue;
     if (!alive()) return;
     const soon = (c) => { if (!c.birthday) return null; const b = D(c.birthday); const t = D(tk); let n = new Date(t.getFullYear(), b.getMonth(), b.getDate(), 12); if (n < t) n = new Date(t.getFullYear() + 1, b.getMonth(), b.getDate(), 12); const d = Math.round((n - t) / 86400000); return d <= 7 ? d : null; };
@@ -581,7 +573,6 @@
     if (sp.pending) alerts.push(['warn', I.cal, sp.pending === 1 ? 'حجز من الموقع بانتظار التأكيد' : `${sp.pending} حجوزات من الموقع بانتظار التأكيد`, 'أرسلوا التأكيد على الواتساب', '#/appts?t=pending']);
     if (sp.today) alerts.push(['', I.cal, `${sp.today === 1 ? 'موعد واحد' : sp.today + ' مواعيد'} في الصالون اليوم`, 'جدول اليوم', '#/appts']);
     if (isManager()) { try { const rc = JSON.parse(localStorage.getItem('bf-rules') || 'null'); if (rc && rc.risk) alerts.unshift(['danger', I.shield, `${rc.risk === 1 ? 'قاعدة وحدة' : rc.risk + ' قواعد'} في خطر`, `صحة بيوتفريش ${rc.score}٪`, '#/rules']); else if (!rc) alerts.push(['', I.shield, 'افحصوا صحة بيوتفريش', 'قواعد تنفحص على بيانات الصالون', '#/rules']); } catch {} }
-    const [mIss, mPl] = await Promise.all([q(sb.from('maint_issues').select('id,title,created_at').eq('status', 'open')).catch(() => []), q(sb.from('maint_plans').select('*')).catch(() => [])]);
     const mLate = mPl.filter((p) => planSt(p) === 'bad').length;
     if (mIss.length) alerts.push([mIss.some((i) => (Date.now() - new Date(i.created_at)) / 86400000 > 3) ? 'danger' : 'warn', I.wrench, mIss.length === 1 ? `عطل مفتوح: ${esc(mIss[0].title.slice(0, 40))}` : `${mIss.length} أعطال مفتوحة`, 'تابعوا إصلاحها', '#/assets?t=maint']);
     if (mLate) alerts.push(['warn', I.wrench, `${mLate === 1 ? 'مهمة صيانة' : mLate + ' مهام صيانة'} فات موعدها`, 'الأصول والصيانة', '#/assets?t=maint']);
@@ -603,7 +594,6 @@
       </div>`;
     // ورديتي: لأي حساب مربوط بملف في الفريق
     let myShift = '';
-    const me = await q(sb.from('team_members').select('*').eq('profile_id', S.profile.id).maybeSingle()).catch(() => null);
     if (me) {
       const wdN = D(tk).getDay();
       const [sh, lv, gds, rds, lists, litems, runs, myBk] = await Promise.all([
@@ -697,20 +687,29 @@
         c2.innerHTML = `<span>صافي الربح</span><b class="num">${sar(f.net)}</b>`;
         pb.setAttribute('href', `#/sales?l=${k}&at=${tk}`); pb.classList.remove('lz-busy');
       };
-      const bindLens = () => $$('.lz-bar a', view).forEach((a) => a.addEventListener('click', (e) => {
+      const bar = $('.lz-bar', view), ind = $('.lz-ind', bar);
+      const place = (anim) => { const a = $('a.on', bar); if (!a) return; ind.style.transition = anim ? '' : 'none'; ind.style.width = a.offsetWidth + 'px'; ind.style.transform = `translateX(${a.offsetLeft}px)`; if (!anim) { void ind.offsetWidth; ind.style.transition = ''; } };
+      requestAnimationFrame(() => place(false)); document.fonts?.ready.then(() => place(false));
+      window.addEventListener('resize', () => place(false), { passive: true });
+      const order = LENS.map((x) => x[0]);
+      $$('a', bar).forEach((a) => a.addEventListener('click', (e) => {
         e.preventDefault();
         const k = new URLSearchParams(a.getAttribute('href').split('?')[1]).get('l');
         if (k === hl) return;
-        const old = $('.lz-bar a.on', view), r0 = old.getBoundingClientRect();
+        const dir = order.indexOf(k) > order.indexOf(hl) ? 1 : -1;
         hl = k; try { sessionStorage.setItem('bf-lens-' + tk, k); } catch {}
         history.replaceState(null, '', `#/home?l=${k}`);
-        const box = $('.lz', view), tmp = document.createElement('div'); tmp.innerHTML = lensHome(LZ, k, autoLens());
-        box.replaceWith(tmp.firstElementChild);
-        const now = $('.lz-bar a.on', view), r1 = now.getBoundingClientRect();
-        now.animate([{ transform: `translateX(${r0.left - r1.left}px) scaleX(${r0.width / (r1.width || 1)})` }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
-        bindLens(); pulseFor(k);
+        $$('a', bar).forEach((x) => x.classList.toggle('on', x === a)); place(true);
+        const card = $('.lz-card', view), h0 = card.offsetHeight;
+        const tmp = document.createElement('div'); tmp.innerHTML = lensHome(LZ, k, autoLens());
+        const nc = $('.lz-card', tmp);
+        card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${dir * 24}px)` }], { duration: 140, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
+          card.replaceWith(nc); nc.style.animation = 'none';
+          const h1 = nc.offsetHeight;
+          nc.animate([{ opacity: 0, transform: `translateX(${-dir * 24}px)`, height: h0 + 'px' }, { opacity: 1, transform: 'none', height: h1 + 'px' }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        };
+        pulseFor(k);
       }));
-      bindLens();
     }
   }
 

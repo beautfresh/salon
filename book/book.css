@@ -193,7 +193,7 @@ h1{font-size:30px;font-weight:800;color:var(--oud);margin:8px 0 2px;line-height:
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 /* live additions */
 .toplink{display:flex;justify-content:center;padding:0 18px 6px}
-.toplink a{font-size:13px;color:var(--mute);text-decoration:none;border:1px solid var(--line);border-radius:99px;padding:5px 14px;background:var(--paper)}
+.toplink a,.toplink span{font-size:13px;color:var(--mute);text-decoration:none;border:1px solid var(--line);border-radius:99px;padding:5px 14px;background:var(--paper)}
 .loading{display:grid;place-items:center;gap:12px;padding:80px 0;color:var(--mute)}
 .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--oud);animation:spin 1s linear infinite}
 .err{background:#F6E1DC;color:#8C2C1B;border-radius:14px;padding:10px 14px;font-size:14px;margin-top:10px}

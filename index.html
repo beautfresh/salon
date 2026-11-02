@@ -158,6 +158,10 @@
       .info { padding: 56px 0; }
     }
     @media (prefers-reduced-motion: reduce) { .hero-logo, .hero .label, .hero h1, .hero p, .hero .cta, .fl { animation: none; } .reveal { opacity: 1; transform: none; } }
+    .is-soon { cursor: default; } .way.is-soon:hover { transform: none; }
+    .way.home .new.soon { background: rgba(243, 235, 223, .16); color: var(--on); }
+    .soonl { opacity: .75; cursor: default; white-space: nowrap; }
+    .soonl em, .btn.is-soon em { font-style: normal; font-size: 11px; padding: 1px 8px; margin-inline-start: 4px; border-radius: 999px; border: 1px solid currentColor; opacity: .85; }
   </style>
 </head>
 <body>
@@ -165,7 +169,7 @@
     <div class="wrap top">
       <a href="./" aria-label="بيوتفريش"><img src="home/assets/Beautfresh-brown.svg" alt="بيوتفريش"></a>
       <nav>
-        <a class="hide-sm" href="home/">الخدمات المنزلية</a>
+        <span class="hide-sm soonl">الخدمات المنزلية <em>قريبًا</em></span>
         <a class="hide-sm" href="gift/">أهديها 🎁</a>
         <a class="hide-sm" href="#menu">الخدمات والأسعار</a>
         <a class="hide-sm" href="#contact">تواصلي معنا</a>
@@ -185,7 +189,7 @@
         <p>صالون بيوتفريش في الأحساء. احجزي موعدك عندنا، أو خلّي الصالون يجيك لين بيتك.</p>
         <div class="cta">
           <a class="btn" href="book/">احجزي في الصالون <i>←</i></a>
-          <a class="btn ghost" href="home/">الخدمات المنزلية</a>
+          <span class="btn ghost is-soon">الخدمات المنزلية <em>قريبًا</em></span>
         </div>
       </div>
     </section>
@@ -201,14 +205,14 @@
           </div>
           <span class="btn">احجزي في الصالون <i>←</i></span>
         </a>
-        <a class="way home reveal" style="--d:.1s" href="home/">
+        <div class="way home reveal is-soon" style="--d:.1s">
           <div>
-            <div class="head"><span class="tag">At home</span><img class="mark" src="home/assets/home-mark-cream.svg" alt=""></div>
+            <div class="head"><span class="tag">At home<span class="new soon">قريبًا</span></span><img class="mark" src="home/assets/home-mark-cream.svg" alt=""></div>
             <h2>في بيتك</h2>
             <p>الصالون اللي تحبينه.. يجيك لين بابك. أظافر وشعر بأيادي بيوتفريش، في وقتك ومكانك.</p>
           </div>
-          <span class="btn light">الخدمات المنزلية <i>←</i></span>
-        </a>
+          <span class="btn light">قريبًا 🤍</span>
+        </div>
         <a class="way gift reveal" style="--d:.2s" href="gift/">
           <div>
             <div class="head"><span class="tag">Gift it<span class="new">جديد</span></span></div>
@@ -248,7 +252,7 @@
       <div class="band" aria-hidden="true"></div>
       <img src="home/assets/Beautfresh-brown.svg" alt="بيوتفريش">
       <p>The Fresh Version of You</p>
-      <div class="links"><a href="book/">الحجز في الصالون</a><a href="home/">الخدمات المنزلية</a><a href="https://www.instagram.com/beautfresh" target="_blank" rel="noopener">إنستقرام</a></div>
+      <div class="links"><a href="book/">الحجز في الصالون</a><span class="soonl">الخدمات المنزلية <em>قريبًا</em></span><a href="https://www.instagram.com/beautfresh" target="_blank" rel="noopener">إنستقرام</a></div>
     </div>
   </footer>
 

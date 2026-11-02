@@ -1451,3 +1451,9 @@ a.sd-in:hover .go { transform: translateX(-4px); color: var(--accent); }
 .sa-season .sa-k { font-size: 140px; }
 .sa-foot { position: relative; font-size: 32px; opacity: .75; letter-spacing: .06em; direction: ltr; }
 @media (max-width: 900px) { .stu { grid-template-columns: 1fr; } .stu-side { position: static; } .cmp-grid { grid-template-columns: 1fr; } .wr-k { grid-template-columns: 1fr 1fr; } }
+/* تنقل ناعم داخل نفس الصفحة */
+#view.soft { opacity: .55; transition: opacity .2s ease; pointer-events: none; }
+#view.soft::before { content: ""; position: fixed; top: 0; inset-inline: 0; height: 3px; z-index: 50; background: linear-gradient(90deg, transparent, #5A2A22, transparent); background-size: 50% 100%; background-repeat: no-repeat; animation: softBar 1s linear infinite; }
+@keyframes softBar { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+#view.soft-in { animation: softIn .35s cubic-bezier(.2,.8,.2,1); }
+@keyframes softIn { from { opacity: .55; } to { opacity: 1; } }

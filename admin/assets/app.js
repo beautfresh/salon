@@ -387,12 +387,35 @@
     setTitle(r.title);
     setActive(r.nav);
     const view = $('#view');
-    view.innerHTML = '<div class="boot" style="min-height:40vh"><div class="spinner"></div></div>';
-    window.scrollTo(0, 0);
+    // نفس الصفحة (تبويب أو فترة أو حفظ): بدون وميض ولا رجوع لفوق، والمؤشر ينزلق للتبويب الجديد
+    const soft = S.lastRoute === parts[0] && view.children.length && !view.querySelector('.boot');
+    S.lastRoute = parts[0];
+    let from = null;
+    if (soft) {
+      const tabs = $$('.lens a, .chips a.chip', view);
+      const old = tabs.find((a) => a.classList.contains('on'));
+      if (old) from = { rect: old.getBoundingClientRect(), group: old.parentElement.className };
+      tabs.forEach((a) => a.classList.toggle('on', a.getAttribute('href') === location.hash));
+      view.classList.add('soft');
+    } else {
+      view.innerHTML = '<div class="boot" style="min-height:40vh"><div class="spinner"></div></div>';
+      window.scrollTo(0, 0);
+    }
     try {
       await r.fn(view, parts.slice(1), params, () => seq === routeSeq);
     } catch (e) {
       if (seq === routeSeq) view.innerHTML = `<div class="notice danger">${esc(errMsg(e))}</div>`;
+    } finally {
+      if (seq === routeSeq && soft) {
+        view.classList.remove('soft', 'soft-in'); void view.offsetWidth; view.classList.add('soft-in');
+        if (from) {
+          const now = $$('.lens a.on, .chips a.chip.on', view).find((a) => a.parentElement.className === from.group);
+          if (now) {
+            const r2 = now.getBoundingClientRect(), dx = from.rect.left - r2.left, sx = from.rect.width / (r2.width || 1);
+            if (Math.abs(dx) > 1) now.animate([{ transform: `translateX(${dx}px) scaleX(${sx})` }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
+          }
+        }
+      }
     }
   }
 

@@ -1500,3 +1500,15 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .lz-skel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; min-height: 150px; }
 .lz-skel span { border-radius: 16px; background: linear-gradient(90deg, #F6EFE6 25%, #FBF7F1 50%, #F6EFE6 75%); background-size: 200% 100%; animation: lzSk 1.2s linear infinite; }
 @keyframes lzSk { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+/* المستشار */
+.adv-q h2 { margin: 0 0 4px; }
+.adv-list { display: grid; gap: 8px; }
+.adv-r { display: grid; grid-template-columns: 130px 1fr auto; gap: 12px; align-items: start; padding: 14px 16px; border-radius: 16px; background: #fff; border: 1px solid #EFE6DA; border-inline-start: 4px solid #D3C3AE; }
+.adv-r.ok { border-inline-start-color: #3F7A4C; } .adv-r.warn { border-inline-start-color: #C9A46A; }
+.adv-ch { display: grid; gap: 4px; } .adv-ch b { color: #3B1F1A; }
+.adv-st { justify-self: start; font-size: 12px; padding: 2px 10px; border-radius: 999px; background: #F6EFE6; color: #8A6F66; }
+.adv-r.ok .adv-st { background: #E6EFE6; color: #3F7A4C; } .adv-r.warn .adv-st { background: #F5EBD6; color: #8A6428; }
+.adv-w > div { font-weight: 500; line-height: 1.7; }
+.adv-w details { margin-top: 4px; } .adv-w summary { cursor: pointer; font-size: 12.5px; color: #9C6A45; list-style: none; } .adv-w summary::before { content: "↙ "; }
+.adv-w details p { margin: 6px 0 0; font-size: 13.5px; color: #6B4A3A; line-height: 1.8; }
+@media (max-width: 760px) { .adv-r { grid-template-columns: 1fr; } }

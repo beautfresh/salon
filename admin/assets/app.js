@@ -2296,10 +2296,11 @@
 
   async function pageMarketing(view, _a, params, alive) {
     const tab = params.get('t') || 'seasons';
-    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
+    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['advisor', 'المستشار'], ['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
     const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/marketing?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
     if (tab === 'content') return mktContent(view, params, alive, head);
     if (tab === 'compass') return mktCompass(view, alive, head);
+    if (tab === 'advisor' && isManager()) return mktAdvisor(view, alive, head);
     if (tab === 'writer' && isManager()) return mktWriter(view, alive, head);
     if (tab === 'studio' && isManager()) return mktStudio(view, alive, head);
     if (tab === 'campaigns' && isManager()) return mktCampaigns(view, alive, head);
@@ -2475,6 +2476,69 @@
     const urls = [...new Set([...out.matchAll(/url\((https:[^)]+)\)/g)].map((m) => m[1]))];
     await Promise.all(urls.map(async (u) => { const bl = await (await fetch(u)).blob(); const d = await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(bl); }); out = out.split(u).join(d); }));
     return (STU_FONT_CSS = out);
+  }
+
+  /* ======================= المستشار ======================= */
+  const ADV_Q = [
+    ['goal', 'وش أهم شي لكم الحين؟', [['new', 'عميلات جدد'], ['back', 'ترجع العميلات القديمات'], ['quiet', 'نعبّي الأوقات الهادية'], ['season', 'نستعد للموسم الجاي']]],
+    ['budget', 'كم تقدرون تصرفون على الإعلانات بالشهر؟', [['0', 'ولا شي'], ['1000', 'أقل من ١٠٠٠'], ['3000', '١٠٠٠ – ٣٠٠٠'], ['9000', 'أكثر من ٣٠٠٠']]],
+    ['shoot', 'مين يصوّر المحتوى؟', [['phone', 'احنا بالجوال'], ['free', 'مصورة مستقلة'], ['agency', 'وكالة']]],
+    ['time', 'كم وقت تقدرون تعطون المحتوى بالأسبوع؟', [['1', 'ساعة'], ['3', 'ثلاث ساعات'], ['6', 'أكثر']]],
+  ];
+  function advDecide(a, F) {
+    const B = Number(a.budget || 0), T = Number(a.time || 1), g = a.goal || 'new';
+    const lapsed = F.lapsed || 0, rv = F.reviews || {}, ws = F.web_share || 0, wu = F.web_unpaid || 0, ns = F.next_season;
+    const dayAr = { Sunday: 'الأحد', Monday: 'الاثنين', Tuesday: 'الثلاثاء', Wednesday: 'الأربعاء', Thursday: 'الخميس', Friday: 'الجمعة', Saturday: 'السبت' }[F.quiet_day] || F.quiet_day || '';
+    const D = [];
+    D.push(['واتساب', g === 'back' || g === 'quiet' ? 'yes' : 'yes', g === 'quiet' ? `نعم: رسالة عرض لـ«${dayAr}» بس، لمن وافقوا` : 'نعم: رسالة وحدة بالأسبوع، لمن وافقوا بس',
+      `${lapsed.toLocaleString('en')} عميلة زارتكم مرتين وفوق وغابت أكثر من شهرين. هذول أسهل رجعة وأرخصها. رصيد واتساب ركاز صفر، اشحنوه أول.`, '#/sales?tab=clients']);
+    D.push(['إنستقرام', 'yes', T >= 3 ? 'نعم: ٣ منشورات بالأسبوع + ستوري يومي' : 'نعم: منشورين بالأسبوع + ستوري يومي',
+      `٦٢٪ من زوار صفحة الحجز جايين من إنستقرام. هذي قناتكم الأولى، وكل منشور لازم ينتهي برابط الحجز.`, '#/marketing?t=writer']);
+    D.push(['قوقل ماب', 'yes', 'نعم: صور حقيقية + اطلبوا التقييم بعد كل زيارة',
+      `عندكم ${(rv.n || 0).toLocaleString('en')} تقييم بمتوسط ${rv.avg || '—'} في ركاز، بس قوقل هو اللي يشوفه اللي يدور «صالون قريب». حوّلوا الراضيات لقوقل.`, '#/site']);
+    D.push(['تيك توك', g === 'new' && T >= 3 ? 'cond' : 'no', g === 'new' && T >= 3 ? 'بشرط: مقطع واحد بالأسبوع، نفس ريلز إنستقرام' : 'لا الحين',
+      g === 'new' && T >= 3 ? 'يجيب عميلات جدد، بس يحتاج انتظام. لا تسوون له محتوى خاص، أعيدوا نشر الريلز.' : 'وقتكم للمحتوى محدود، فركزوه في إنستقرام اللي يجيب الحجوزات فعلًا.', '#/marketing?t=content']);
+    D.push(['إعلانات ممولة', B >= 1000 ? 'cond' : 'no', B >= 1000 ? `بشرط: ${B >= 3000 ? 'سناب وإنستقرام' : 'إنستقرام بس'}، داخل الأحساء، على عرض واحد` : 'لا الحين',
+      B >= 1000 ? 'الإعلان بدون عرض واضح يضيع الفلوس. إعلان واحد بهدف واحد، وقيسوه بالحجوزات بعد أسبوعين.' : 'بدون ميزانية، الأولوية للقنوات المجانية اللي فوق.', '#/marketing?t=campaigns']);
+    D.push(['مشاهير', B >= 9000 && g !== 'back' ? 'cond' : 'no', B >= 9000 && g !== 'back' ? 'بشرط: مشهورة من الأحساء، جمهورها نساء، وعرض بكود' : 'لا الحين',
+      B >= 9000 && g !== 'back' ? 'اطلبوا إحصائيات جمهورها (المدينة والجنس) قبل الدفع، وحطوا كود خاص عشان تقيسون.' : 'تكلفتها عالية والنتيجة صعبة القياس. لما تكبر الميزانية نرجع لها.', '']);
+    D.push(['صفحة الحجز', wu >= 15 ? 'yes' : 'ok', wu >= 15 ? 'نعم: فعّلوا الدفع الإلكتروني' : 'تمام، كملوا', 
+      `${ws}٪ من طلبات آخر شهر جات من الموقع${wu ? `، و${wu}٪ من طلبات الموقع ما كملت الدفع` : ''}. كل تحسين هنا يرجع فلوس مباشرة.`, '#/sales']);
+    const steps = [];
+    if (g === 'back') steps.push(['رسالة «وحشتينا» لأول ٣٠ عميلة غايبة', '#/sales?tab=clients']);
+    if (g === 'quiet') steps.push([`عرض خاص ليوم ${dayAr}، ورسالة واتساب عنه`, '#/site?t=offers']);
+    if (g === 'season' && ns) steps.push([`حملة ${ns.name} (بعد ${ns.in} يوم) بمراحلها`, '#/marketing?t=campaigns']);
+    if (g === 'new') steps.push(['٣ منشورات إنستقرام هالأسبوع من الكاتب الذكي', '#/marketing?t=writer']);
+    steps.push(['بعد كل زيارة: رابط تقييم قوقل للعميلة الراضية', '#/site']);
+    if ((F.posts_30 || 0) < 8) steps.push([`خططوا محتوى الأسبوعين الجاية (آخر ٣٠ يوم: ${F.posts_30 || 0} منشور)`, '#/marketing?t=content']);
+    return { D, steps: steps.slice(0, 3) };
+  }
+  async function mktAdvisor(view, alive, head) {
+    const F = await q(sb.rpc('advisor_facts'));
+    if (!alive()) return;
+    const a = { goal: 'new', budget: '0', shoot: 'phone', time: '3', ...((F.saved && F.saved.answers) || {}) };
+    const draw = (fresh) => {
+      const { D, steps } = advDecide(a, F);
+      const ST = { yes: ['نعم', 'ok'], cond: ['بشرط', 'warn'], no: ['لا الحين', ''], ok: ['تمام', 'ok'] };
+      $('#adv-out', view).innerHTML = `
+        <div class="section-title"><h2>قرار المستشار</h2>${F.saved?.at && !fresh ? `<span class="muted small">آخر مراجعة ${new Date(F.saved.at).toLocaleDateString('ar-SA-u-nu-latn', { day: 'numeric', month: 'long' })}</span>` : ''}</div>
+        <div class="adv-list">${D.map(([ch, st, what, why, go]) => `<div class="adv-r ${ST[st][1]}"><div class="adv-ch"><b>${ch}</b><span class="adv-st">${ST[st][0]}</span></div>
+          <div class="adv-w"><div>${esc(what)}</div><details><summary>من أين؟</summary><p>${esc(why)}</p></details></div>${go ? `<a class="btn sm" href="${go}">افتح ←</a>` : ''}</div>`).join('')}</div>
+        <div class="section-title"><h2>هالأسبوع: ٣ خطوات بس</h2></div>
+        <div class="lz-todo">${steps.map(([t, h]) => `<a href="${h}">${esc(t)}<i>←</i></a>`).join('')}</div>`;
+    };
+    view.innerHTML = `${head}
+      <div class="card adv-q"><h2>المستشار</h2><p class="muted">أربع أسئلة، وبعدها يقرر معكم قناة قناة، وكل قرار معه السبب من أرقامكم.</p>
+        ${ADV_Q.map(([k, l, opts]) => `<div class="field"><label>${l}</label><div class="chips wrap">${opts.map(([v, t]) => `<button type="button" class="chip ${String(a[k]) === v ? 'on' : ''}" data-k="${k}" data-v="${v}">${t}</button>`).join('')}</div></div>`).join('')}
+      </div>
+      <div id="adv-out"></div>`;
+    let tm = null;
+    $$('[data-k]', view).forEach((b) => b.onclick = () => {
+      a[b.dataset.k] = b.dataset.v; $$(`[data-k="${b.dataset.k}"]`, view).forEach((x) => x.classList.toggle('on', x === b));
+      const o = $('#adv-out', view); o.animate([{ opacity: .4 }, { opacity: 1 }], { duration: 300 }); draw(true);
+      clearTimeout(tm); tm = setTimeout(() => sb.from('mkt_advisor').update({ answers: a, decided_at: new Date().toISOString(), decided_by: S.profile?.id || null }).eq('id', 1).then(() => {}), 800);
+    });
+    draw(false);
   }
 
   async function mktSeasons(view, alive, head) {

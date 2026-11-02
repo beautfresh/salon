@@ -683,6 +683,35 @@
     $('#ms-leave')?.addEventListener('click', async () => leaveForm(await teamData()));
     const expLink = $('a[href="#expiring"]', view);
     expLink.addEventListener('click', (e) => { e.preventDefault(); $('#expiring').scrollIntoView({ behavior: 'smooth' }); });
+    // تبديل العدسة فوري: بدون تحميل الصفحة من جديد
+    if (LZ) {
+      const pulseFor = async (k) => {
+        const pb = $('.pulse-body', view); if (!pb) return;
+        pb.classList.add('lz-busy');
+        const [a, b] = lensRange(k, D(tk));
+        const f = await q(sb.rpc('fin_range', { p_from: dk(a), p_to: dk(b) })).catch(() => null);
+        if (!f || !pb.isConnected) return;
+        const dl = f.prev_revenue > 0 ? Math.round(((f.revenue - f.prev_revenue) / f.prev_revenue) * 100) : null;
+        const [c1, c2] = pb.children;
+        c1.innerHTML = `<span>مبيعات ${k === 'd' ? 'اليوم' : k === 'y' ? 'هذي السنة' : 'هذا ' + HL[k]}</span><b class="num">${sar(f.revenue)}</b>${dl != null ? `<em class="${dl >= 0 ? 'up' : 'down'}">${dl >= 0 ? '▲' : '▼'} ${Math.abs(dl)}٪</em>` : ''}`;
+        c2.innerHTML = `<span>صافي الربح</span><b class="num">${sar(f.net)}</b>`;
+        pb.setAttribute('href', `#/sales?l=${k}&at=${tk}`); pb.classList.remove('lz-busy');
+      };
+      const bindLens = () => $$('.lz-bar a', view).forEach((a) => a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const k = new URLSearchParams(a.getAttribute('href').split('?')[1]).get('l');
+        if (k === hl) return;
+        const old = $('.lz-bar a.on', view), r0 = old.getBoundingClientRect();
+        hl = k; try { sessionStorage.setItem('bf-lens-' + tk, k); } catch {}
+        history.replaceState(null, '', `#/home?l=${k}`);
+        const box = $('.lz', view), tmp = document.createElement('div'); tmp.innerHTML = lensHome(LZ, k, autoLens());
+        box.replaceWith(tmp.firstElementChild);
+        const now = $('.lz-bar a.on', view), r1 = now.getBoundingClientRect();
+        now.animate([{ transform: `translateX(${r0.left - r1.left}px) scaleX(${r0.width / (r1.width || 1)})` }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        bindLens(); pulseFor(k);
+      }));
+      bindLens();
+    }
   }
 
   function itemRow(i) {

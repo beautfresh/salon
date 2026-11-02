@@ -367,7 +367,7 @@
       if (on.includes('team') && d.team.length) {
         const fq = {}; d.team.forEach((t) => (t.tops || []).slice(0, 1).forEach((x) => { fq[x] = (fq[x] || 0) + 1; }));
         const common = Object.keys(fq).filter((k) => fq[k] > d.team.length / 3);
-        const spec = (t) => { const L = (t.tops || []).filter((x) => !common.includes(x)).slice(0, 2); return L.length ? 'تتميز في: ' + L.join('، ') : ''; };
+        const spec = (t) => { const L = [...new Set((t.tops || []).filter((x) => !common.includes(x)).map((x) => x.split(' - ')[0].split(/[,،(]/)[0].trim()))].filter(Boolean).slice(0, 2); return L.length ? 'تتميز في: ' + L.join('، ') : ''; };
         document.getElementById('tm-rail').innerHTML = d.team.map((t) => `<article class="tm"><div class="av">${t.photo ? `<img src="${esc(t.photo)}" alt="" loading="lazy">` : esc((t.name || '؟').trim().charAt(0))}</div><h3>${esc(t.name)}</h3><div class="t">${esc(t.title || spec(t))}</div>${t.n ? `<div class="sc"><span class="stars" style="font-size:13px">★</span> <b class="num">${AR(t.avg)}</b> · ${AR(t.n)} رأي</div>` : ''}<a href="${book('pro=' + encodeURIComponent(t.id) + '&pn=' + encodeURIComponent(t.name))}">احجزي معها</a></article>`).join('');
         show('team');
       }

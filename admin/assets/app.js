@@ -2296,11 +2296,12 @@
 
   async function pageMarketing(view, _a, params, alive) {
     const tab = params.get('t') || 'seasons';
-    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['advisor', 'المستشار'], ['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
+    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ...(isManager() ? [['advisor', 'المستشار'], ['sources', 'كيف عرفتنا؟'], ['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
     const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/marketing?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
     if (tab === 'content') return mktContent(view, params, alive, head);
     if (tab === 'compass') return mktCompass(view, alive, head);
     if (tab === 'advisor' && isManager()) return mktAdvisor(view, alive, head);
+    if (tab === 'sources') return mktSources(view, alive, head);
     if (tab === 'writer' && isManager()) return mktWriter(view, alive, head);
     if (tab === 'studio' && isManager()) return mktStudio(view, alive, head);
     if (tab === 'campaigns' && isManager()) return mktCampaigns(view, alive, head);
@@ -2539,6 +2540,31 @@
       clearTimeout(tm); tm = setTimeout(() => sb.from('mkt_advisor').update({ answers: a, decided_at: new Date().toISOString(), decided_by: S.profile?.id || null }).eq('id', 1).then(() => {}), 800);
     });
     draw(false);
+  }
+
+  /* ======================= كيف عرفتنا؟ ======================= */
+  const SRC_L = { instagram: 'إنستقرام', tiktok: 'تيك توك', snapchat: 'سناب', google: 'قوقل', friend: 'صديقة أو قريبة', passby: 'مرّت من عند الصالون', influencer: 'مشهورة', whatsapp: 'واتساب', other: 'غيره' };
+  async function mktSources(view, alive, head) {
+    const d = await q(sb.rpc('src_new', { p_days: 14 }));
+    if (!alive()) return;
+    const mix = Object.entries(d.mix || {}).sort((a, b) => b[1] - a[1]), tot = mix.reduce((a, x) => a + x[1], 0);
+    const list = d.list || [], known = list.filter((x) => x.source).length;
+    view.innerHTML = `${head}
+      <div class="card"><h2 style="margin:0 0 4px">كيف عرفتنا؟</h2>
+        <p class="muted">كل عميلة جديدة نعرف من وين جات. اللي تحجز من الموقع تختار بنفسها بعد الحجز، والباقي يسجله الاستقبال هنا بضغطة. هذا اللي يخلي المستشار يقرر بالأرقام، ويصعّدكم لدرجة «مقيس».</p>
+        <div class="src-sum"><div><b class="num">${list.length}</b><span>عميلة جديدة آخر ١٤ يوم</span></div><div><b class="num">${list.length ? Math.round((known / list.length) * 100) : 0}٪</b><span>مصدرهن معروف</span></div><div><b class="num">${tot}</b><span>إجابة آخر ٩٠ يوم</span></div></div>
+        ${tot ? `<div class="src-mix">${mix.map(([k, n]) => `<div><span>${SRC_L[k] || k}</span><i><b style="width:${Math.round((n / mix[0][1]) * 100)}%"></b></i><em class="num">${Math.round((n / tot) * 100)}٪</em></div>`).join('')}</div>` : '<div class="notice" style="margin-top:12px">لسه ما فيه إجابات. أول ما يبدأ التسجيل تطلع هنا النسب.</div>'}
+      </div>
+      <div class="section-title"><h2>العميلات الجدد</h2><span class="muted small">اضغطوا المصدر جنب كل وحدة</span></div>
+      <div class="list" id="src-list">${list.length ? list.map((x) => `<div class="row src-row" data-p="${esc(x.phone9 || '')}">
+          <div class="grow"><div class="title">${esc(firstName(x.name) || 'عميلة')}</div><div class="meta">${new Date(x.at).toLocaleDateString('ar-SA-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}${x.service ? ' · ' + esc(x.service) : ''}</div></div>
+          <div class="chips wrap src-chips">${Object.entries(SRC_L).filter(([k]) => k !== 'whatsapp').map(([k, l]) => `<button type="button" class="chip sm ${x.source === k ? 'on' : ''}" data-s="${k}" ${x.phone9 ? '' : 'disabled'}>${l}</button>`).join('')}</div></div>`).join('') : '<div class="empty card">ما فيه عميلات جدد في آخر ١٤ يوم</div>'}</div>`;
+    $$('.src-row [data-s]', view).forEach((b) => b.onclick = async () => {
+      const row = b.closest('.src-row'), p9 = row.dataset.p; if (!p9) return;
+      $$('[data-s]', row).forEach((x) => x.classList.toggle('on', x === b));
+      try { await q(sb.from('client_sources').upsert({ phone9: p9, source: b.dataset.s, via: 'desk', at: new Date().toISOString(), by_user: S.profile?.id || null })); row.animate([{ background: '#EEF5EC' }, { background: 'transparent' }], { duration: 900 }); }
+      catch (err) { toast(errMsg(err), true); }
+    });
   }
 
   async function mktSeasons(view, alive, head) {

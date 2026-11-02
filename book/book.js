@@ -198,10 +198,19 @@ function s3() {
     `<div class="card ticket">${S.sel.map((x) => `<div class="sumrow"><span>${esc(x.name)}</span><span class="num">${sar(x.price)}</span></div>`).join('')}<div class="sumrow sumtot"><span>الإجمالي</span><span class="num">${sar(total())}</span></div><div class="sumrow"><span>المكان</span><span>بيوتفريش · الأحساء</span></div></div>` +
     (S.res.pay ? `<a class="primary" href="${esc(S.res.pay)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:12px">تفاصيل الحجز والدفع</a>` : '') +
     (S.gift ? `<p class="note">🎁 حجزك مربوط ببطاقة هديتك <b dir="ltr">${esc(S.gift.code)}</b>، والدفع من رصيدك في الصالون.</p>` : '') +
+    `<div class="card src" id="src"><b>سؤال سريع: كيف عرفتينا؟</b><div class="srcs">${SRC.map(([k, l]) => `<button type="button" data-src="${k}">${l}</button>`).join('')}</div></div>` +
     `<a class="waBtn" href="${waLink(msg)}" target="_blank" rel="noopener">أرسلي الحجز على واتساب الصالون</a>` +
     (C.settings.rekaz ? `<p class="note">تحتاجين تعدلين الموعد أو تلغينه؟ راسلينا على واتساب الصالون وحنا نرتبه لك.</p>` : `<p class="note">نأكد لك الموعد على الواتساب، ومن نفس الرابط تقدرين تعدلين أو تلغين.</p>`) +
     `<button class="primary" id="again2" style="margin-top:10px">احجزي موعد ثاني</button></div></div>`;
 }
+
+const SRC = [['instagram', 'إنستقرام'], ['tiktok', 'تيك توك'], ['snapchat', 'سناب'], ['google', 'قوقل'], ['friend', 'صديقة أو قريبة'], ['passby', 'مريت من عند الصالون'], ['influencer', 'مشهورة'], ['other', 'غيره']];
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest && e.target.closest('[data-src]'); if (!b) return;
+  const box = document.getElementById('src'); if (!box || box.dataset.sent) return; box.dataset.sent = '1';
+  b.classList.add('on'); try { await rpc('src_submit', { p_phone: '0' + S.phone, p_source: b.dataset.src }); } catch {}
+  box.innerHTML = '<b>شكرًا 🤍</b><span class="sub">هذا يساعدنا نوصل لعميلات مثلك</span>';
+});
 
 /* ---------- رابط الحجز ---------- */
 const STAT = { pending: ['بانتظار التأكيد', ''], confirmed: ['مؤكد', 'ok'], arrived: ['وصلتِ', 'ok'], done: ['تمت الزيارة', 'ok'], no_show: ['ما حضرتِ', 'no'], cancelled: ['ملغي', 'no'] };

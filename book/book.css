@@ -212,3 +212,8 @@ h1{font-size:30px;font-weight:800;color:var(--oud);margin:8px 0 2px;line-height:
 @keyframes gbIn{from{opacity:0;transform:translateY(-8px)}}
 .giftban.pro{background:#F3EBDF;color:#4A2620;border:1px solid #E5D9C9}.giftban.pro span{flex:1}.giftban.pro small{color:#8A6F66}
 .prox{font:inherit;font-size:13px;border:1px solid #D3C3AE;background:#fff;color:#5A2A22;border-radius:999px;padding:7px 14px;cursor:pointer;flex:none}
+.card.src{margin-top:12px;padding:14px 16px;text-align:center;display:grid;gap:10px}
+.card.src b{font-size:15px;color:#4A2620}.card.src .sub{font-size:12.5px;color:#8A6F66}
+.srcs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.srcs button{font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;border:1px solid #E5D9C9;background:#fff;color:#5A2A22;cursor:pointer;transition:all .2s}
+.srcs button:hover,.srcs button.on{background:#5A2A22;color:#F3EBDF;border-color:#5A2A22}

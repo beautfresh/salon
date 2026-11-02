@@ -1512,3 +1512,11 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .adv-w details { margin-top: 4px; } .adv-w summary { cursor: pointer; font-size: 12.5px; color: #9C6A45; list-style: none; } .adv-w summary::before { content: "↙ "; }
 .adv-w details p { margin: 6px 0 0; font-size: 13.5px; color: #6B4A3A; line-height: 1.8; }
 @media (max-width: 760px) { .adv-r { grid-template-columns: 1fr; } }
+/* كيف عرفتنا */
+.src-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.src-sum div { display: grid; padding: 12px; border-radius: 14px; background: #FBF7F1; } .src-sum b { font-size: 22px; color: #3B1F1A; } .src-sum span { font-size: 12px; color: #8A6F66; }
+.src-mix { display: grid; gap: 8px; margin-top: 14px; }
+.src-mix div { display: grid; grid-template-columns: 130px 1fr 44px; gap: 10px; align-items: center; font-size: 14px; }
+.src-mix i { height: 10px; border-radius: 6px; background: #F1E9DE; overflow: hidden; } .src-mix i b { display: block; height: 100%; background: #9C6A45; border-radius: 6px; }
+.src-mix em { font-style: normal; color: #8A6F66; text-align: left; }
+.src-row { flex-wrap: wrap; } .src-chips { gap: 4px; }

@@ -4472,7 +4472,7 @@
           <div class="fin-split sd-split">
             <div data-tip="المبيعات بدون ضريبة القيمة المضافة"><span>صافي المبيعات</span><b class="num">${sdCu('net', K.net_sales)}</b><em>الضريبة ${sar(K.tax)}</em></div>
             <div data-tip="المدفوعات اللي دخلت فعلًا في الفترة ناقص المسترجع، نفس «صافي المبالغ المدفوعة» في ركاز"><span>صافي المحصّل</span><b class="num">${sdCu('col', K.collected)}</b><em>${Number(K.prev_paid) > 0 ? `منها ${sar(K.prev_paid)} لطلبات سابقة` : `المسترجع ${sar(K.refunds)}`}</em></div>
-            <div><span>الخصومات</span><b class="num">${sdCu('disc', K.discount)}</b><em>${K.sales ? sdShare(K.discount, Number(K.sales) + Number(K.discount)) : 0}٪ من قبل الخصم</em></div>
+            <div><span>الخصومات</span><b class="num">${sdCu('disc', K.discount)}</b><em>${Number(K.discount) > 0 ? `${sdShare(K.discount, Number(K.sales) + Number(K.discount))}٪ من قبل الخصم` : 'ما فيه خصومات'}</em></div>
             ${Number(K.home) ? `<div><span>الخدمات المنزلية</span><b class="num">${sdCu('home', K.home)}</b><em>من موقعنا</em></div>` : ''}
           </div>
           ${sdRecon(K, lens)}
@@ -4537,7 +4537,7 @@
         <div class="card sd-pulse ${firstPulse ? 'sd-up' : ''}">
           <div class="sd-pulse-h"><h3><i class="sd-dot"></i>اليوم لحظة بلحظة</h3><span class="muted small">يتحدث لحاله كل دقيقة</span></div>
           <div class="sd-pulse-g">
-            <div data-tip="قيمة الطلبات المؤكدة اليوم شامل الضريبة"><span>مبيعات اليوم</span><b class="num">${sdCu('p1', k.sales)}</b><em>${sdChip(k.sales, kw.sales, { tip: `نفس الوقت ${WDAYS[new Date().getDay()]} الماضي: ${sar(kw.sales)} ر.س` })} عن نفس الوقت ${WDAYS[new Date().getDay()]} الماضي · المحصّل ${sar(k.collected)}</em></div>
+            <div data-tip="قيمة الطلبات المؤكدة اليوم شامل الضريبة"><span>مبيعات اليوم</span><b class="num">${sdCu('p1', k.sales)}</b><em>${sdChip(k.sales, kw.sales, { tip: `نفس الوقت ${WDAYS[new Date().getDay()]} الماضي: ${sar(kw.sales)} ر.س` })} عن نفس الوقت ${WDAYS[new Date().getDay()]} الماضي</em></div>
             <div><span>حجوزات اليوم</span><b class="num">${sdCu('p2', k.bookings)}</b><em>${sdN(k.clients)} عميلة${k.cancelled ? ` · ${k.cancelled} إلغاء` : ''}</em></div>
             <div><span>باقي اليوم</span><b class="num">${sdCu('p3', P.left_today.n)}</b><em>موعد بقيمة ${sar(P.left_today.v)} ر.س</em></div>
             <div data-tip="الحجوزات المؤكدة والمعلقة للسبعة أيام الجاية (يزيد كل ما حجزوا أكثر)"><span>محجوز للأسبوع الجاي</span><b class="num">${sdCu('p4', P.next7.v)}</b><em>${sdN(P.next7.n)} حجز</em></div>

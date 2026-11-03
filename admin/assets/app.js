@@ -2028,7 +2028,7 @@
       return `<a class="row cx-row" href="#/cx/${encodeURIComponent(c.id)}">
         <span class="cav ${c.seg}">${esc(initial(c.name))}</span>
         <div class="grow"><div class="title">${esc(c.name || 'بدون اسم')} ${seg[0] ? `<span class="badge ${seg[1]}">${seg[0]}</span>` : ''}</div><div class="meta">${meta}</div></div>
-        <div class="end">${c.seg === 'away' && c.phone ? `<span class="wa-mini" data-wa="${esc(c.phone)}" data-n="${esc(firstName(c.name))}">وحشتينا</span>` : c.next && !c.today ? `<span class="muted small">موعدها ${cxDate(c.next)}</span>` : late > 7 ? `<span class="muted small">متأخرة ${late} يوم</span>` : ''}</div></a>`;
+        <div class="end">${c.seg === 'away' && c.phone ? `<span class="wa-mini" data-wa="${esc(c.phone)}" data-n="${esc(firstName(c.name))}">وحشتينا</span>` : c.next && !c.today ? `<span class="muted small">موعدها ${cxDate(c.next)}</span>` : late > 7 && !c.today ? `<span class="muted small">متأخرة ${late} يوم</span>` : ''}</div></a>`;
     };
     const load = async (append) => {
       const my = ++seq;

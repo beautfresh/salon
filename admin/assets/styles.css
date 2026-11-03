@@ -1720,3 +1720,4 @@ div.fcard { cursor: default; }
 .pp-sigpad { display: block; border: 1.5px dashed #cdb9ae; border-radius: 10px; background: #FFFCFA; touch-action: none; cursor: crosshair; }
 .pp-sigclr { font: inherit; font-size: 11px; border: 0; background: none; color: #A0675A; cursor: pointer; padding: 2px 0; }
 @media print { .pp-sigclr { display: none; } .pp-live .pp-in { background: none; } .pp-sigpad { border-style: solid; border-color: #ddd; } }
+.adv-kb { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

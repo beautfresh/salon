@@ -1576,3 +1576,10 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .cx-stars { min-width: 40px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #F5EBD6; color: #8A6428; font-weight: 700; font-size: 13px; }
 .cx-stars.low { background: #F6E3DD; color: #A4442F; }
 @media (max-width: 640px) { .cx-hero { padding: 14px; } .cx-hero h2 { font-size: 19px; } .cx-rh { height: 96px; gap: 4px; } }
+.cx-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.cx-tmore { justify-self: start; border: 0; background: none; color: #8A5A45; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; padding: 4px 2px; }
+.cx-tip[hidden] { display: none; }
+.cx-hero { flex-wrap: wrap; }
+.cx-hero .grow { min-width: 0; flex: 1 1 170px; }
+.cx-hero .cl-acts { flex: none; width: auto; display: flex; gap: 8px; position: static; }
+@media (max-width: 640px) { .cx-hero .cl-acts { width: 100%; justify-content: flex-start; } }

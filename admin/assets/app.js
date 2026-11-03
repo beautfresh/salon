@@ -2091,6 +2091,8 @@
     if (c.orders?.web_unpaid) tips.push(['🌐', `عندها ${c.orders.web_unpaid} طلب من الموقع ما اكتمل دفعه`, 'warn']);
     if (c.winback) tips.push(['💌', `انرسل لها «وحشتينا» ${ago(dk(new Date(c.winback.at)))}`, '']);
 
+    const PRI = { '⚠️': 0, '📍': 1, '💬': 2, '🎁': 3, '🎂': 4, '🤍': 5, '👩‍🎨': 6, '💅': 7, '🔁': 8, '📅': 9, '⏳': 10, '🌐': 11, '💌': 12 };
+    tips.sort((x, y) => (PRI[x[0]] ?? 20) - (PRI[y[0]] ?? 20));
     // الإيقاع: آخر ١٢ شهر
     const months = []; { const t = D(todayR()); for (let i = 11; i >= 0; i--) { const d = new Date(t.getFullYear(), t.getMonth() - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); } }
     const mv = Object.fromEntries(c.months.map((m) => [m.m, m]));
@@ -2115,13 +2117,13 @@
           <div class="cl-acts">${c.phone ? `<a class="icon-btn" href="https://wa.me/${waNum(c.phone)}" target="_blank" rel="noopener" aria-label="واتساب">${I.wa}</a><a class="icon-btn" href="tel:${esc(c.phone)}" aria-label="اتصال">${I.phone}</a>` : ''}</div>
         </div>
 
-        ${tips.length ? `<div class="cx-brief"><div class="cx-bh"><b>قبل لا تستقبلينها</b><span class="muted small">من زياراتها وملاحظاتكم</span></div>${tips.map(([ic, t, k]) => `<div class="cx-tip ${k}"><i>${ic}</i><p>${t}</p></div>`).join('')}</div>` : ''}
+        ${tips.length ? `<div class="cx-brief"><div class="cx-bh"><b>قبل لا تستقبلينها</b><span class="muted small">من زياراتها وملاحظاتكم</span></div>${tips.map(([ic, t, k], i) => `<div class="cx-tip ${k}" ${i >= 5 ? 'hidden' : ''}><i>${ic}</i><p>${t}</p></div>`).join('')}${tips.length > 5 ? `<button class="cx-tmore" id="cx-tmore">${tips.length - 5} ملاحظات ثانية</button>` : ''}</div>` : ''}
 
-        <div class="cl-stats">
+        <div class="cl-stats cx-stats">
           <div><b class="num">${sdN(c.visits)}</b><span>زيارة</span></div>
           ${M ? `<div><b class="num">${sar(c.spend)}</b><span>صرفت ر.س</span></div><div><b class="num">${sar(c.visits ? c.spend / c.visits : 0)}</b><span>متوسط الزيارة</span></div>` : ''}
           <div class="lv"><b>${c.last ? ago(dk(new Date(c.last))) : '—'}</b><span>آخر زيارة</span></div>
-          ${M && c.top_pct != null && c.spend > 0 ? `<div><b class="num">${c.top_pct < 1 ? '1٪' : Math.ceil(c.top_pct) + '٪'}</b><span>من أعلى العميلات</span></div>` : ''}
+          ${M && c.top_pct != null && c.spend > 0 ? `<div><b class="num">${c.top_pct < 1 ? '1٪' : Math.ceil(c.top_pct) + '٪'}</b><span>ضمن أعلى العميلات صرفًا</span></div>` : ''}
         </div>
 
         <div class="fin-grid cx-grid">
@@ -2150,6 +2152,7 @@
         ${c.reviews.length ? `<div class="section-title"><h2>تقييماتها</h2></div><div class="list">${c.reviews.map((r) => `<div class="row"><span class="cx-stars ${r.rating <= 3 ? 'low' : ''}">★${r.rating}</span><div class="grow"><div class="title">${r.text ? esc(r.text) : '<span class="muted">بدون تعليق</span>'}</div><div class="meta">${esc(r.svc || '')}${r.by ? ` · ${esc(cxProv(r.by))}` : ''} · ${cxDate(r.at, 1)}</div></div></div>`).join('')}</div>` : ''}
         <p class="muted small" style="margin-top:18px">الزيارات والمواعيد من ركاز، وتتحدث تلقائيًا. الملاحظات تنحفظ هنا للفريق.</p>
       </div>`;
+    $('#cx-tmore', view)?.addEventListener('click', (e) => { $$('.cx-tip[hidden]', view).forEach((x) => { x.hidden = false; }); e.currentTarget.remove(); });
     $('#cx-all', view)?.addEventListener('click', (e) => { $$('.cx-more', view).forEach((x) => { x.hidden = false; }); e.currentTarget.remove(); });
     $('#cx-edit', view).onclick = () => modal(`
       <h3>ملاحظات على ${esc(fn || 'العميلة')}</h3>

@@ -343,6 +343,7 @@
     homesvc: { title: 'خدمات هوم والإعدادات', nav: 'bookings', fn: pageHomeSvc, manager: true },
     clients: { title: 'العميلات', nav: 'clients', fn: pageClients },
     client: { title: 'ملف العميلة', nav: 'clients', fn: pageClient },
+    cx: { title: 'ملف العميلة', nav: 'clients', fn: pageCx },
     feedback: { title: 'الآراء والملاحظات', nav: 'clients', fn: pageFeedback },
     rules: { title: 'قواعد بيوتفريش', nav: 'rules', fn: pageRules },
     ops: { title: 'التشغيل', nav: 'ops', fn: pageOps },
@@ -2000,48 +2001,170 @@
     return `<div class="stamps ${size}">${Array.from({ length: total }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="--d:${i * 60}ms">${i < n ? `<img src="${ROSETTE}" alt="">` : `<b>${i + 1}</b>`}</i>`).join('')}</div>`;
   }
 
+  /* ===== العميلات من ركاز + ملف العميلة الذكي ===== */
+  const CX_SEG = { vip: ['VIP', 'gold'], regular: ['دائمة', 'ok'], away: ['غابت عنّا', 'warn'], new: ['جديدة', 'accent'], once: ['', ''] };
+  const cxTime = (t) => new Date(t).toLocaleTimeString('ar-SA-u-nu-latn', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Riyadh' });
+  const cxDate = (t, y) => { const d = new Date(t); const o = { day: 'numeric', month: 'long', timeZone: 'Asia/Riyadh' }; if (y) o.year = 'numeric'; return d.toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', o); };
+  const cxDays = (t) => Math.round((Date.now() - new Date(t)) / 86400000);
+  const cxVisits = (n) => (n === 1 ? 'زيارة' : n === 2 ? 'زيارتين' : n <= 10 ? `${n} زيارات` : `${n} زيارة`);
+  const cxProv = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean).join('، ');
+
   async function pageClients(view, _a, params, alive) {
-    const seg = params.get('s') || 'all';
-    const [rows, L] = await Promise.all([q(sb.from('clients_overview').select('*').order('last_visit', { ascending: false, nullsFirst: false }).limit(3000)), loyalty()]);
-    if (!alive()) return;
-    const mNow = new Date(todayR()).getMonth();
-    const bday = (c) => c.birthday && D(c.birthday).getMonth() === mNow;
-    const count = { all: rows.length, regular: 0, vip: 0, away: 0, new: 0, bday: rows.filter(bday).length, reward: rows.filter((c) => L.active && c.stamps >= L.stamps).length };
-    rows.forEach((c) => { count[c.segment]++; });
-    const tiles = [['all', 'كل العميلات', ''], ['regular', 'دائمات', 'ok'], ['vip', 'VIP', 'gold'], ['away', 'غابوا عنّا', 'warn']];
+    const st = { seg: params.get('s') || 'all', q: params.get('q') || '', off: 0, rows: [] };
+    const tiles = [['all', 'كل العميلات', ''], ['today', 'مواعيدهن اليوم', 'accent'], ['vip', 'VIP', 'gold'], ['regular', 'دائمات', 'ok'], ['away', 'غابوا عنّا', 'warn'], ['new', 'جديدات', 'accent']];
     view.innerHTML = `
-      <div class="seg-tiles">${tiles.map(([k, l, c]) => `<a class="seg-tile ${c} ${seg === k ? 'on' : ''}" href="#/clients?s=${k}"><b class="num">${count[k]}</b><span>${l}</span></a>`).join('')}</div>
-      <div class="chips wrap" style="margin:12px 0">
-        <a class="chip ${seg === 'new' ? 'on' : ''}" href="#/clients?s=new">جديدات (${count.new})</a>
-        <a class="chip ${seg === 'bday' ? 'on' : ''}" href="#/clients?s=bday">🎂 ميلادها هالشهر (${count.bday})</a>
-        ${L.active ? `<a class="chip ${seg === 'reward' ? 'on' : ''}" href="#/clients?s=reward">مكافأتها جاهزة (${count.reward})</a>` : ''}
-      </div>
-      <div class="cl-bar"><input class="input" id="cl-q" type="search" placeholder="بحث بالاسم أو الجوال" autocomplete="off">
-        <button class="btn primary" id="cl-new">${I.plus} عميلة</button></div>
+      <div class="seg-tiles cx-tiles" id="cx-tiles">${tiles.map(([k, l, c]) => `<a class="seg-tile ${c} ${st.seg === k ? 'on' : ''}" href="#" data-s="${k}"><b class="num">…</b><span>${l}</span></a>`).join('')}</div>
+      <div class="cl-bar"><input class="input" id="cl-q" type="search" placeholder="ابحثي بالاسم أو آخر أرقام الجوال" autocomplete="off" value="${esc(st.q)}"></div>
       <div class="actions" style="margin:-4px 0 14px"><a class="btn sm" href="#/feedback">الآراء والملاحظات</a>${isManager() ? '<button class="btn sm" id="cl-loyal">بطاقة الولاء</button>' : ''}</div>
-      ${seg === 'away' && count.away ? '<div class="notice info">هذولي آخر زيارة لهم قبل أكثر من ٤٥ يوم. رسالة «وحشتينا» وحدة ممكن ترجّعهم.</div>' : ''}
-      <div class="list" id="cl-list"></div>`;
-    const list = $('#cl-list');
-    const pool = rows.filter((c) => seg === 'all' ? true : seg === 'bday' ? bday(c) : seg === 'reward' ? L.active && c.stamps >= L.stamps : c.segment === seg);
-    const draw = () => {
-      const t = $('#cl-q').value.trim().replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-      const res = t ? pool.filter((c) => c.name.includes(t) || (c.phone || '').includes(t.replace(/\D/g, '') || '~')) : pool;
-      list.innerHTML = res.length ? res.slice(0, 300).map((c) => `
-        <a class="row" href="#/client/${c.id}">
-          <span class="cav ${c.segment}">${esc(initial(c.name))}</span>
-          <div class="grow"><div class="title">${esc(c.name)} ${c.segment !== 'new' ? `<span class="badge ${SEG[c.segment][1]}">${SEG[c.segment][0]}</span>` : ''}</div>
-            <div class="meta">${ago(c.last_visit)}${c.visits ? ` · ${c.visits} ${c.visits === 1 ? 'زيارة' : c.visits <= 10 ? 'زيارات' : 'زيارة'}` : ''}${c.spend > 0 ? ` · ${sar(c.spend)} ر.س` : ''}</div></div>
-          <div class="end">${L.active ? `<span class="mini-st ${c.stamps >= L.stamps ? 'full' : ''}"><img src="${ROSETTE}" alt="">${Math.min(c.stamps, L.stamps)}/${L.stamps}</span>` : ''}
-            ${seg === 'away' && c.phone ? `<span class="wa-mini" data-wa="${c.id}">وحشتينا</span>` : ''}</div>
-        </a>`).join('') : `<div class="empty">${rows.length ? 'ما فيه نتائج' : 'ابدؤوا بإضافة أول عميلة. وكل حجز منزلي يكتمل ينضاف هنا تلقائيًا.'}</div>`;
-      $$('[data-wa]', list).forEach((b) => b.addEventListener('click', (e) => {
-        e.preventDefault(); const c = rows.find((x) => String(x.id) === b.dataset.wa);
-        window.open(`https://wa.me/${waNum(c.phone)}?text=${encodeURIComponent(waTpl(c, L).miss)}`, '_blank', 'noopener');
-      }));
+      <div id="cx-note"></div>
+      <div class="list" id="cl-list"><div class="empty"><span class="spinner"></span></div></div>
+      <div class="actions" style="justify-content:center;margin-top:12px"><button class="btn" id="cx-more" hidden>عرض المزيد</button></div>`;
+    const list = $('#cl-list', view), more = $('#cx-more', view);
+    let seq = 0;
+    const row = (c) => {
+      const seg = CX_SEG[c.seg] || CX_SEG.once;
+      const late = c.seg === 'away' ? c.days : (c.cadence && c.days > c.cadence * 1.3 ? c.days - c.cadence : 0);
+      const meta = [c.today ? `<b class="cx-today">اليوم ${cxTime(c.today)}</b>` : '', c.last ? ago(c.last) : 'أول زيارة جاية', c.visits ? cxVisits(c.visits) : '', isManager() && c.spend > 0 ? `${sar(c.spend)} ر.س` : ''].filter(Boolean).join(' · ');
+      return `<a class="row cx-row" href="#/cx/${encodeURIComponent(c.id)}">
+        <span class="cav ${c.seg}">${esc(initial(c.name))}</span>
+        <div class="grow"><div class="title">${esc(c.name || 'بدون اسم')} ${seg[0] ? `<span class="badge ${seg[1]}">${seg[0]}</span>` : ''}</div><div class="meta">${meta}</div></div>
+        <div class="end">${c.seg === 'away' && c.phone ? `<span class="wa-mini" data-wa="${esc(c.phone)}" data-n="${esc(firstName(c.name))}">وحشتينا</span>` : c.next && !c.today ? `<span class="muted small">موعدها ${cxDate(c.next)}</span>` : late > 7 ? `<span class="muted small">متأخرة ${late} يوم</span>` : ''}</div></a>`;
     };
-    $('#cl-q').addEventListener('input', draw); draw();
-    $('#cl-new').onclick = () => clientForm(null, (id) => { location.hash = `#/client/${id}`; });
-    $('#cl-loyal')?.addEventListener('click', loyaltyForm);
+    const load = async (append) => {
+      const my = ++seq;
+      if (!append) { st.off = 0; list.classList.add('sd-busy'); }
+      try {
+        const r = await q(sb.rpc('cx_list', { p_q: st.q || null, p_seg: st.seg, p_limit: 60, p_offset: st.off }));
+        if (!alive() || my !== seq) return;
+        st.rows = append ? st.rows.concat(r.list) : r.list;
+        $$('#cx-tiles a', view).forEach((a) => { const n = r.counts[a.dataset.s]; a.querySelector('b').textContent = n == null ? '' : sdN(n); });
+        $('#cx-note', view).innerHTML = st.seg === 'away' && !st.q ? `<div class="notice info">عميلات زاروكم مرتين وفوق، وتأخروا عن عادتهم كثير، وما عندهم موعد جاي. مرتبات من الأعلى صرفًا. «وحشتينا» وحدة ممكن ترجّعهن.</div>` : st.seg === 'vip' && !st.q ? '<div class="notice info">أعلى ٥٪ صرفًا من كل العميلات. يستاهلن معاملة خاصة.</div>' : '';
+        list.innerHTML = st.rows.length ? st.rows.map(row).join('') : `<div class="empty">${st.q ? 'ما فيه نتائج' : 'ما فيه عميلات هنا'}</div>`;
+        more.hidden = st.rows.length >= r.total;
+        more.textContent = `عرض المزيد (${sdN(r.total - st.rows.length)})`;
+        $$('[data-wa]', list).forEach((b) => b.addEventListener('click', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          window.open(`https://wa.me/${waNum(b.dataset.wa)}?text=${encodeURIComponent(`هلا ${b.dataset.n} 🤍\nوحشتينا في بيوتفريش! صار لك فترة ما جيتي.\nودّك نرتب لك موعد؟ تقدرين تحجزين من هنا: beautfresh.com/book`)}`, '_blank', 'noopener');
+        }));
+      } catch (err) { if (my === seq) list.innerHTML = `<div class="notice danger">${esc(errMsg(err))}</div>`; }
+      finally { if (my === seq) list.classList.remove('sd-busy'); }
+    };
+    const sync = () => { const p = new URLSearchParams(); if (st.seg !== 'all') p.set('s', st.seg); if (st.q) p.set('q', st.q); history.replaceState(null, '', `#/clients${p.toString() ? '?' + p : ''}`); };
+    $$('#cx-tiles a', view).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); st.seg = a.dataset.s; $$('#cx-tiles a', view).forEach((x) => x.classList.toggle('on', x === a)); sync(); load(); }));
+    let tmr; $('#cl-q', view).addEventListener('input', (e) => { clearTimeout(tmr); tmr = setTimeout(() => { st.q = e.target.value.trim(); sync(); load(); }, 260); });
+    more.onclick = () => { st.off = st.rows.length; load(true); };
+    $('#cl-loyal', view)?.addEventListener('click', loyaltyForm);
+    load();
+  }
+
+  async function pageCx(view, args, _p, alive) {
+    const id = decodeURIComponent(args[0] || '');
+    const c = await q(sb.rpc('cx_profile', { p_id: id }));
+    if (!alive()) return;
+    if (!c) { view.innerHTML = '<div class="notice danger">ما لقينا هذي العميلة</div>'; return; }
+    setTitle(c.name || 'ملف العميلة');
+    const M = isManager(), n = c.note || {}, fn = firstName(c.name);
+    const top = c.services[0], prov = c.providers[0];
+    const daysAway = c.last ? cxDays(c.last) : null;
+    const today = c.upcoming.find((u) => cxDate(u.at, 1) === cxDate(new Date(), 1));
+    const next = c.upcoming[0];
+    const seg = c.visits >= 2 && c.top_pct != null && c.top_pct <= 5 ? 'vip' : c.first && cxDays(c.first) <= 45 ? 'new' : c.visits >= 2 && !next && daysAway > Math.max(45, (c.cadence || 30) * 1.8) && daysAway <= 365 ? 'away' : c.visits >= 3 ? 'regular' : 'once';
+    const late = c.cadence && daysAway != null && !next ? daysAway - c.cadence : null;
+    const bday = (() => { if (!c.birth) return null; const b = D(c.birth), t = D(todayR()); const x = new Date(t.getFullYear(), b.getMonth(), b.getDate()); if (x < t) x.setFullYear(t.getFullYear() + 1); return Math.round((x - t) / 86400000); })();
+    const gift = c.gifts.find((g) => g.to && g.status === 'active' && Number(g.balance) > 0);
+    const lowRev = c.reviews.find((r) => r.rating <= 3);
+    const SRC2 = { instagram: 'إنستقرام', tiktok: 'تيك توك', snapchat: 'سناب', google: 'قوقل', friend: 'صديقة', passby: 'مرّت من عند الصالون', influencer: 'مشهورة', whatsapp: 'واتساب', other: 'غيره' };
+
+    // قبل لا تستقبلينها
+    const tips = [];
+    if (n.allergies) tips.push(['⚠️', `<b>انتبهي:</b> ${esc(n.allergies)}`, 'bad']);
+    if (today) tips.push(['📍', `عندها موعد <b>اليوم ${cxTime(today.at)}</b>: ${esc(today.svc || '')}${today.by ? ` مع ${esc(cxProv(today.by))}` : ''}`, 'accent']);
+    else if (next) tips.push(['📅', `موعدها الجاي <b>${cxDate(next.at)} ${cxTime(next.at)}</b>: ${esc(next.svc || '')}`, '']);
+    if (n.prefs) tips.push(['🤍', `<b>تحب:</b> ${esc(n.prefs)}`, '']);
+    if (top && top.n >= 2) tips.push(['💅', `خدمتها المعتادة <b>${esc(top.name)}</b> (${top.n} ${top.n <= 10 ? 'مرات' : 'مرة'})، آخرها ${ago(dk(new Date(top.last)))}`, '']);
+    if (prov && c.visits >= 2) { const sh = Math.round((prov.n / c.visits) * 100); tips.push(['👩‍🎨', sh >= 60 ? `دايم مع <b>${esc(prov.name)}</b> (${prov.n} من ${c.visits} زيارة). لو موجودة خلّوها معها` : `أكثر وحدة سوّت لها: <b>${esc(prov.name)}</b> (${prov.n} مرات)`, '']); }
+    if (c.cadence && daysAway != null) tips.push(['🔁', late != null && late > 7 ? `عادتها تجي كل <b>${c.cadence} يوم</b> تقريبًا، والحين <b class="late">متأخرة ${late} يوم</b>` : `عادتها تجي كل <b>${c.cadence} يوم</b> تقريبًا${!next ? `، زيارتها الجاية المتوقعة حوالي ${cxDate(new Date(new Date(c.last).getTime() + c.cadence * 86400000))}` : ''}`, late > 7 ? 'warn' : '']);
+    if (gift) tips.push(['🎁', `عندها <b>بطاقة هدية</b> رصيدها ${sar(gift.balance)} ر.س (${esc(gift.code)})`, 'good']);
+    if (bday != null && bday <= 14) tips.push(['🎂', bday === 0 ? '<b>اليوم عيد ميلادها!</b>' : `عيد ميلادها بعد <b>${bday} ${bday <= 10 ? 'أيام' : 'يوم'}</b>`, 'good']);
+    if (lowRev) tips.push(['💬', `آخر تقييم منخفض منها ★${lowRev.rating}${lowRev.text ? `: «${esc(lowRev.text.slice(0, 90))}»` : ''}. اهتموا فيها زيادة`, 'bad']);
+    if (c.cancels + c.noshow >= 2) tips.push(['⏳', `ألغت ${c.cancels} ${c.cancels <= 10 ? 'مرات' : 'مرة'}${c.noshow ? ` وما حضرت ${c.noshow}` : ''}. تأكيد الموعد قبلها بيوم يفيد`, 'warn']);
+    if (c.orders?.web_unpaid) tips.push(['🌐', `عندها ${c.orders.web_unpaid} طلب من الموقع ما اكتمل دفعه`, 'warn']);
+    if (c.winback) tips.push(['💌', `انرسل لها «وحشتينا» ${ago(dk(new Date(c.winback.at)))}`, '']);
+
+    // الإيقاع: آخر ١٢ شهر
+    const months = []; { const t = D(todayR()); for (let i = 11; i >= 0; i--) { const d = new Date(t.getFullYear(), t.getMonth() - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); } }
+    const mv = Object.fromEntries(c.months.map((m) => [m.m, m]));
+    const mx = Math.max(1, ...c.months.map((m) => m.n));
+    const rhythm = `<div class="cx-rh">${months.map((m) => { const x = mv[m] || { n: 0, v: 0 }; const d = D(m + '-01'); return `<div class="cx-rh-c" data-tip="${MONTHS_AR[d.getMonth()]} ${d.getFullYear()}\n${x.n ? cxVisits(x.n) : 'ما جات'}${M && x.v ? ` · ${sar(x.v)} ر.س` : ''}"><i style="height:${x.n ? Math.max(14, (x.n / mx) * 100) : 4}%" class="${x.n ? '' : 'z'}"></i><span>${MONTHS_AR[d.getMonth()].slice(0, 3)}</span></div>`; }).join('')}</div>`;
+
+    const T = {
+      thanks: `هلا ${fn} 🤍\nشكرًا لزيارتك بيوتفريش، إن شاء الله عجبتك النتيجة.\nرأيك يهمنا، وإذا فيه أي ملاحظة قولي لنا.`,
+      remind: next ? `هلا ${fn} 🤍\nنذكّرك بموعدك في بيوتفريش ${cxDate(next.at)} الساعة ${cxTime(next.at)}${next.svc ? ` (${next.svc})` : ''}.\nإذا تبين تغيرين الوقت كلمينا هنا.` : null,
+      usual: top ? `هلا ${fn} 🤍\nصار وقت ${top.name}؟ ${prov ? `${firstName(prov.name)} جاهزة لك` : 'نستناك'} في بيوتفريش.\nاحجزي من هنا: beautfresh.com/book` : null,
+      miss: `هلا ${fn} 🤍\nوحشتينا في بيوتفريش! صار لك فترة ما جيتي.\nودّك نرتب لك موعد؟ beautfresh.com/book`,
+      bday: c.birth ? `كل عام وأنتِ بخير يا ${fn} 🎂\nبمناسبة ميلادك، كل بيوتفريش يهنيك 🤍` : null,
+    };
+    const tpls = [['remind', 'تذكير بموعدها'], ['thanks', 'شكر بعد الزيارة'], ['usual', top ? `صار وقت ${top.name.split(' ').slice(0, 2).join(' ')}؟` : ''], ['miss', 'وحشتينا'], ['bday', 'عيد ميلاد']].filter(([k]) => T[k]);
+
+    view.innerHTML = `
+      <div class="cx">
+        <div class="cx-hero">
+          <span class="cav big ${seg}">${esc(initial(c.name))}</span>
+          <div class="grow"><h2>${esc(c.name || 'بدون اسم')}</h2>
+            <div class="cl-sub">${CX_SEG[seg][0] ? `<span class="badge ${CX_SEG[seg][1]}">${CX_SEG[seg][0]}</span>` : ''}${c.phone ? `<span class="num" dir="ltr">${esc(c.phone)}</span>` : ''}${c.first ? `<span>معنا من ${cxDate(c.first, 1)}</span>` : ''}${c.source ? `<span>عرفتنا من ${SRC2[c.source] || esc(c.source)}</span>` : ''}${c.blocked ? '<span class="badge danger">محظورة في ركاز</span>' : ''}</div></div>
+          <div class="cl-acts">${c.phone ? `<a class="icon-btn" href="https://wa.me/${waNum(c.phone)}" target="_blank" rel="noopener" aria-label="واتساب">${I.wa}</a><a class="icon-btn" href="tel:${esc(c.phone)}" aria-label="اتصال">${I.phone}</a>` : ''}</div>
+        </div>
+
+        ${tips.length ? `<div class="cx-brief"><div class="cx-bh"><b>قبل لا تستقبلينها</b><span class="muted small">من زياراتها وملاحظاتكم</span></div>${tips.map(([ic, t, k]) => `<div class="cx-tip ${k}"><i>${ic}</i><p>${t}</p></div>`).join('')}</div>` : ''}
+
+        <div class="cl-stats">
+          <div><b class="num">${sdN(c.visits)}</b><span>زيارة</span></div>
+          ${M ? `<div><b class="num">${sar(c.spend)}</b><span>صرفت ر.س</span></div><div><b class="num">${sar(c.visits ? c.spend / c.visits : 0)}</b><span>متوسط الزيارة</span></div>` : ''}
+          <div class="lv"><b>${c.last ? ago(dk(new Date(c.last))) : '—'}</b><span>آخر زيارة</span></div>
+          ${M && c.top_pct != null && c.spend > 0 ? `<div><b class="num">${c.top_pct < 1 ? '1٪' : Math.ceil(c.top_pct) + '٪'}</b><span>من أعلى العميلات</span></div>` : ''}
+        </div>
+
+        <div class="fin-grid cx-grid">
+          <div><div class="section-title"><h2>زياراتها آخر سنة</h2></div><div class="card">${rhythm}</div></div>
+          <div><div class="section-title"><h2>خدماتها المفضلة</h2></div><div class="card cx-fav">${c.services.length ? c.services.slice(0, 5).map((s) => `<div class="cx-bar" data-tip="${esc(s.name)}\n${s.n} ${s.n <= 10 ? 'مرات' : 'مرة'}${M ? ` · ${sar(s.v)} ر.س` : ''}\nآخرها ${cxDate(s.last, 1)}"><span>${esc(s.name)}</span><i><s style="width:${(s.n / c.services[0].n) * 100}%"></s></i><b class="num">${s.n}</b></div>`).join('') : '<div class="muted small">ما فيه زيارات مكتملة</div>'}
+            ${c.providers.length ? `<div class="cx-provs">${c.providers.map((p) => `<span class="chip sm">${esc(p.name)} <b class="num">${p.n}</b></span>`).join('')}</div>` : ''}</div></div>
+        </div>
+
+        <div class="section-title"><h2>ملاحظات الصالون عليها</h2><button class="btn sm" id="cx-edit">${I.edit} ${n.prefs || n.allergies || n.notes ? 'تعديل' : 'أضيفي'}</button></div>
+        <div class="card cx-notes" id="cx-notes">${n.prefs || n.allergies || n.notes ? `
+          ${n.allergies ? `<div class="cx-n bad"><span>حساسية أو تنبيه</span><p>${esc(n.allergies)}</p></div>` : ''}
+          ${n.prefs ? `<div class="cx-n"><span>تفضيلاتها</span><p>${esc(n.prefs)}</p></div>` : ''}
+          ${n.notes ? `<div class="cx-n"><span>ملاحظات</span><p>${esc(n.notes)}</p></div>` : ''}
+          <div class="muted small">آخر تعديل ${ago(dk(new Date(n.updated_at)))}</div>` : '<div class="muted">لونها المفضل، شكل الأظافر، درجة حرارة الماء، أي حساسية… أي شي يخلي زيارتها الجاية أحلى. يطلع لكل الفريق أول ما يفتحون ملفها.</div>'}</div>
+
+        ${c.phone ? `<div class="section-title"><h2>رسالة جاهزة</h2></div><div class="chips wrap">${tpls.map(([k, l]) => `<a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(c.phone)}?text=${encodeURIComponent(T[k])}">${esc(l)}</a>`).join('')}</div>` : ''}
+
+        ${c.upcoming.length ? `<div class="section-title"><h2>مواعيدها الجاية</h2></div><div class="list">${c.upcoming.map((u) => `<div class="row"><span class="vdot">${I.cal}</span><div class="grow"><div class="title">${esc(u.svc || 'موعد')}</div><div class="meta">${WDAYS[new Date(u.at).getDay()]} ${cxDate(u.at)} · ${cxTime(u.at)}${u.by ? ` · ${esc(cxProv(u.by))}` : ''}${u.st === 'pending' ? ' · <span class="badge warn">بانتظار التأكيد</span>' : ''}</div></div>${M ? `<div class="end"><b class="num">${sar(u.v)}</b></div>` : ''}</div>`).join('')}</div>` : ''}
+
+        <div class="section-title"><h2>زياراتها</h2><span class="muted small">${c.timeline.length >= 40 ? 'آخر ٤٠' : c.timeline.length}</span></div>
+        <div class="list cx-tl">${c.timeline.length ? c.timeline.map((d, i) => `<div class="row ${d.cx ? 'cx-cx' : ''} ${i >= 8 ? 'cx-more' : ''}" ${i >= 8 ? 'hidden' : ''}><span class="vdot"><img src="${ROSETTE}" alt=""></span>
+          <div class="grow"><div class="title">${d.items.map((x) => esc(x.svc || '')).filter(Boolean).join(' + ')}</div><div class="meta">${WDAYS[D(d.d).getDay()]} ${cxDate(d.d + 'T12:00:00', 1)}${[...new Set(d.items.map((x) => cxProv(x.by)).filter(Boolean))].length ? ` · ${esc([...new Set(d.items.map((x) => cxProv(x.by)).filter(Boolean))].join('، '))}` : ''}${d.cx ? ' · <span class="badge">ملغي</span>' : ''}</div></div>
+          ${M && d.v ? `<div class="end"><b class="num">${sar(d.v)}</b></div>` : ''}</div>`).join('') : '<div class="empty">ما فيه زيارات</div>'}</div>
+        ${c.timeline.length > 8 ? `<div class="actions" style="justify-content:center;margin-top:10px"><button class="btn sm" id="cx-all">كل الزيارات (${c.timeline.length})</button></div>` : ''}
+
+        ${c.reviews.length ? `<div class="section-title"><h2>تقييماتها</h2></div><div class="list">${c.reviews.map((r) => `<div class="row"><span class="cx-stars ${r.rating <= 3 ? 'low' : ''}">★${r.rating}</span><div class="grow"><div class="title">${r.text ? esc(r.text) : '<span class="muted">بدون تعليق</span>'}</div><div class="meta">${esc(r.svc || '')}${r.by ? ` · ${esc(cxProv(r.by))}` : ''} · ${cxDate(r.at, 1)}</div></div></div>`).join('')}</div>` : ''}
+        <p class="muted small" style="margin-top:18px">الزيارات والمواعيد من ركاز، وتتحدث تلقائيًا. الملاحظات تنحفظ هنا للفريق.</p>
+      </div>`;
+    $('#cx-all', view)?.addEventListener('click', (e) => { $$('.cx-more', view).forEach((x) => { x.hidden = false; }); e.currentTarget.remove(); });
+    $('#cx-edit', view).onclick = () => modal(`
+      <h3>ملاحظات على ${esc(fn || 'العميلة')}</h3>
+      <form id="cx-f">
+        <div class="field"><label>حساسية أو تنبيه <span class="muted small">(يطلع بالأحمر لكل الفريق)</span></label><textarea class="input" name="allergies" rows="2" maxlength="300" placeholder="مثال: حساسية من الأمونيا، بشرة حساسة للشمع">${esc(n.allergies || '')}</textarea></div>
+        <div class="field"><label>تفضيلاتها</label><textarea class="input" name="prefs" rows="3" maxlength="500" placeholder="مثال: تحب الأظافر قصيرة مربعة، ألوان نيود، ماء فاتر">${esc(n.prefs || '')}</textarea></div>
+        <div class="field"><label>ملاحظات</label><textarea class="input" name="notes" rows="3" maxlength="800" placeholder="أي شي يفيد الفريق">${esc(n.notes || '')}</textarea></div>
+        <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">حفظ</button></div>
+      </form>`, (root, close) => {
+      $('#cx-f', root).addEventListener('submit', (e) => { e.preventDefault(); busy(e.submitter || $('button.primary', root), async () => {
+        const f = new FormData(e.target); const v = (k) => String(f.get(k) || '').trim() || null;
+        try { await q(sb.from('cx_notes').upsert({ customer_id: c.id, allergies: v('allergies'), prefs: v('prefs'), notes: v('notes'), updated_at: new Date().toISOString(), updated_by: S.profile?.id || null })); toast('انحفظت'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      }); });
+    });
+    sdTips(view);
   }
 
   function waTpl(c, L) {

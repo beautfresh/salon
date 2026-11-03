@@ -1441,11 +1441,8 @@
         const f = new FormData(e.target);
         await busy($('button.primary', el), async () => {
           try {
-            const role = f.get('role'), base = ['admin', 'partner'].includes(role) ? role : 'staff';
-            const made = await invokeAdmin({ action: 'create', full_name: f.get('full_name').trim(), login: f.get('login').trim().toLowerCase(), password: f.get('password'), role: base });
-            const uid = made?.id || made?.user_id || made?.user?.id;
-            if (uid && role !== base) await q(sb.from('profiles').update({ role, provider_id: f.get('provider_id') || null }).eq('id', uid));
-            else if (!uid && role !== base) toast('انشأ الحساب، حددي الصلاحية من قائمة المستخدمين', true);
+            const role = f.get('role');
+            await invokeAdmin({ action: 'create', full_name: f.get('full_name').trim(), login: f.get('login').trim().toLowerCase(), password: f.get('password'), role, provider_id: f.get('provider_id') || null });
             toast('تم إنشاء الحساب'); close(); after && after();
           } catch (err) { toast(errMsg(err), true); }
         });

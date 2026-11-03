@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
       return json({ error: 'اسم المستخدم: أحرف إنجليزية صغيرة وأرقام فقط، من 3 إلى 32 خانة' }, 400);
     if (password.length < 8) return json({ error: 'كلمة المرور 8 خانات على الأقل' }, 400);
     if (!fullName) return json({ error: 'الاسم مطلوب' }, 400);
-    if (!['admin', 'partner', 'staff'].includes(role)) return json({ error: 'دور غير صالح' }, 400);
+    if (!['admin', 'partner', 'staff', 'reception', 'specialist'].includes(role)) return json({ error: 'دور غير صالح' }, 400);
+    const providerId = role === 'specialist' ? (String(body.provider_id ?? '').trim() || null) : null;
 
     const { data, error } = await admin.auth.admin.createUser({
       email: toEmail(login), password, email_confirm: true, user_metadata: { full_name: fullName },
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
       return json({ error: msg }, 400);
     }
     const { error: pErr } = await admin.from('profiles')
-      .update({ role, is_active: true, full_name: fullName }).eq('id', data.user.id);
+      .update({ role, provider_id: providerId, is_active: true, full_name: fullName }).eq('id', data.user.id);
     if (pErr) return json({ error: pErr.message }, 500);
     return json({ ok: true, id: data.user.id });
   }

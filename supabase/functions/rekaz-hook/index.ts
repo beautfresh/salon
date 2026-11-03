@@ -1,10 +1,12 @@
 // بيوتفريش ← ركاز: استقبال الأحداث الفورية (Webhooks) وإرسال إشعار للإدارة.
 // - طلبات ركاز: موقّعة HMAC-SHA256 (Rekaz-Webhook-*).
-// - الربط يتسوى من لوحة ركاز: الإعدادات ← مفاتيح API ← Webhook (رابط هذي الدالة)، والمفتاح يتحط في أسرار الدوال باسم REKAZ_WEBHOOK_SECRET.
+// - setup: يناديها قاعدة البيانات (x-sync-secret) لتسجيل الرابط والاشتراك في الأحداث.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const API = 'https://api.rekaz.io/v1';
 const TOKEN_URL = 'https://platform.rekaz.io/connect/token';
+const SELF = 'https://enrlujtrysrlzwbjexey.supabase.co/functions/v1/rekaz-hook';
+const FAMILIES = ['reservations', 'orders', 'customers'];
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json' } });
 
 function secretKey(): string {
@@ -33,13 +35,16 @@ async function call(method: string, path: string, body?: unknown, idem?: string)
   return txt ? JSON.parse(txt) : null;
 }
 
-// توقيع ركاز: X-Rekaz-Signature = HMAC-SHA256(جسم الطلب الخام، المفتاح) بصيغة hex صغيرة
-async function verify(raw: Uint8Array, sig: string, secret: string): Promise<boolean> {
-  if (!sig || !secret) return false;
-  sig = sig.trim().toLowerCase().replace(/^sha256=/, '');
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, raw));
-  const expected = [...mac].map((b) => b.toString(16).padStart(2, '0')).join('');
+function b64urlToBytes(s: string): Uint8Array {
+  s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+}
+async function verify(raw: string, ts: string, sig: string, secret: string): Promise<boolean> {
+  if (!ts || !sig || !secret) return false;
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
+  const key = await crypto.subtle.importKey('raw', b64urlToBytes(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${ts}.${raw}`)));
+  const expected = 'v1=' + [...mac].map((b) => b.toString(16).padStart(2, '0')).join('');
   if (expected.length !== sig.length) return false;
   let d = 0; for (let i = 0; i < expected.length; i++) d |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
   return d === 0;
@@ -83,29 +88,51 @@ async function onCustomer(id: string) {
   await db.rpc('rekaz_upsert', { p_kind: 'customers', p_items: [c] });
 }
 
-// أي حركة مالية أو طلب: نشغّل المزامنة السريعة فورًا بدل ما ننتظر ١٠ دقايق
-async function kickQuick(syncSecret: string) {
-  await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/rekaz-sync`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-sync-secret': syncSecret }, body: JSON.stringify({ mode: 'quick' }) });
+async function setup() {
+  const steps: string[] = [];
+  const list = await call('GET', '/webhook-endpoints');
+  let ep = (list?.items || []).find((e: any) => e.url === SELF);
+  if (!ep) {
+    const c = await call('POST', '/webhook-endpoints', { url: SELF }, crypto.randomUUID());
+    await db.rpc('rekaz_set_webhook_secret', { p_secret: c.signingSecret });
+    ep = c.endpoint; steps.push('endpoint_created');
+  } else if (!(await db.rpc('rekaz_hook_config')).data?.webhook_secret) {
+    const c = await call('POST', `/webhook-endpoints/${ep.id}/rotate-secret`, {}, crypto.randomUUID());
+    await db.rpc('rekaz_set_webhook_secret', { p_secret: c.signingSecret });
+    steps.push('secret_rotated');
+  }
+  if (ep.status !== 'verified') { await call('PATCH', `/webhook-endpoints/${ep.id}/verification`, {}); steps.push('verified'); }
+  for (const f of FAMILIES) {
+    try { await call('POST', '/event-subscriptions', { webhookEndpointId: ep.id, eventFamily: f }, `sub-${ep.id}-${f}`); steps.push(`sub_${f}`); }
+    catch (e) { steps.push(`sub_${f}_failed: ${(e as Error).message.slice(0, 160)}`); }
+  }
+  return steps;
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json({ ok: true, hint: 'rekaz webhook receiver' });
-  const raw = new Uint8Array(await req.arrayBuffer());
+  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  const raw = await req.text();
   const { data: cfg } = await db.rpc('rekaz_hook_config');
-  const secret = Deno.env.get('REKAZ_WEBHOOK_SECRET') || cfg?.webhook_secret || '';
-  if (!(await verify(raw, req.headers.get('x-rekaz-signature') ?? '', secret))) return json({ error: 'bad_signature' }, 401);
-  let ev: any; try { ev = JSON.parse(new TextDecoder().decode(raw)); } catch (_) { return json({ error: 'bad_json' }, 400); }
-  const id = String(ev?.Id ?? ev?.id ?? ''), name = String(ev?.EventName ?? ev?.eventName ?? ''), data = ev?.Data ?? ev?.data ?? {};
-  const sid = String(data?.Id ?? data?.id ?? '');
-  if (id) { const { data: seen } = await db.rpc('rekaz_seen', { p_id: id, p_type: name, p_stype: name.replace(/(Created|Confirmed|Done|Cancelled|Canceled|Updated|Paid|Refunded|Completed|Activated|Redeemed)?Event$/, ''), p_sid: sid }); if (seen) return json({ ok: true, duplicate: true }); }
-  // نرد على ركاز فورًا، والشغل يكمل بالخلفية
-  // @ts-ignore EdgeRuntime
-  EdgeRuntime.waitUntil((async () => {
-    try {
-      if (name.startsWith('Reservation') && sid) await onReservation(sid);
-      if (name.startsWith('Transaction') || name.startsWith('MerchandiseOrder') || name.startsWith('Gift') || name.startsWith('Subscription')) await kickQuick(cfg?.sync_secret ?? '');
-      else if (name.startsWith('Reservation')) await kickQuick(cfg?.sync_secret ?? '');
-    } catch (e) { console.error('rekaz-hook', name, (e as Error).message); }
-  })());
+
+  if (req.headers.get('x-sync-secret')) {
+    if (req.headers.get('x-sync-secret') !== cfg?.sync_secret) return json({ error: 'forbidden' }, 403);
+    try { return json({ ok: true, steps: await setup() }); } catch (e) { return json({ ok: false, error: (e as Error).message }, 500); }
+  }
+
+  const ok = await verify(raw, req.headers.get('rekaz-webhook-timestamp') ?? '', req.headers.get('rekaz-webhook-signature') ?? '', cfg?.webhook_secret ?? '');
+  if (!ok) return json({ error: 'bad_signature' }, 401);
+  let ev: any; try { ev = JSON.parse(raw); } catch (_) { return json({ error: 'bad_json' }, 400); }
+  if (ev && typeof ev.challenge === 'string' && Object.keys(ev).length === 1) return json({ challenge: ev.challenge });
+
+  const st = String(ev?.subject?.type || ev?.type || '').toLowerCase(), sid = ev?.subject?.id;
+  if (ev?.id) { const { data: seen } = await db.rpc('rekaz_seen', { p_id: ev.id, p_type: ev.type ?? '', p_stype: st, p_sid: sid ?? '' }); if (seen) return json({ ok: true, duplicate: true }); }
+  try {
+    if (sid && st.includes('reservation')) await onReservation(sid);
+    else if (sid && st.includes('order')) await onOrder(sid);
+    else if (sid && st.includes('customer')) await onCustomer(sid);
+  } catch (e) {
+    console.error('rekaz-hook', ev?.type, (e as Error).message);
+    return json({ error: 'retry' }, 500);
+  }
   return json({ ok: true });
 });

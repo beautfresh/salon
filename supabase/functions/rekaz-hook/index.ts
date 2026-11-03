@@ -15,18 +15,23 @@ function secretKey(): string {
 }
 const db = createClient(Deno.env.get('SUPABASE_URL')!, secretKey(), { auth: { persistSession: false, autoRefreshToken: false } });
 
-let token: { v: string; exp: number } | null = null;
-async function getToken(): Promise<string> {
-  if (token && token.exp > Date.now() + 60_000) return token.v;
+// تكاملين في ركاز: الأساسي للقراءة، وتكامل «الأحداث» (صلاحيات events.*) لإدارة الـ Webhooks
+const tokens: Record<string, { v: string; exp: number }> = {};
+async function getToken(kind: 'main' | 'events' = 'main'): Promise<string> {
+  const t0 = tokens[kind];
+  if (t0 && t0.exp > Date.now() + 60_000) return t0.v;
+  const id = kind === 'events' ? Deno.env.get('REKAZ_EVENTS_CLIENT_ID') : Deno.env.get('REKAZ_CLIENT_ID');
+  const sec = kind === 'events' ? Deno.env.get('REKAZ_EVENTS_CLIENT_SECRET') : Deno.env.get('REKAZ_CLIENT_SECRET');
+  if (!id || !sec) throw new Error(`missing ${kind} credentials`);
   const r = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: Deno.env.get('REKAZ_CLIENT_ID') ?? '', client_secret: Deno.env.get('REKAZ_CLIENT_SECRET') ?? '' }) });
-  if (!r.ok) throw new Error(`token ${r.status}`);
+    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: id, client_secret: sec }) });
+  if (!r.ok) throw new Error(`token ${kind} ${r.status}`);
   const t = await r.json();
-  token = { v: t.access_token, exp: Date.now() + (Number(t.expires_in) || 3000) * 1000 };
-  return token.v;
+  tokens[kind] = { v: t.access_token, exp: Date.now() + (Number(t.expires_in) || 3000) * 1000 };
+  return tokens[kind].v;
 }
-async function call(method: string, path: string, body?: unknown, idem?: string): Promise<any> {
-  const h: Record<string, string> = { Authorization: `Bearer ${await getToken()}`, Accept: 'application/json' };
+async function call(method: string, path: string, body?: unknown, idem?: string, kind: 'main' | 'events' = 'main'): Promise<any> {
+  const h: Record<string, string> = { Authorization: `Bearer ${await getToken(kind)}`, Accept: 'application/json' };
   if (body) h['Content-Type'] = 'application/json';
   if (idem) h['Idempotency-Key'] = idem;
   const r = await fetch(API + path, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
@@ -90,20 +95,20 @@ async function onCustomer(id: string) {
 
 async function setup() {
   const steps: string[] = [];
-  const list = await call('GET', '/webhook-endpoints');
+  const list = await call('GET', '/webhook-endpoints', undefined, undefined, 'events');
   let ep = (list?.items || []).find((e: any) => e.url === SELF);
   if (!ep) {
-    const c = await call('POST', '/webhook-endpoints', { url: SELF }, crypto.randomUUID());
+    const c = await call('POST', '/webhook-endpoints', { url: SELF }, crypto.randomUUID(), 'events');
     await db.rpc('rekaz_set_webhook_secret', { p_secret: c.signingSecret });
     ep = c.endpoint; steps.push('endpoint_created');
   } else if (!(await db.rpc('rekaz_hook_config')).data?.webhook_secret) {
-    const c = await call('POST', `/webhook-endpoints/${ep.id}/rotate-secret`, {}, crypto.randomUUID());
+    const c = await call('POST', `/webhook-endpoints/${ep.id}/rotate-secret`, {}, crypto.randomUUID(), 'events');
     await db.rpc('rekaz_set_webhook_secret', { p_secret: c.signingSecret });
     steps.push('secret_rotated');
   }
-  if (ep.status !== 'verified') { await call('PATCH', `/webhook-endpoints/${ep.id}/verification`, {}); steps.push('verified'); }
+  if (ep.status !== 'verified') { await call('PATCH', `/webhook-endpoints/${ep.id}/verification`, {}, undefined, 'events'); steps.push('verified'); }
   for (const f of FAMILIES) {
-    try { await call('POST', '/event-subscriptions', { webhookEndpointId: ep.id, eventFamily: f }, `sub-${ep.id}-${f}`); steps.push(`sub_${f}`); }
+    try { await call('POST', '/event-subscriptions', { webhookEndpointId: ep.id, eventFamily: f }, `sub-${ep.id}-${f}`, 'events'); steps.push(`sub_${f}`); }
     catch (e) { steps.push(`sub_${f}_failed: ${(e as Error).message.slice(0, 160)}`); }
   }
   return steps;

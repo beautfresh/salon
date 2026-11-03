@@ -285,7 +285,7 @@
       ['العميلات والنمو', [['clients', 'العميلات', I.heart], ['marketing', 'التسويق', I.mega], M && ['site', 'الموقع', I.home], M && ['finance', 'المالية', I.coin]]],
       ['الفريق والتشغيل', [['team', 'الفريق', I.users], ['ops', 'التشغيل', I.check], ['assets', 'الأصول والصيانة', I.wrench], ['rules', 'قواعد بيوتفريش', I.shield]]],
       ['المخزون', [['items', 'الأصناف', I.box], ['issue', 'صرف من المخزون', I.out], ['invoices', 'فواتير الشراء', I.invoice], ['shopping', 'قائمة المشتريات', I.cart], ['movements', 'سجل الحركات', I.list], M && ['reports', 'التقارير', I.chart]]],
-      ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
+      ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], ['lib', '📚 المكتبة', I.list], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
     ];
     const L = [];
     if (isSpec()) G[0][1].unshift(['me', 'صفحتي', I.users]); else if (M) { G[0][1].splice(1, 0, ['ask', '✦ اسألي الموقع', I.chart]); G[0][1].push(['me', 'صفحة الأخصائية', I.users]); }
@@ -360,6 +360,7 @@
     site: { title: 'الموقع', nav: 'site', fn: pageSite, manager: true },
     sales: { title: 'المبيعات والأداء', nav: 'sales', fn: pageSales, manager: true },
     ask: { title: 'اسألي الموقع', nav: 'ask', fn: pageAsk, manager: true },
+    lib: { title: 'مكتبة بيوتفريش', nav: 'lib', fn: pageLib },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
     expenses: { title: 'المصروفات', nav: 'finance', fn: pageExpenses, manager: true },
@@ -381,7 +382,7 @@
   };
 
   // صلاحيات الصفحات: الإدارة تشوف كل شي، الأخصائية صفحات محددة، والاستقبال كل شي ما عدا صفحات الإدارة
-  const SPEC_OK = new Set(['me', 'appts', 'clients', 'cx', 'ops', 'svc', 'rules', 'assets', 'asset', 'issue', 'items', 'item', 'team', 'member', 'tour', 'more', 'feedback']);
+  const SPEC_OK = new Set(['me', 'lib', 'appts', 'clients', 'cx', 'ops', 'svc', 'rules', 'assets', 'asset', 'issue', 'items', 'item', 'team', 'member', 'tour', 'more', 'feedback']);
   function canSee(key) {
     const r = ROUTES[key]; if (!r) return false;
     if (r.admin) return isAdmin();
@@ -2106,6 +2107,7 @@
     const bindCard = (el) => {
       $$('[data-wa]', el).forEach((b) => b.onclick = () => window.open(`https://wa.me/${waNum(b.dataset.wa)}?text=${encodeURIComponent(`هلا ${b.dataset.n} 🤍\nوحشتينا في بيوتفريش! ودّك نرتب لك موعد؟ beautfresh.com/book`)}`, '_blank', 'noopener'));
       $('[data-copy]', el)?.addEventListener('click', (e) => copyTxt(e.currentTarget.dataset.copy, 'القائمة'));
+      kbBind(el);
     };
     $$('.ask-c', out).forEach(bindCard);
     $$('#ask-s .chip', view).forEach((b) => b.onclick = () => { inp.value = b.textContent; $('#ask-f', view).requestSubmit(); });
@@ -2113,7 +2115,7 @@
       e.preventDefault(); const qq = inp.value.trim(); if (!qq) return;
       const ph = document.createElement('div'); ph.className = 'card ask-c'; ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="muted"><span class="spinner"></span> يدوّر في الأرقام…</div>`; out.prepend(ph); inp.value = '';
       busy($('#ask-f button', view), async () => {
-        try { const j = await aiCall({ kind: 'ask', q: qq }); const item = { q: qq, a: j.answer, c: j.clients || [], go: j.go || [] }; ASK_LOG.unshift(item); if (ASK_LOG.length > 12) ASK_LOG.pop(); ph.outerHTML = askCard(item); bindCard($('.ask-c', out)); }
+        try { const j = await aiCall({ kind: 'ask', q: qq }); const item = { q: qq, a: j.answer, c: j.clients || [], go: j.go || [], refs: j.refs || [] }; ASK_LOG.unshift(item); if (ASK_LOG.length > 12) ASK_LOG.pop(); ph.outerHTML = askCard(item); bindCard($('.ask-c', out)); }
         catch (err) { ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="notice warn">${esc(errMsg(err))}</div>`; }
       });
     });
@@ -2138,9 +2140,97 @@
   function askCard(x) {
     const list = x.c || [], go = (x.go || []).map((k) => ASK_GO[k]).filter(Boolean);
     return `<div class="card ask-c"><div class="ask-qq">${esc(x.q)}</div><div class="ask-a">${esc(x.a || '').replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div>
+      ${(x.refs || []).length ? `<div class="ask-refs"><span class="muted small">مبني على:</span>${x.refs.map((r) => kbChip(r.id, r.title)).join('')}</div>` : ''}
       ${go.length ? `<div class="ask-go">${go.map(([ic, l, d, h]) => `<a class="ask-gl" href="${h}"><span class="ask-gi">${ic}</span><span class="grow"><b>${l}</b><small>${d}</small></span><span class="ask-ga">←</span></a>`).join('')}</div>` : ''}
       ${list.length ? `<div class="ask-lh"><b>${list.length} عميلة</b><button class="btn sm" data-copy="${esc(list.map((c) => `${c.name} ${c.phone || ''}`).join('\n'))}">نسخ القائمة</button></div>
       <div class="list">${list.map((c) => `<div class="row"><a class="grow" href="#/cx/${encodeURIComponent(c.id)}"><div class="title">${esc(c.name || '')}</div><div class="meta">${esc(c.last_service || '')}${c.last_provider ? ` · ${esc(cxProv(c.last_provider))}` : ''} · ${c.days_away != null ? `قبل ${sdN(c.days_away)} يوم` : ''} · ${cxVisits(c.visits)} · ${sar(c.spend)} ر.س</div></a>${c.phone ? `<button class="btn sm" data-wa="${esc(c.phone)}" data-n="${esc(firstName(c.name))}">${I.wa}</button>` : ''}</div>`).join('')}</div>` : ''}</div>`;
+  }
+
+  /* ======================= 📚 المكتبة ======================= */
+  const KB_DOM = { marketing: ['📣', 'التسويق والجذب'], sales: ['💰', 'المبيعات والتسعير'], experience: ['🤍', 'تجربة العميلة والولاء'], operations: ['⚙️', 'التشغيل والجودة'], people: ['👥', 'الفريق والقيادة'], growth: ['📈', 'المالية والنمو والامتياز'] };
+  const KB_ST = { law: ['نظام ملزم', 'law'], evidence: ['مثبت بالدراسات', 'ev'], consensus: ['تتفق عليه المدارس', 'co'], practice: ['ممارسة مهنية', 'pr'] };
+  const KB_KIND = { book: 'كتاب', study: 'دراسة', school: 'مدرسة', gov: 'جهة رسمية', law: 'نظام', guide: 'دليل', org: 'منظمة' };
+  let KB = null;
+  async function kbLoad() {
+    if (KB) return KB;
+    const [P, Sx, C, F] = await Promise.all([
+      q(sb.from('kb_principles').select('id,domain,title,idea,salon,example,measure,when,caution,sources,strength,tags,go,ord').order('domain').order('ord')),
+      q(sb.from('kb_sources').select('*')),
+      q(sb.from('kb_cautions').select('*')).catch(() => []),
+      q(sb.from('kb_scores').select('*')).catch(() => []),
+    ]);
+    const src = Object.fromEntries(Sx.map((x) => [x.id, x])), sc = Object.fromEntries(F.map((x) => [x.principle_id, x]));
+    KB = { P, src, C, sc, byId: Object.fromEntries(P.map((x) => [x.id, x])) };
+    return KB;
+  }
+  const kbNorm = (t) => String(t || '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ً-ْـ]/g, '').toLowerCase();
+  const kbRef = (x) => x ? `${x.title_ar ? `«${esc(x.title_ar)}»` : `«${esc(x.title)}»`}${x.author ? ` · ${esc(x.author)}` : ''}${x.year ? ` (${x.year})` : ''}` : '';
+  const kbChip = (id, label) => `<button type="button" class="kb-chip" data-kb="${esc(id)}">📚 ${esc(label || 'من أين؟')}</button>`;
+  function kbBind(root) { $$('[data-kb]', root).forEach((b) => b.onclick = (e) => { e.preventDefault(); kbOpen(b.dataset.kb); }); $$('[data-kbs]', root).forEach((b) => b.onclick = (e) => { e.preventDefault(); kbSource(b.dataset.kbs); }); }
+  function kbCard(p, K, open) {
+    const [ic, dl] = KB_DOM[p.domain] || ['📘', p.domain], st = KB_ST[p.strength] || KB_ST.practice, f = K.sc[p.id];
+    return `<article class="kb-p ${open ? 'open' : ''}" data-id="${esc(p.id)}">
+      <header class="kb-ph"><span class="kb-ic">${ic}</span><div class="grow"><h3>${esc(p.title)}</h3><div class="kb-meta"><span class="kb-st ${st[1]}">${st[0]}</span>${(p.sources || []).map((id) => K.src[id] ? `<a href="#" class="kb-src" data-kbs="${esc(id)}">${esc(K.src[id].author || K.src[id].title)}</a>` : '').join('')}${f && f.worked ? `<span class="kb-ok">✓ نجح معنا ${f.worked}</span>` : ''}</div></div><span class="kb-tog">⌄</span></header>
+      <div class="kb-body">
+        <p class="kb-idea">${esc(p.idea)}</p>
+        ${p.salon ? `<div class="kb-sec"><b>في بيوتفريش</b><p>${esc(p.salon)}</p></div>` : ''}
+        ${p.example ? `<div class="kb-sec ex"><b>مثال</b><p>${esc(p.example)}</p></div>` : ''}
+        <div class="kb-two">${p.when ? `<div class="kb-sec"><b>متى؟</b><p>${esc(p.when)}</p></div>` : ''}${p.measure ? `<div class="kb-sec"><b>كيف تقيسونها؟</b><p>${esc(p.measure)}</p></div>` : ''}</div>
+        ${p.caution ? `<div class="kb-sec warn"><b>انتبهوا</b><p>${esc(p.caution)}</p></div>` : ''}
+        <div class="kb-refs"><b>المرجع</b>${(p.sources || []).map((id) => K.src[id] ? `<a href="#" class="kb-ref" data-kbs="${esc(id)}"><span>${KB_KIND[K.src[id].kind] || ''}</span>${kbRef(K.src[id])}</a>` : '').join('')}</div>
+        <div class="kb-acts">${p.go && ASK_GO[p.go] ? `<a class="btn sm primary" href="${ASK_GO[p.go][3]}">${ASK_GO[p.go][0]} ${ASK_GO[p.go][1]}</a>` : p.go === 'rules' ? '<a class="btn sm primary" href="#/rules">افتحي قواعد بيوتفريش</a>' : p.go === 'kit' ? '<a class="btn sm primary" href="#/kit">افتحي العُدّة</a>' : ''}
+          <span class="grow"></span><span class="muted small">جربتوه؟</span><button type="button" class="chip sm" data-fb="worked">👍 نجح</button><button type="button" class="chip sm" data-fb="didnt">👎 ما نفع</button></div>
+      </div></article>`;
+  }
+  function kbBindCards(root, K) {
+    kbBind(root);
+    $$('.kb-ph', root).forEach((h) => h.onclick = (e) => { if (e.target.closest('[data-kbs]')) return; h.parentElement.classList.toggle('open'); });
+    $$('[data-fb]', root).forEach((b) => b.onclick = async () => {
+      const id = b.closest('.kb-p').dataset.id;
+      try { await q(sb.from('kb_feedback').insert({ principle_id: id, verdict: b.dataset.fb })); const f = K.sc[id] || (K.sc[id] = { worked: 0, didnt: 0 }); f[b.dataset.fb] = (f[b.dataset.fb] || 0) + 1; toast(b.dataset.fb === 'worked' ? 'حلو! انحفظ إنه نفع معكم 🤍' : 'انحفظ، والمستشار بياخذه بالحسبان'); b.classList.add('on'); }
+      catch (err) { toast(errMsg(err), true); }
+    });
+  }
+  async function kbOpen(id) {
+    const K = await kbLoad(), p = K.byId[id];
+    if (!p) return toast('المبدأ مو موجود', true);
+    modal(`<div class="kb-modal">${kbCard(p, K, true)}<div class="actions"><a class="btn" href="#/lib?d=${p.domain}">كل مبادئ «${esc((KB_DOM[p.domain] || [])[1] || '')}»</a><button class="btn primary" data-close>تمام</button></div></div>`, (el, close) => { kbBindCards(el, K); $('[data-close]', el).onclick = close; $$('a[href^="#/"]', el).forEach((a) => a.addEventListener('click', close)); });
+  }
+  async function kbSource(id) {
+    const K = await kbLoad(), x = K.src[id];
+    if (!x) return;
+    const ps = K.P.filter((p) => (p.sources || []).includes(id));
+    modal(`<div class="kb-modal"><div class="kb-book"><span class="kb-kind">${KB_KIND[x.kind] || ''}</span><h2>${esc(x.title_ar || x.title)}</h2>${x.title_ar ? `<div class="muted" dir="ltr">${esc(x.title)}</div>` : ''}
+        <div class="kb-by">${esc(x.author || '')}${x.year ? ` · ${x.year}` : ''}${x.school ? ` · ${esc(x.school)}` : ''}</div>${x.why ? `<p>${esc(x.why)}</p>` : ''}${x.url ? `<a class="btn sm" href="${esc(x.url)}" target="_blank" rel="noopener">افتحي المصدر ↗</a>` : ''}</div>
+      <div class="section-title"><h2>${ps.length} مبدأ من هالمرجع</h2></div><div class="kb-list">${ps.map((p) => kbCard(p, K)).join('')}</div>
+      <div class="actions"><button class="btn primary" data-close>تمام</button></div></div>`, (el, close) => { kbBindCards(el, K); $('[data-close]', el).onclick = close; });
+  }
+  async function pageLib(view, _a, params, alive) {
+    const K = await kbLoad();
+    if (!alive()) return;
+    const st = { d: params.get('d') || '', q: params.get('q') || '' };
+    if (!K.P.length) { view.innerHTML = '<div class="card muted">المكتبة تتجهز… ارجعي لها بعد شوي.</div>'; return; }
+    const dayIx = Math.floor(Date.now() / 864e5) % K.P.length, today = K.P[dayIx];
+    const books = Object.values(K.src).filter((x) => x.kind === 'book').length;
+    view.innerHTML = `
+      <div class="kb-hero card"><div class="grow"><span class="kb-eyebrow">📚 مكتبة بيوتفريش</span><h2>خلاصة الكتب والمدارس، مطبّقة على صالونكم</h2>
+        <p class="muted">${K.P.length} مبدأ من ${Object.keys(K.src).length} مرجع (${books} كتاب). المستشار و«اسألي الموقع» يرجعون لها قبل ما ينصحون، ويقولون لكم من وين جات النصيحة.</p></div></div>
+      <div class="kb-today card"><span class="kb-eyebrow">✦ مبدأ اليوم</span><div class="kb-list">${kbCard(today, K, true)}</div></div>
+      <div class="kb-tools"><input class="input" id="kb-q" placeholder="ابحثي: ولاء، تسعير، غياب، تحفيز، امتياز…" value="${esc(st.q)}"><div class="chips wrap" id="kb-d"><button class="chip ${!st.d ? 'on' : ''}" data-d="">الكل</button>${Object.entries(KB_DOM).map(([k, [ic, l]]) => `<button class="chip ${st.d === k ? 'on' : ''}" data-d="${k}">${ic} ${l} <i class="muted">${K.P.filter((p) => p.domain === k).length}</i></button>`).join('')}</div></div>
+      <div id="kb-out"></div>
+      <details class="card kb-books"><summary><b>كل المراجع</b> <span class="muted">(${Object.keys(K.src).length})</span></summary><div class="kb-blist">${Object.values(K.src).sort((a, b) => (a.kind > b.kind ? 1 : -1)).map((x) => `<a href="#" class="kb-ref" data-kbs="${esc(x.id)}"><span>${KB_KIND[x.kind] || ''}</span>${kbRef(x)}</a>`).join('')}</div></details>
+      ${K.C.length ? `<details class="card kb-books"><summary><b>⚠️ أفكار شائعة لكنها غلط أو مبالغ فيها</b> <span class="muted">(${K.C.length})</span></summary><ul class="kb-caut">${K.C.map((c) => `<li>${esc(c.text)}</li>`).join('')}</ul></details>` : ''}`;
+    const draw = () => {
+      const words = kbNorm(st.q).split(/\s+/).filter((w) => w.length >= 2);
+      let L = K.P.filter((p) => !st.d || p.domain === st.d);
+      if (words.length) L = L.map((p) => { const t = kbNorm(p.title + ' ' + (p.tags || []).join(' ')), d = kbNorm([p.idea, p.salon, p.when, p.example].join(' ')); return [p, words.reduce((a, w) => a + (t.includes(w) ? 3 : 0) + (d.includes(w) ? 1 : 0), 0)]; }).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+      $('#kb-out', view).innerHTML = L.length ? `<div class="muted small kb-n">${L.length} مبدأ</div><div class="kb-list">${L.map((p) => kbCard(p, K)).join('')}</div>` : '<div class="card muted">ما لقيت شي بهالكلمة، جربي كلمة ثانية.</div>';
+      kbBindCards($('#kb-out', view), K);
+    };
+    kbBindCards($('.kb-today', view), K); kbBind($$('.kb-books', view)[0]);
+    let tm; $('#kb-q', view).addEventListener('input', (e) => { clearTimeout(tm); tm = setTimeout(() => { st.q = e.target.value.trim(); draw(); }, 200); });
+    $$('#kb-d [data-d]', view).forEach((b) => b.onclick = () => { st.d = b.dataset.d; $$('#kb-d .chip', view).forEach((x) => x.classList.toggle('on', x === b)); draw(); });
+    draw();
   }
 
   /* ======================= صفحتي (الأخصائية) ======================= */
@@ -2176,7 +2266,7 @@
 
   async function pageCx(view, args, _p, alive) {
     const id = decodeURIComponent(args[0] || '');
-    const [c, log] = await Promise.all([q(sb.rpc('cx_profile', { p_id: id })), q(sb.from('cx_log').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(60)).catch(() => [])]);
+    const [c, log, fe] = await Promise.all([q(sb.rpc('cx_profile', { p_id: id })), q(sb.from('cx_log').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(60)).catch(() => []), q(sb.from('form_entries').select('id,kind,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(5)).catch(() => [])]);
     if (!alive()) return;
     if (!c) { view.innerHTML = '<div class="notice danger">ما لقينا هذي العميلة</div>'; return; }
     const lastV = (log || []).find((x) => x.kind === 'visit');
@@ -2252,7 +2342,7 @@
         </div>
 
         <div class="section-title"><h2>ملاحظات الفريق عليها</h2></div>
-        <div class="cx-lact"><button class="btn primary sm" id="cx-lv">📝 وش صار بالزيارة</button><button class="btn sm" id="cx-ln">${I.plus} ملاحظة</button><button class="btn sm" id="cx-edit">${I.edit} ${n.prefs || n.allergies ? 'الحساسية والتفضيلات' : 'حساسية أو تفضيلات'}</button></div>
+        <div class="cx-lact"><button class="btn primary sm" id="cx-lv">📝 وش صار بالزيارة</button><button class="btn sm" id="cx-ln">${I.plus} ملاحظة</button><button class="btn sm" id="cx-edit">${I.edit} ${n.prefs || n.allergies ? 'الحساسية والتفضيلات' : 'حساسية أو تفضيلات'}</button>${fe.length ? fe.filter((x) => x.kind === 'consult').slice(0, 1).map((x) => `<button class="btn sm" data-fe="${x.id}">📝 استمارتها (${new Date(x.created_at).toLocaleDateString('ar-SA-u-nu-latn', { day: 'numeric', month: 'short' })})</button>`).join('') : '<button class="btn sm" id="cx-form">📝 تعبّي الاستمارة</button>'}</div>
         ${n.prefs || n.allergies || n.notes ? `<div class="card cx-notes">
           ${n.allergies ? `<div class="cx-n bad"><span>حساسية أو تنبيه</span><p>${esc(n.allergies)}</p></div>` : ''}
           ${n.prefs ? `<div class="cx-n"><span>تفضيلاتها</span><p>${esc(n.prefs)}</p></div>` : ''}
@@ -2308,6 +2398,8 @@
     });
     $('#cx-tmore', view)?.addEventListener('click', (e) => { $$('.cx-tip[hidden]', view).forEach((x) => { x.hidden = false; }); e.currentTarget.remove(); });
     $('#cx-all', view)?.addEventListener('click', (e) => { $$('.cx-more', view).forEach((x) => { x.hidden = false; }); e.currentTarget.remove(); });
+    $$('[data-fe]', view).forEach((b) => b.onclick = () => viewEntry(Number(b.dataset.fe)));
+    $('#cx-form', view)?.addEventListener('click', async () => fillForm('consult', await kitProfile().catch(() => ({})), { id: c.id, name: c.name, phone: c.phone }));
     $('#cx-edit', view).onclick = () => modal(`
       <h3>ملاحظات على ${esc(fn || 'العميلة')}</h3>
       <form id="cx-f">
@@ -4444,16 +4536,22 @@
     ['custody', 'نموذج استلام عهدة', 'الأدوات والأجهزة اللي تستلمها الموظفة', '🧰'],
     ['privacy', 'تعهد الخصوصية والسرية', 'خصوصية العميلات وصورهن وبياناتهن', '🤍'],
   ];
-  function kitForms(view, K, head) {
-    view.innerHTML = `${head}<div class="form-grid">${FORMS.map(([k, t, d, e], i) => `<button class="fcard" data-f="${k}" style="--d:${i * 50}ms"><div class="fc-paper"><span>${e}</span><i></i><i></i><i></i></div><b>${t}</b><span>${d}</span></button>`).join('')}</div>
-      <p class="muted small mt">النماذج تتعبّى ببيانات المنشأة وتنطبع على A4. قوالب للاستئناس، وراجعوا أي صيغة نظامية مع مختص.</p>`;
+  const FILLABLE = new Set(['consult', 'custody', 'privacy']);
+  async function kitForms(view, K, head) {
+    const recent = await q(sb.from('form_entries').select('id,kind,subject,by_name,created_at').order('created_at', { ascending: false }).limit(12)).catch(() => []);
+    view.innerHTML = `${head}<div class="form-grid">${FORMS.map(([k, t, d, e], i) => `<div class="fcard" style="--d:${i * 50}ms"><div class="fc-paper"><span>${e}</span><i></i><i></i><i></i></div><b>${t}</b><span>${d}</span>
+        <div class="fc-acts">${FILLABLE.has(k) ? `<button class="btn sm primary" data-fill="${k}">✍️ عبّيها على الجهاز</button>` : ''}<button class="btn sm" data-f="${k}">🖨️ فاضية للطباعة</button></div></div>`).join('')}</div>
+      ${recent.length ? `<div class="section-title"><h2>آخر النماذج المعبّاة</h2></div><div class="list">${recent.map((r) => `<a class="row" href="#" data-fe="${r.id}"><div class="grow"><div class="title">${esc((FORMS.find((f) => f[0] === r.kind) || [])[1] || r.kind)}${r.subject ? ` · ${esc(r.subject)}` : ''}</div><div class="meta">${new Date(r.created_at).toLocaleDateString('ar-SA-u-nu-latn', { day: 'numeric', month: 'long' })}${r.by_name ? ` · ${esc(r.by_name)}` : ''}</div></div><span class="muted">فتح ←</span></a>`).join('')}</div>` : ''}
+      <p class="muted small mt">«عبّيها على الجهاز»: العميلة أو الموظفة تعبّيها على الآيباد وتوقّع بإصبعها، وتنحفظ في ملفها، وتطلع PDF بضغطة. قوالب للاستئناس، وراجعوا أي صيغة نظامية مع مختص.</p>`;
     $$('[data-f]', view).forEach((b) => b.onclick = () => openForm(b.dataset.f, K));
+    $$('[data-fill]', view).forEach((b) => b.onclick = () => fillForm(b.dataset.fill, K));
+    $$('[data-fe]', view).forEach((b) => b.onclick = (e) => { e.preventDefault(); viewEntry(Number(b.dataset.fe)); });
   }
   function formHead(K, title, sub) {
     return `<header class="pp-h"><img src="../home/assets/Beautfresh-brown.svg" alt=""><div><h1>${esc(title)}</h1>${sub ? `<span>${esc(sub)}</span>` : ''}</div><div class="pp-meta">${esc(K.legal_name || K.brand || 'بيوتفريش')}${K.cr ? `<br>س.ت ${esc(K.cr)}` : ''}${K.phone ? `<br><span dir="ltr">${esc(K.phone)}</span>` : ''}</div></header>`;
   }
   const lines = (n) => Array.from({ length: n }, () => '<div class="pp-line"></div>').join('');
-  function openForm(k, K) {
+  function openForm(k, K, only) {
     const ft = FORMS.find((f) => f[0] === k)[1];
     let html = '';
     if (k === 'consult') html = `<div class="pp">${formHead(K, ft, 'تُعبّى في أول زيارة، وتُحدّث إذا تغيّر شي')}
@@ -4487,7 +4585,81 @@
       <ol class="pp-ol">${['ما أصوّر أي عميلة أو جزء منها إلا بموافقتها، وبجوال الصالون فقط.', 'ما أنشر أي صورة أو معلومة عن عميلة في حساباتي الشخصية.', 'ما أشارك أرقام العميلات أو بياناتهن مع أي أحد داخل الصالون أو خارجه.', 'ما أتكلم عن عميلة قدام عميلة ثانية، ولا أنقل كلام دار في الصالون.', 'أحافظ على سرية أسعار الموردين وبيانات الصالون الداخلية.', 'يستمر هذا التعهد بعد انتهاء عملي في الصالون.'].map((x) => `<li>${x}</li>`).join('')}</ol>
       <p class="pp-small">أعرف إن مخالفة هذا التعهد تعرّضني للمساءلة حسب لائحة العمل والأنظمة.</p>
       <div class="pp-sign"><div><label>الاسم</label>${lines(1)}</div><div><label>التوقيع</label>${lines(1)}</div><div><label>التاريخ</label>${lines(1)}</div></div></div>`;
+    if (only) return html;
     paper(ft, `<div class="pp-wrap">${html}</div>`);
+  }
+
+  /* النماذج التفاعلية: نفس الورقة، بس الخطوط تصير خانات، والمربعات تنضغط، والتوقيع بالإصبع */
+  function formLive(root, data, ro) {
+    const v = (data && data.v) || [], t = (data && data.t) || [], g = (data && data.sig) || [];
+    let i = 0, j = 0, k = 0;
+    // الخطوط ← خانة كتابة (الخطوط المتتالية تصير خانة وحدة)
+    $$('.pp-line', root).forEach((ln) => {
+      if (ln.previousElementSibling && ln.previousElementSibling.classList.contains('pp-in')) { ln.previousElementSibling.dataset.rows = Number(ln.previousElementSibling.dataset.rows || 1) + 1; ln.remove(); return; }
+      const sigBox = ln.closest('.pp-sign > div'), isSig = sigBox && /توقيع/.test($('label', sigBox)?.textContent || '');
+      if (isSig) { const c = document.createElement('canvas'); c.className = 'pp-sigpad'; c.dataset.k = k++; ln.replaceWith(c); return; }
+      const d = document.createElement('div'); d.className = 'pp-in'; d.dataset.i = i++; d.dataset.rows = 1;
+      if (!ro) d.contentEditable = 'plaintext-only';
+      ln.replaceWith(d);
+    });
+    $$('.pp-in', root).forEach((d) => { d.style.minHeight = `${Number(d.dataset.rows) * 30}px`; d.textContent = v[Number(d.dataset.i)] || ''; });
+    // خلايا الجداول الفاضية
+    $$('.pp-t tbody td', root).forEach((td) => { if (td.textContent.trim()) return; td.className = 'pp-in td'; td.dataset.i = i++; td.textContent = v[Number(td.dataset.i)] || ''; if (!ro) td.contentEditable = 'plaintext-only'; });
+    // المربعات ▢ ← اختيارات تنضغط
+    $$('.pp-opts span, .pp-yn', root).forEach((sp) => {
+      const parts = sp.innerHTML.split(/&nbsp;|\u00a0/).map((x) => x.trim()).filter(Boolean);
+      const holder = document.createElement('span'); holder.className = sp.className + ' pp-tg-wrap';
+      parts.forEach((p) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pp-tg'; b.dataset.j = j++; b.innerHTML = p.replace('▢', '').trim(); if (t[Number(b.dataset.j)]) b.classList.add('on'); if (ro) b.disabled = true; else b.onclick = () => { const grp = b.parentElement.closest('.pp-yn') ? [...b.parentElement.children] : null; if (grp) grp.forEach((x) => x !== b && x.classList.remove('on')); b.classList.toggle('on'); }; holder.appendChild(b); });
+      sp.replaceWith(holder);
+    });
+    // التوقيع
+    $$('.pp-sigpad', root).forEach((c) => {
+      const w = c.parentElement.clientWidth || 220; c.width = w * 2; c.height = 110 * 2; c.style.width = '100%'; c.style.height = '110px';
+      const x = c.getContext('2d'); x.lineWidth = 4; x.lineCap = 'round'; x.strokeStyle = '#2E1612';
+      const src = g[Number(c.dataset.k)]; if (src) { const im = new Image(); im.onload = () => x.drawImage(im, 0, 0, c.width, c.height); im.src = src; }
+      if (ro) return;
+      let down = false; const pt = (e) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; };
+      c.onpointerdown = (e) => { down = true; c.setPointerCapture(e.pointerId); x.beginPath(); x.moveTo(...pt(e)); c.dataset.on = 1; };
+      c.onpointermove = (e) => { if (!down) return; x.lineTo(...pt(e)); x.stroke(); };
+      c.onpointerup = () => { down = false; };
+      const clr = document.createElement('button'); clr.type = 'button'; clr.className = 'pp-sigclr'; clr.textContent = 'امسحي'; clr.onclick = () => { x.clearRect(0, 0, c.width, c.height); delete c.dataset.on; }; c.after(clr);
+    });
+  }
+  function formCollect(root) {
+    return { v: $$('.pp-in', root).map((d) => d.textContent.trim()), t: $$('.pp-tg', root).map((b) => b.classList.contains('on') ? 1 : 0), sig: $$('.pp-sigpad', root).map((c) => (c.dataset.on ? c.toDataURL('image/png') : '')) };
+  }
+  async function fillForm(k, K, client) {
+    const ft = FORMS.find((f) => f[0] === k)[1];
+    if (k === 'consult' && !client) {
+      return modal(`<h2>استمارة لمين؟</h2><p class="muted">ابحثي عن العميلة عشان تنحفظ في ملفها (أو كمّلي بدون).</p><input class="input" id="fc-q" placeholder="الاسم أو الجوال"><div class="list" id="fc-r"></div><div class="actions"><button class="btn" data-skip>بدون ربط</button><button class="btn" data-close>إلغاء</button></div>`, (el, close) => {
+        let tm; $('#fc-q', el).oninput = (e) => { clearTimeout(tm); tm = setTimeout(async () => { const r = await q(sb.rpc('cx_list', { p_q: e.target.value.trim(), p_seg: 'all', p_limit: 8, p_offset: 0 })).catch(() => null); $('#fc-r', el).innerHTML = (r?.list || []).map((c) => `<a href="#" class="row" data-c="${esc(c.id)}" data-n="${esc(c.name || '')}" data-p="${esc(c.phone || '')}"><div class="grow"><div class="title">${esc(c.name || '')}</div><div class="meta">${cxVisits(c.visits)}</div></div></a>`).join(''); $$('[data-c]', el).forEach((a) => a.onclick = (ev) => { ev.preventDefault(); close(); fillForm(k, K, { id: a.dataset.c, name: a.dataset.n, phone: a.dataset.p }); }); }, 250); };
+        $('[data-skip]', el).onclick = () => { close(); fillForm(k, K, { id: null }); };
+      });
+    }
+    const html = openForm(k, K, true);
+    paper(ft, `<div class="pp-wrap pp-live">${html}</div>`, { extra: '<button class="btn sm" data-save>💾 احفظي</button>', mount: (ov, close) => {
+      const root = $('.pp', ov); formLive(root, null, false);
+      if (client && client.name) { const ins = $$('.pp-in', root); if (ins[0]) ins[0].textContent = client.name; if (ins[1] && client.phone) ins[1].textContent = client.phone; }
+      $('[data-save]', ov).onclick = async () => {
+        const data = formCollect(root);
+        if (!data.sig.some(Boolean)) return toast('باقي التوقيع ✍️', true);
+        const subject = client?.name || data.v[0] || null;
+        try {
+          await q(sb.from('form_entries').insert({ kind: k, customer_id: client?.id || null, subject, data, by_name: S.profile?.full_name || S.profile?.login || null }));
+          if (k === 'consult' && client?.id) {
+            const health = $$('.pp-q', root)[0], flags = health ? $$('.pp-tg.on', health).filter((b) => b.textContent.trim() === 'نعم').map((b) => b.closest('div').firstElementChild.textContent.replace('؟', '')) : [];
+            const lab = $$('label', root).find((l) => l.textContent.trim() === 'تفاصيل'), det = lab && lab.nextElementSibling && lab.nextElementSibling.classList.contains('pp-in') ? lab.nextElementSibling.textContent.trim() : '';
+            await q(sb.from('cx_log').insert({ customer_id: client.id, kind: 'note', text: `📝 وقّعت الاستمارة${flags.length ? ` · ⚠️ ${flags.join('، ')}` : ' · ما عندها حساسية'}${det ? ` · ${det}` : ''}`, by_name: S.profile?.full_name || null })).catch(() => {});
+          }
+          toast('انحفظت وموقّعة 🤍 تقدرين تطبعينها PDF الحين'); $('[data-save]', ov).remove(); $$('.pp-in', root).forEach((d) => d.removeAttribute('contenteditable'));
+        } catch (err) { toast(errMsg(err), true); }
+      };
+    } });
+  }
+  async function viewEntry(id) {
+    const e = (await q(sb.from('form_entries').select('*').eq('id', id)))[0]; if (!e) return;
+    const K = await kitProfile().catch(() => ({})), ft = (FORMS.find((f) => f[0] === e.kind) || [])[1] || e.kind;
+    paper(ft, `<div class="pp-wrap pp-live">${openForm(e.kind, K, true)}</div>`, { mount: (ov) => formLive($('.pp', ov), e.data, true) });
   }
 
   const genCode = () => 'BF-' + Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('');

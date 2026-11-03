@@ -212,6 +212,7 @@ const TOOLS = [
   { name: 'by_service', description: 'الخدمات في فترة: العدد والقيمة. اختياري: provider أو service (بحث جزئي).', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, provider: { type: 'string' }, service: { type: 'string' }, limit: { type: 'integer' } }, required: ['from', 'to'] } },
   { name: 'find_clients', description: 'تبحث عن عميلات: service (سوّت هالخدمة مرة على الأقل)، provider (تعاملت معها)، min_days_away/max_days_away (من آخر زيارة)، min_visits/max_visits، no_upcoming (ما عندها موعد جاي)، sort (spend أو recent)، limit. ترجع الأسماء والجوالات وآخر زيارة وصرفها.', input_schema: { type: 'object', properties: { service: { type: 'string' }, provider: { type: 'string' }, min_days_away: { type: 'integer' }, max_days_away: { type: 'integer' }, min_visits: { type: 'integer' }, max_visits: { type: 'integer' }, no_upcoming: { type: 'boolean' }, sort: { type: 'string' }, limit: { type: 'integer' } } } },
   { name: 'reviews', description: 'التقييمات في فترة: المتوسط والعدد وعينات من النصوص. اختياري: provider، max_rating.', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, provider: { type: 'string' }, max_rating: { type: 'integer' } }, required: ['from', 'to'] } },
+  { name: 'library', description: 'مكتبة بيوتفريش: مبادئ من كتب ومدارس التسويق والمبيعات وتجربة العميل والتشغيل والفريق والمالية والامتياز، مع تطبيقها على الصالون ومرجعها. q = كلمات الموضوع (مثلًا: استرجاع عميلات غايبات، تسعير باقات، تحفيز الأخصائيات). domain اختياري: marketing, sales, experience, operations, people, growth.', input_schema: { type: 'object', properties: { q: { type: 'string' }, domain: { type: 'string' }, limit: { type: 'integer' } }, required: ['q'] } },
   { name: 'lists', description: 'أسماء الأخصائيات والخدمات بالضبط مثل ما هي في ركاز. استخدميها لو مو متأكدة من الاسم.', input_schema: { type: 'object', properties: {} } },
 ];
 async function askSite(b: any, logUse: any) {
@@ -231,9 +232,11 @@ async function askSite(b: any, logUse: any) {
 - لو فيه اقتراح، حطي معه وين تروح تنفذه: اختاري من هالمفاتيح بس في go (واحد أو اثنين بالكثير، وبدون ما تكتبينها في النص):
   winback = الاسترجاع الذكي (رسائل للعميلات الغايبات) · reviews = محلل الآراء · campaigns = الحملات · writer = الكاتب الذكي (منشورات وعروض) · after = بعد الزيارة (متابعة عميلات أمس) · appts = مواعيد الصالون · away = العميلات الغايبات · vip = عميلات VIP · sales = المبيعات والأداء · finance = المالية · team = الفريق والمناوبات · gifts = قسائم الهدايا · seasons = المواسم
   ولو جوابك فيه قائمة عميلات تبين تتواصلين معهن، القائمة نفسها فيها زر واتساب، فما يحتاج تحطين مفتاح لها.
-- ردك الأخير JSON فقط: {"answer":"النص","client_ids":["..."],"go":["winback"]}`;
+- أي اقتراح أو نصيحة: ابحثي في library أول، وابني اقتراحك على مبدأ منها لو فيه مبدأ مناسب. اذكري المرجع باختصار آخر الاقتراح بين قوسين، مثل: (حسب «How Brands Grow» لبايرن شارب). لا تنسبين لمرجع شي ما جاء في نتيجة library. وحطي معرفات المبادئ اللي استخدمتيها في refs.
+- الأسئلة اللي أرقام بس (كم، مين أعلى...) ما تحتاج المكتبة إلا إذا فيها اقتراح.
+- ردك الأخير JSON فقط: {"answer":"النص","client_ids":["..."],"go":["winback"],"refs":["exp-03"]}`;
   const msgs: any[] = [{ role: 'user', content: question }];
-  const found: Record<string, any> = {}; let usage = { input_tokens: 0, output_tokens: 0 };
+  const found: Record<string, any> = {}, lib: Record<string, any> = {}; let usage = { input_tokens: 0, output_tokens: 0 };
   for (let i = 0; i < 7; i++) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'x-api-key': KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -251,6 +254,7 @@ async function askSite(b: any, logUse: any) {
         try {
           out = await fetch(`${URL_}/rest/v1/rpc/ask_tool`, { method: 'POST', headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_name: u.name, p: u.input || {} }) }).then((x) => x.json());
           if (u.name === 'find_clients') (out?.clients || []).forEach((c: any) => { found[c.id] = c; });
+          if (u.name === 'library' && Array.isArray(out)) out.forEach((p: any) => { lib[p.id] = { id: p.id, title: p.title, refs: p.refs || [] }; });
         } catch (e) { out = { error: String(e) }; }
         results.push({ type: 'tool_result', tool_use_id: u.id, content: JSON.stringify(out).slice(0, 30000) });
       }
@@ -263,7 +267,8 @@ async function askSite(b: any, logUse: any) {
     await logUse(`ask: ${question}`, { answer: String(out.answer || '').slice(0, 500), n: clients.length }, { usage });
     const GO = ['winback', 'reviews', 'campaigns', 'writer', 'after', 'appts', 'away', 'vip', 'sales', 'finance', 'team', 'gifts', 'seasons'];
     const go = (Array.isArray(out.go) ? out.go : []).filter((k: string) => GO.includes(k)).slice(0, 2);
-    return json({ kind: 'ask', answer: out.answer || txt, clients, go });
+    const refs = (Array.isArray(out.refs) ? out.refs : []).map((id: string) => lib[id]).filter(Boolean).slice(0, 3);
+    return json({ kind: 'ask', answer: out.answer || txt, clients, go, refs });
   }
   throw new Error('السؤال طوّل، جربي تسألينه بشكل أبسط');
 }

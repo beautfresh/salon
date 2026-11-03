@@ -39,10 +39,10 @@ Deno.serve(async (req) => {
     const b = await req.json().catch(() => ({}));
     const kind = String(b.kind || 'post');
     const logUse = (prompt: string, out: unknown, j: any) => db('ai_log', { method: 'POST', body: JSON.stringify({ user_id: user.id, kind, prompt: prompt.slice(0, 2000), output: out, tokens: (j?.usage?.input_tokens || 0) + (j?.usage?.output_tokens || 0) }) }).catch(() => {});
-    if (kind === 'winback' || kind === 'reviews') {
+    if (kind === 'winback' || kind === 'reviews' || kind === 'ask') {
       const capR = await fetch(`${URL_}/rest/v1/ai_log?select=id&at=gte.${new Date(new Date().setUTCDate(1)).toISOString().slice(0, 10)}`, { method: 'HEAD', headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, Prefer: 'count=exact' } });
       if (Number((capR.headers.get('content-range') || '*/0').split('/')[1] || 0) >= MONTH_CAP) return json({ error: 'cap', message: `وصلتوا الحد الشهري (${MONTH_CAP} طلب)` }, 429);
-      return kind === 'winback' ? await winback(b, auth, user.id, logUse) : await reviews(user.id, logUse);
+      return kind === 'winback' ? await winback(b, auth, user.id, logUse) : kind === 'ask' ? await askSite(b, logUse) : await reviews(user.id, logUse);
     }
     const K = KINDS[kind]; if (!K) return json({ error: 'kind' }, 400);
     const topic = String(b.topic || '').slice(0, 600);
@@ -201,4 +201,62 @@ ${texts}
   const rep = await db('ai_reports', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ kind: 'reviews', data: out, stats, created_by: uid }) });
   await logUse('reviews report', { id: rep?.[0]?.id }, j);
   return json({ kind: 'reviews', report: rep?.[0] || { data: out, stats } });
+}
+
+
+// ===== «اسألي الموقع»: يجاوب من أرقام الصالون عن طريق أدوات قراءة آمنة =====
+const TOOLS = [
+  { name: 'sales_summary', description: 'ملخص فترة: المبيعات (sales شامل الضريبة)، صافي المبيعات، المحصّل، الطلبات، الحجوزات، العميلات، الجدد، متوسط الزيارة، الإلغاء وعدم الحضور. التواريخ YYYY-MM-DD.', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' } }, required: ['from', 'to'] } },
+  { name: 'daily_series', description: 'المبيعات يوم بيوم في فترة.', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' } }, required: ['from', 'to'] } },
+  { name: 'by_provider', description: 'أداء الأخصائيات في فترة: عدد الخدمات وقيمتها وعدد العميلات. اختياري: service لفلترة خدمة.', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, service: { type: 'string' } }, required: ['from', 'to'] } },
+  { name: 'by_service', description: 'الخدمات في فترة: العدد والقيمة. اختياري: provider أو service (بحث جزئي).', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, provider: { type: 'string' }, service: { type: 'string' }, limit: { type: 'integer' } }, required: ['from', 'to'] } },
+  { name: 'find_clients', description: 'تبحث عن عميلات: service (سوّت هالخدمة مرة على الأقل)، provider (تعاملت معها)، min_days_away/max_days_away (من آخر زيارة)، min_visits/max_visits، no_upcoming (ما عندها موعد جاي)، sort (spend أو recent)، limit. ترجع الأسماء والجوالات وآخر زيارة وصرفها.', input_schema: { type: 'object', properties: { service: { type: 'string' }, provider: { type: 'string' }, min_days_away: { type: 'integer' }, max_days_away: { type: 'integer' }, min_visits: { type: 'integer' }, max_visits: { type: 'integer' }, no_upcoming: { type: 'boolean' }, sort: { type: 'string' }, limit: { type: 'integer' } } } },
+  { name: 'reviews', description: 'التقييمات في فترة: المتوسط والعدد وعينات من النصوص. اختياري: provider، max_rating.', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, provider: { type: 'string' }, max_rating: { type: 'integer' } }, required: ['from', 'to'] } },
+  { name: 'lists', description: 'أسماء الأخصائيات والخدمات بالضبط مثل ما هي في ركاز. استخدميها لو مو متأكدة من الاسم.', input_schema: { type: 'object', properties: {} } },
+];
+async function askSite(b: any, logUse: any) {
+  const question = String(b.q || '').slice(0, 500).trim();
+  if (!question) return json({ error: 'q', message: 'اكتبي سؤالك' }, 400);
+  const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+  const system = `أنتِ مساعدة إدارة صالون «بيوتفريش» في الأحساء. تجاوبين شهد وأميرة (مالكات الصالون) من أرقام الصالون الحقيقية بس، باستخدام الأدوات. اليوم ${today} (توقيت الرياض)، والأسبوع يبدأ السبت.
+قواعد:
+- لا تخترعين أي رقم أو اسم. كل رقم لازم يجي من أداة. لو الأدوات ما تكفي، قولي بصراحة وش ما تقدرين تعرفينه.
+- البيانات الكاملة من يناير ٢٠٢٦، وقبلها ناقصة. المبيعات من ديسمبر ٢٠٢٥.
+- «المبيعات» = sales (شامل الضريبة) مثل ركاز.
+- جاوبي باللهجة السعودية الخليجية، مختصر ومباشر: الجواب أول سطر، بعدها تفاصيل قليلة لو تفيد، واقتراح عملي واحد لو مناسب.
+- الأرقام بالأرقام الإنجليزية مع فواصل، والمبالغ بـ «ر.س».
+- لو السؤال يطلب قائمة عميلات، استخدمي find_clients وحطي معرفاتهن في client_ids.
+- ردك الأخير JSON فقط: {"answer":"النص","client_ids":["..."]}`;
+  const msgs: any[] = [{ role: 'user', content: question }];
+  const found: Record<string, any> = {}; let usage = { input_tokens: 0, output_tokens: 0 };
+  for (let i = 0; i < 7; i++) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'x-api-key': KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, max_tokens: 4000, system, tools: TOOLS, messages: msgs }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j?.error?.message || 'ai');
+    usage.input_tokens += j.usage?.input_tokens || 0; usage.output_tokens += j.usage?.output_tokens || 0;
+    const uses = (j.content || []).filter((x: any) => x.type === 'tool_use');
+    if (j.stop_reason === 'tool_use' && uses.length) {
+      msgs.push({ role: 'assistant', content: j.content });
+      const results = [];
+      for (const u of uses) {
+        let out: any;
+        try {
+          out = await fetch(`${URL_}/rest/v1/rpc/ask_tool`, { method: 'POST', headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_name: u.name, p: u.input || {} }) }).then((x) => x.json());
+          if (u.name === 'find_clients') (out?.clients || []).forEach((c: any) => { found[c.id] = c; });
+        } catch (e) { out = { error: String(e) }; }
+        results.push({ type: 'tool_result', tool_use_id: u.id, content: JSON.stringify(out).slice(0, 30000) });
+      }
+      msgs.push({ role: 'user', content: results });
+      continue;
+    }
+    const txt = (j.content || []).map((x: any) => x.text || '').join('').trim();
+    let out: any; try { out = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)); } catch { out = { answer: txt }; }
+    const clients = (out.client_ids || []).map((id: string) => found[id]).filter(Boolean).slice(0, 80);
+    await logUse(`ask: ${question}`, { answer: String(out.answer || '').slice(0, 500), n: clients.length }, { usage });
+    return json({ kind: 'ask', answer: out.answer || txt, clients });
+  }
+  throw new Error('السؤال طوّل، جربي تسألينه بشكل أبسط');
 }

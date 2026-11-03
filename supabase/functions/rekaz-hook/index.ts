@@ -24,7 +24,7 @@ async function getToken(kind: 'main' | 'events' = 'main'): Promise<string> {
   const sec = kind === 'events' ? Deno.env.get('REKAZ_EVENTS_CLIENT_SECRET') : Deno.env.get('REKAZ_CLIENT_SECRET');
   if (!id || !sec) throw new Error(`missing ${kind} credentials`);
   const r = await fetch(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: id, client_secret: sec }) });
+    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: id, client_secret: sec, ...(kind === 'events' ? { scope: FAMILIES.map((f) => `events.${f}`).join(' ') } : {}) }) });
   if (!r.ok) throw new Error(`token ${kind} ${r.status}`);
   const t = await r.json();
   tokens[kind] = { v: t.access_token, exp: Date.now() + (Number(t.expires_in) || 3000) * 1000 };

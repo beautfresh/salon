@@ -288,7 +288,7 @@
       ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
     ];
     const L = [];
-    if (isSpec()) G[0][1].unshift(['me', 'صفحتي', I.users]); else if (M) G[0][1].push(['me', 'صفحة الأخصائية', I.users]);
+    if (isSpec()) G[0][1].unshift(['me', 'صفحتي', I.users]); else if (M) { G[0][1].splice(1, 0, ['ask', '✦ اسألي الموقع', I.chart]); G[0][1].push(['me', 'صفحة الأخصائية', I.users]); }
     G.forEach(([g, its]) => { const ok = its.filter((x) => x && canSee(x[0])); if (!ok.length) return; L.push({ group: g }); ok.forEach(([k, l, ic]) => L.push({ href: `#/${k}`, label: l, icon: ic, key: k, group: g })); });
     return L;
   }
@@ -359,6 +359,7 @@
     marketing: { title: 'التسويق', nav: 'marketing', fn: pageMarketing },
     site: { title: 'الموقع', nav: 'site', fn: pageSite, manager: true },
     sales: { title: 'المبيعات والأداء', nav: 'sales', fn: pageSales, manager: true },
+    ask: { title: 'اسألي الموقع', nav: 'ask', fn: pageAsk, manager: true },
     finance: { title: 'المالية', nav: 'finance', fn: pageFinance, manager: true },
     closing: { title: 'إقفال اليوم', nav: 'finance', fn: pageClosing, manager: true },
     expenses: { title: 'المصروفات', nav: 'finance', fn: pageExpenses, manager: true },
@@ -2093,6 +2094,40 @@
     more.onclick = () => { st.off = st.rows.length; load(true); };
     $('#cl-loyal', view)?.addEventListener('click', loyaltyForm);
     load();
+  }
+
+  /* ======================= اسألي الموقع ======================= */
+  const ASK_LOG = [];
+  async function pageAsk(view, _a, params, alive) {
+    const sugg = ['كم مبيعات أكتوبر مقارنة بسبتمبر؟', 'مين أعلى أخصائية دخل هالشهر؟', 'مين سوّت صبغة وما رجعت من ٣ شهور؟', 'وش أكثر ٥ خدمات طلبًا هالشهر؟', 'أي يوم بالأسبوع أقوى مبيعات؟', 'وش يقولون عن روز في التقييمات؟', 'كم عميلة جديدة جات هالشهر؟', 'العميلات اللي يجون كل شهر وغابوا هالشهر'];
+    view.innerHTML = `
+      <div class="ask-h card"><h2>✦ اسألي الموقع</h2><p class="muted">اسألي أي سؤال عن الصالون بكلامك، ويجاوبك من أرقام ركاز الحقيقية. لو طلبتي عميلات، يطلعن لك بقائمة مع واتساب.</p>
+        <form id="ask-f" class="ask-f"><input class="input" id="ask-q" maxlength="500" placeholder="مثال: مين سوّت بروتين وما رجعت من شهرين؟" autocomplete="off"><button class="btn primary">اسألي</button></form>
+        <div class="chips wrap" id="ask-s">${sugg.map((x) => `<button type="button" class="chip sm">${x}</button>`).join('')}</div></div>
+      <div id="ask-out">${ASK_LOG.map(askCard).join('')}</div>`;
+    const out = $('#ask-out', view), inp = $('#ask-q', view);
+    const bindCard = (el) => {
+      $$('[data-wa]', el).forEach((b) => b.onclick = () => window.open(`https://wa.me/${waNum(b.dataset.wa)}?text=${encodeURIComponent(`هلا ${b.dataset.n} 🤍\nوحشتينا في بيوتفريش! ودّك نرتب لك موعد؟ beautfresh.com/book`)}`, '_blank', 'noopener'));
+      $('[data-copy]', el)?.addEventListener('click', (e) => copyTxt(e.currentTarget.dataset.copy, 'القائمة'));
+    };
+    $$('.ask-c', out).forEach(bindCard);
+    $$('#ask-s .chip', view).forEach((b) => b.onclick = () => { inp.value = b.textContent; $('#ask-f', view).requestSubmit(); });
+    $('#ask-f', view).addEventListener('submit', (e) => {
+      e.preventDefault(); const qq = inp.value.trim(); if (!qq) return;
+      const ph = document.createElement('div'); ph.className = 'card ask-c'; ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="muted"><span class="spinner"></span> يدوّر في الأرقام…</div>`; out.prepend(ph); inp.value = '';
+      busy($('#ask-f button', view), async () => {
+        try { const j = await aiCall({ kind: 'ask', q: qq }); const item = { q: qq, a: j.answer, c: j.clients || [] }; ASK_LOG.unshift(item); if (ASK_LOG.length > 12) ASK_LOG.pop(); ph.outerHTML = askCard(item); bindCard($('.ask-c', out)); }
+        catch (err) { ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="notice warn">${esc(errMsg(err))}</div>`; }
+      });
+    });
+    if (params.get('q')) { inp.value = params.get('q'); $('#ask-f', view).requestSubmit(); }
+    setTimeout(() => inp.focus(), 50);
+  }
+  function askCard(x) {
+    const list = x.c || [];
+    return `<div class="card ask-c"><div class="ask-qq">${esc(x.q)}</div><div class="ask-a">${esc(x.a || '').replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div>
+      ${list.length ? `<div class="ask-lh"><b>${list.length} عميلة</b><button class="btn sm" data-copy="${esc(list.map((c) => `${c.name} ${c.phone || ''}`).join('\n'))}">نسخ القائمة</button></div>
+      <div class="list">${list.map((c) => `<div class="row"><a class="grow" href="#/cx/${encodeURIComponent(c.id)}"><div class="title">${esc(c.name || '')}</div><div class="meta">${esc(c.last_service || '')}${c.last_provider ? ` · ${esc(cxProv(c.last_provider))}` : ''} · ${c.days_away != null ? `قبل ${sdN(c.days_away)} يوم` : ''} · ${cxVisits(c.visits)} · ${sar(c.spend)} ر.س</div></a>${c.phone ? `<button class="btn sm" data-wa="${esc(c.phone)}" data-n="${esc(firstName(c.name))}">${I.wa}</button>` : ''}</div>`).join('')}</div>` : ''}</div>`;
   }
 
   /* ======================= صفحتي (الأخصائية) ======================= */

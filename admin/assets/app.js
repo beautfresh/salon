@@ -2459,13 +2459,15 @@
 
   async function pageMarketing(view, _a, params, alive) {
     const tab = params.get('t') || 'seasons';
-    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ['sources', 'كيف عرفتنا؟'], ...(isManager() ? [['advisor', 'المستشار'], ['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
+    const tabs = [['seasons', 'المواسم'], ['content', 'المحتوى'], ['sources', 'كيف عرفتنا؟'], ...(isManager() ? [['advisor', 'المستشار'], ['campaigns', 'الحملات'], ['writer', '✦ الكاتب الذكي'], ['winback', '✦ استرجاع ذكي'], ['reviews', '✦ محلل الآراء'], ['studio', 'الاستوديو']] : []), ['compass', 'البوصلة']];
     const head = `<div class="lens" style="margin-bottom:16px">${tabs.map(([k, l]) => `<a href="#/marketing?t=${k}" class="${k === tab ? 'on' : ''}">${l}</a>`).join('')}</div>`;
     if (tab === 'content') return mktContent(view, params, alive, head);
     if (tab === 'compass') return mktCompass(view, alive, head);
     if (tab === 'advisor' && isManager()) return mktAdvisor(view, alive, head);
     if (tab === 'sources') return mktSources(view, alive, head);
     if (tab === 'writer' && isManager()) return mktWriter(view, alive, head);
+    if (tab === 'winback' && isManager()) return mktWinback(view, alive, head);
+    if (tab === 'reviews' && isManager()) return mktReviews(view, alive, head);
     if (tab === 'studio' && isManager()) return mktStudio(view, alive, head);
     if (tab === 'campaigns' && isManager()) return mktCampaigns(view, alive, head);
     return mktSeasons(view, alive, head);
@@ -2542,6 +2544,98 @@
       } catch (err) { out.innerHTML = `<div class="card notice warn">${esc(errMsg(err))}</div>`; }
     });
   }
+  async function aiCall(body) {
+    const { data: s0 } = await sb.auth.getSession();
+    const r = await fetch(`${CFG.supabaseUrl}/functions/v1/ai-writer`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseKey, Authorization: `Bearer ${s0.session?.access_token}` }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.message || 'ما رد، جربي بعد شوي');
+    return j;
+  }
+
+  /* ======================= استرجاع ذكي ======================= */
+  async function mktWinback(view, alive, head) {
+    const [st, pool, drafts, sent] = await Promise.all([
+      q(sb.rpc('winback_stats')), q(sb.rpc('winback_pool', { p_limit: 1, p_offset: 0 })),
+      q(sb.from('winback_msgs').select('*').eq('status', 'draft').order('spend', { ascending: false }).limit(60)),
+      q(sb.from('winback_msgs').select('id,customer_id,name,sent_at,last_service').eq('status', 'sent').order('sent_at', { ascending: false }).limit(40)),
+    ]);
+    if (!alive()) return;
+    const back = st.back_ids || {};
+    view.innerHTML = `${head}
+      <div class="wb-hero card">
+        <div><h2>استرجاع العميلات الذكي</h2><p class="muted">عميلات زاروكم مرتين وفوق، وغابوا من شهرين لسنة، وما عندهم موعد جاي. لكل وحدة رسالة باسمها تذكر خدمتها وأخصائيتها، مو رسالة وحدة للكل.</p></div>
+        <div class="wb-k"><div><b class="num">${sdN(pool.total)}</b><span>عميلة غايبة</span></div><div><b class="num">${sar(pool.spend)}</b><span>ر.س صرفوا عندكم قبل</span></div></div>
+        <div class="actions"><button class="btn primary" id="wb-go">✦ جهّزي ١٢ رسالة شخصية</button><span class="muted small">تبدأ بالأعلى صرفًا · ما تنرسل لأحد إلا لما تضغطين</span></div>
+      </div>
+      <div class="wb-res">
+        <div><b class="num">${sdN(st.sent)}</b><span>انرسلت</span></div>
+        <div class="ok"><b class="num">${sdN(st.back)}</b><span>رجعت وحجزت خلال ٣٠ يوم</span></div>
+        <div class="ok"><b class="num">${sar(st.back_value)}</b><span>ر.س دخل منهن</span></div>
+        <div><b class="num">${st.sent ? Math.round((st.back / st.sent) * 100) : 0}٪</b><span>نسبة الرجوع</span></div>
+      </div>
+      <div class="section-title"><h2>جاهزة للإرسال</h2><span class="muted small">${drafts.length}</span></div>
+      <div id="wb-list">${drafts.length ? drafts.map((d) => `
+        <div class="card wb-c" data-id="${d.id}">
+          <div class="wb-ch"><a href="#/cx/${encodeURIComponent(d.customer_id)}" class="wb-n">${esc(d.name || '')}</a><span class="muted small">${esc(d.last_service || '')}${d.last_provider ? ` · ${esc(cxProv(d.last_provider))}` : ''} · غابت ${sdN(d.days_away)} يوم · ${cxVisits(d.visits)} · ${sar(d.spend)} ر.س</span></div>
+          <textarea class="input wb-t" rows="3">${esc(d.text)}</textarea>
+          <div class="actions"><button class="btn primary sm" data-send>${I.wa} أرسلي واتساب</button><button class="btn sm" data-skip>تخطي</button></div>
+        </div>`).join('') : '<div class="empty">ما فيه رسائل جاهزة. اضغطي «جهّزي» فوق.</div>'}</div>
+      ${sent.length ? `<div class="section-title"><h2>آخر المرسلة</h2></div><div class="list">${sent.map((x) => `<a class="row" href="#/cx/${encodeURIComponent(x.customer_id)}"><div class="grow"><div class="title">${esc(x.name || '')}</div><div class="meta">${esc(x.last_service || '')} · انرسلت ${ago(dk(new Date(x.sent_at)))}</div></div><div class="end">${back[x.id] != null ? `<span class="badge ok">رجعت ✓ ${sar(back[x.id])} ر.س</span>` : '<span class="muted small">بانتظار</span>'}</div></a>`).join('')}</div>` : ''}`;
+    $('#wb-go', view).onclick = (e) => busy(e.currentTarget, async () => {
+      const b = e.currentTarget; const t0 = b.innerHTML; b.innerHTML = '<span class="spinner"></span> تكتب لكل وحدة رسالتها…';
+      try { const j = await aiCall({ kind: 'winback', n: 12 }); toast(j.made ? `انكتبت ${j.made} رسالة` : 'ما فيه عميلات جديدات للاسترجاع الحين'); route(); } catch (err) { b.innerHTML = t0; toast(errMsg(err), true); }
+    });
+    $$('.wb-c', view).forEach((card) => {
+      const id = Number(card.dataset.id), d = drafts.find((x) => x.id === id);
+      $('[data-send]', card).onclick = async () => {
+        const text = $('.wb-t', card).value.trim();
+        window.open(`https://wa.me/${waNum(d.phone)}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+        try { await q(sb.from('winback_msgs').update({ status: 'sent', sent_at: new Date().toISOString(), text }).eq('id', id)); card.classList.add('done'); setTimeout(() => card.remove(), 400); } catch (err) { toast(errMsg(err), true); }
+      };
+      $('[data-skip]', card).onclick = async () => { try { await q(sb.from('winback_msgs').update({ status: 'skipped' }).eq('id', id)); card.classList.add('done'); setTimeout(() => card.remove(), 400); } catch (err) { toast(errMsg(err), true); } };
+    });
+  }
+
+  /* ======================= محلل الآراء ======================= */
+  async function mktReviews(view, alive, head) {
+    const rep = (await q(sb.from('ai_reports').select('*').eq('kind', 'reviews').order('created_at', { ascending: false }).limit(1)))[0];
+    if (!alive()) return;
+    const SEV = { high: ['مهم', 'danger'], mid: ['متوسط', 'warn'], low: ['خفيف', ''] };
+    const d = rep?.data || {}, s = rep?.stats || {};
+    const mxD = Math.max(1, ...(s.dist || [1]));
+    view.innerHTML = `${head}
+      <div class="wb-hero card">
+        <div><h2>محلل الآراء</h2><p class="muted">يقرأ كل تقييمات عميلاتكم في ركاز ويطلع لكم: وش يمدحون، ووش يشتكون منه، ولكل أخصائية نقاط قوتها، وردود جاهزة للتقييمات المنخفضة.</p></div>
+        <div class="actions"><button class="btn primary" id="rv-go">✦ ${rep ? 'حلّلي من جديد' : 'حلّلي الآراء الحين'}</button>${rep ? `<span class="muted small">آخر تحليل ${ago(dk(new Date(rep.created_at)))}</span>` : ''}</div>
+      </div>
+      ${rep ? `
+      <div class="wb-res">
+        <div><b class="num">${s.avg}</b><span>متوسط التقييم من ٥</span></div>
+        <div><b class="num">${sdN(s.n)}</b><span>تقييم</span></div>
+        <div><b class="num">${sdN(s.with_text)}</b><span>فيها تعليق</span></div>
+        <div class="${(s.dist?.[0] || 0) + (s.dist?.[1] || 0) + (s.dist?.[2] || 0) ? 'bad' : 'ok'}"><b class="num">${sdN((s.dist?.[0] || 0) + (s.dist?.[1] || 0) + (s.dist?.[2] || 0))}</b><span>٣ نجوم وأقل</span></div>
+      </div>
+      ${d.summary ? `<div class="card rv-sum"><b>الخلاصة</b><p>${esc(d.summary)}</p></div>` : ''}
+      ${(d.alerts || []).length ? `<div class="rv-alerts">${d.alerts.map((a) => `<div class="cx-tip bad" style="opacity:1"><i>⚠️</i><p>${esc(a)}</p></div>`).join('')}</div>` : ''}
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>وش يمدحون</h2></div><div class="list">${(d.praise || []).map((x) => `<div class="row rv-r"><div class="grow"><div class="title">${esc(x.theme)} <span class="muted small">~${x.n}</span></div>${(x.quotes || []).map((qq) => `<div class="rv-q">«${esc(qq)}»</div>`).join('')}</div></div>`).join('') || '<div class="empty">—</div>'}</div></div>
+        <div><div class="section-title"><h2>وش يشتكون منه</h2></div><div class="list">${(d.complaints || []).map((x) => `<div class="row rv-r"><div class="grow"><div class="title">${esc(x.theme)} <span class="badge ${SEV[x.severity]?.[1] || ''}">${SEV[x.severity]?.[0] || ''}</span> <span class="muted small">~${x.n}</span></div>${x.who ? `<div class="meta">${esc(x.who)}</div>` : ''}${(x.quotes || []).map((qq) => `<div class="rv-q">«${esc(qq)}»</div>`).join('')}${x.fix ? `<div class="rv-fix">الحل: ${esc(x.fix)}</div>` : ''}</div></div>`).join('') || '<div class="empty">ما فيه شكاوى واضحة 🤍</div>'}</div></div>
+      </div>
+      <div class="fin-grid">
+        <div><div class="section-title"><h2>التقييمات</h2></div><div class="card rv-dist">${[5, 4, 3, 2, 1].map((n) => `<div class="cx-bar"><span>${'★'.repeat(n)}</span><i><s style="width:${((s.dist?.[n - 1] || 0) / mxD) * 100}%;${n <= 3 ? 'background:#C0705A' : ''}"></s></i><b class="num">${sdN(s.dist?.[n - 1] || 0)}</b></div>`).join('')}
+          ${(s.months || []).length ? `<div class="rv-m">${s.months.map((m) => `<span data-tip="${m.n} تقييم"><b class="num">${m.avg}</b>${MONTHS_AR[Number(m.m.slice(5, 7)) - 1].slice(0, 3)}</span>`).join('')}</div>` : ''}</div></div>
+        <div><div class="section-title"><h2>الأخصائيات</h2></div><div class="list">${(d.providers || []).map((x) => { const st2 = (s.providers || []).find((p) => p.name === x.name); return `<div class="row rv-r"><div class="grow"><div class="title">${esc(x.name)}${st2 ? ` <span class="muted small">★${st2.avg} من ${st2.n}</span>` : ''}</div>${x.strength ? `<div class="meta">💪 ${esc(x.strength)}</div>` : ''}${x.watch ? `<div class="meta">👀 ${esc(x.watch)}</div>` : ''}</div></div>`; }).join('') || '<div class="empty">—</div>'}</div></div>
+      </div>
+      ${(d.replies || []).length ? `<div class="section-title"><h2>ردود جاهزة للتقييمات المنخفضة</h2></div><div class="list">${d.replies.map((x) => `<div class="row rv-r"><div class="grow"><div class="title rv-rep">${esc(x.text)}</div></div><div class="end"><button class="btn sm" data-cp="${esc(x.text)}">نسخ</button></div></div>`).join('')}</div>` : ''}
+      <p class="muted small mt">الاقتباسات حرفية من آراء عميلاتكم. الأرقام التقريبية (~) من قراءة الذكاء الاصطناعي، والإحصائيات الدقيقة من ركاز.</p>` : '<div class="empty card">اضغطي «حلّلي» ويقرأ كل الآراء خلال دقيقة تقريبًا.</div>'}`;
+    sdTips(view);
+    $$('[data-cp]', view).forEach((b) => b.onclick = () => copyTxt(b.dataset.cp, 'الرد'));
+    $('#rv-go', view).onclick = (e) => busy(e.currentTarget, async () => {
+      const b = e.currentTarget; const t0 = b.innerHTML; b.innerHTML = '<span class="spinner"></span> يقرأ الآراء… (دقيقة تقريبًا)';
+      try { await aiCall({ kind: 'reviews' }); toast('جاهز التحليل'); route(); } catch (err) { b.innerHTML = t0; toast(errMsg(err), true); }
+    });
+  }
+
   function wrRender(kind, o) {
     if (!o || o.raw) return `<div class="card wr-r"><div class="wr-txt" style="white-space:pre-wrap">${esc(o?.raw || '')}</div><div class="actions"><button class="btn sm" data-copy>نسخ</button></div></div>`;
     const add = (title, k, pillar, notes) => `<button class="btn sm" data-add='${esc(JSON.stringify({ title, kind: k, pillar, notes }))}'>${I.plus} للوحة المحتوى</button>`;

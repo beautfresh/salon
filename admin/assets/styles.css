@@ -1601,3 +1601,30 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .cx-empty { font-size: 13px; line-height: 1.8; }
 #cx-md .chip.on { background: #5A2A22; color: #F3EBDF; border-color: #5A2A22; }
 .cx-lact .btn svg { width: 16px; height: 16px; flex: none; }
+/* استرجاع ذكي + محلل الآراء */
+.wb-hero { display: grid; gap: 14px; margin-bottom: 14px; }
+.wb-hero h2 { margin: 0 0 4px; }
+.wb-hero p { margin: 0; line-height: 1.8; }
+.wb-k { display: flex; gap: 22px; flex-wrap: wrap; }
+.wb-k b { display: block; font-size: 26px; color: #5A2A22; }
+.wb-k span { font-size: 12.5px; color: var(--muted, #8A6F66); }
+.wb-res { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.wb-res > div { padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface, #fff); }
+.wb-res b { display: block; font-size: 22px; } .wb-res span { font-size: 12.5px; color: var(--muted, #8A6F66); }
+.wb-res .ok b { color: #3F7A4C; } .wb-res .bad b { color: #A4442F; }
+.wb-c { margin-bottom: 10px; display: grid; gap: 8px; transition: opacity .35s, transform .35s; }
+.wb-c.done { opacity: 0; transform: translateX(-20px); }
+.wb-ch { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.wb-n { font-weight: 700; color: #5A2A22; }
+.wb-t { font-size: 14px; line-height: 1.8; }
+.wb-c .btn svg { width: 16px; height: 16px; }
+.rv-sum { margin-bottom: 12px; } .rv-sum p { margin: 6px 0 0; line-height: 1.85; }
+.rv-alerts { display: grid; gap: 8px; margin-bottom: 12px; }
+.rv-r .title { line-height: 1.6; }
+.rv-q { font-size: 13px; color: #6B4A3A; margin-top: 4px; line-height: 1.7; }
+.rv-fix { font-size: 13px; margin-top: 6px; padding: 6px 10px; border-radius: 10px; background: #EAF3EA; color: #2F5E3A; }
+.rv-rep { font-weight: 400; font-size: 14px; }
+.rv-dist { display: grid; gap: 8px; }
+.rv-dist .cx-bar span { color: #C9A46A; letter-spacing: 1px; }
+.rv-m { display: flex; justify-content: space-between; gap: 4px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 11px; color: var(--muted, #8A6F66); }
+.rv-m span { display: grid; text-align: center; } .rv-m b { font-size: 13px; color: #5A2A22; }

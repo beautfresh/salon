@@ -37,7 +37,14 @@ Deno.serve(async (req) => {
     if (!KEY) return json({ error: 'no_key', message: 'الكاتب الذكي يحتاج مفتاح ANTHROPIC_API_KEY في أسرار الدوال' }, 503);
 
     const b = await req.json().catch(() => ({}));
-    const kind = String(b.kind || 'post'); const K = KINDS[kind]; if (!K) return json({ error: 'kind' }, 400);
+    const kind = String(b.kind || 'post');
+    const logUse = (prompt: string, out: unknown, j: any) => db('ai_log', { method: 'POST', body: JSON.stringify({ user_id: user.id, kind, prompt: prompt.slice(0, 2000), output: out, tokens: (j?.usage?.input_tokens || 0) + (j?.usage?.output_tokens || 0) }) }).catch(() => {});
+    if (kind === 'winback' || kind === 'reviews') {
+      const capR = await fetch(`${URL_}/rest/v1/ai_log?select=id&at=gte.${new Date(new Date().setUTCDate(1)).toISOString().slice(0, 10)}`, { method: 'HEAD', headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, Prefer: 'count=exact' } });
+      if (Number((capR.headers.get('content-range') || '*/0').split('/')[1] || 0) >= MONTH_CAP) return json({ error: 'cap', message: `وصلتوا الحد الشهري (${MONTH_CAP} طلب)` }, 429);
+      return kind === 'winback' ? await winback(b, auth, user.id, logUse) : await reviews(user.id, logUse);
+    }
+    const K = KINDS[kind]; if (!K) return json({ error: 'kind' }, 400);
     const topic = String(b.topic || '').slice(0, 600);
     const channel = String(b.channel || '').slice(0, 30);
     const extra = String(b.extra || '').slice(0, 1500);
@@ -107,3 +114,87 @@ ${quotes}
     return json({ error: 'server', message: 'صار خطأ، جربي مرة ثانية', detail: String((e as Error).message || e).slice(0, 300) }, 500);
   }
 });
+
+
+// ===== الذكاء الاصطناعي ١: رسائل استرجاع شخصية =====
+const ask = async (system: string, user: string, max = 4000) => {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'x-api-key': KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: MODEL, max_tokens: max, system, messages: [{ role: 'user', content: user }] }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error?.message || 'ai');
+  const txt = (j.content || []).map((x: any) => x.text || '').join('').trim();
+  let out: any; try { out = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)); } catch { out = { raw: txt }; }
+  return { out, j };
+};
+const first = (n: string) => String(n || '').trim().split(/\s+/)[0] || '';
+
+async function winback(b: any, auth: string, uid: string, logUse: any) {
+  const n = Math.min(20, Math.max(1, Number(b.n || 12)));
+  const pr = await fetch(`${URL_}/rest/v1/rpc/winback_pool`, { method: 'POST', headers: { apikey: ANON, Authorization: auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_limit: n, p_offset: 0 }) });
+  const pool = await pr.json();
+  if (!pr.ok) return json({ error: 'pool', message: pool?.message || 'ما قدرنا نجيب القائمة' }, 400);
+  if (!pool?.list?.length) return json({ kind: 'winback', made: 0, total: pool?.total || 0 });
+  const pub = await fetch(`${URL_}/rest/v1/rpc/site_public`, { method: 'POST', headers: { apikey: SRV, Authorization: `Bearer ${SRV}`, 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json()).catch(() => ({}));
+  const offers = (pub?.offers || []).map((o: any) => `${o.title}${o.price ? `: ${o.price}` : ''}${o.ends ? ` لين ${o.ends}` : ''}`).join('\n') || 'لا يوجد';
+  const system = `أنتِ تكتبين رسائل واتساب من صالون «بيوتفريش» في الأحساء لعميلات غابوا عنّا فترة. اللهجة سعودية خليجية فقط (لا «كمان» ولا «هيك»).
+لكل عميلة رسالة وحدة شخصية، دافية وقصيرة (أقل من ٤٥ كلمة):
+- ابدئي باسمها الأول فقط.
+- اذكري خدمتها المعتادة أو الأخيرة بشكل طبيعي، واسم أخصائيتها الأول لو موجود (مثلًا «روز مشتاقة لك»).
+- لا تذكرين عدد الأيام ولا المبالغ ولا إنها «غابت».
+- لا تخترعين خصومات أو هدايا أو عروض. العروض المسموحة فقط هذي:\n${offers}
+- لا ضغط ولا استعجال مصطنع.
+- نوّعي البدايات، لا تبدأ كل الرسائل بنفس الكلمة.
+- اختمي برابط الحجز: beautfresh.com/book
+- إيموجي واحد أو اثنين بالكثير.
+ردك JSON صالح فقط: {"msgs":[{"id":"","text":""}]}`;
+  const lines = pool.list.map((c: any) => `id=${c.id} | الاسم: ${first(c.name)} | آخر خدمة: ${c.last_service || '-'} | المعتادة: ${c.top_service || '-'} | الأخصائية: ${first(String(c.last_provider || '').split(',')[0]) || '-'} | زيارات: ${c.visits}`).join('\n');
+  const { out, j } = await ask(system, `اكتبي رسالة لكل وحدة:\n${lines}`, 4000);
+  const by: Record<string, string> = {}; (out?.msgs || []).forEach((m: any) => { if (m?.id && m?.text) by[String(m.id)] = String(m.text).slice(0, 700); });
+  const rows = pool.list.filter((c: any) => by[c.id]).map((c: any) => ({
+    customer_id: c.id, name: c.name, phone: c.phone, last_service: c.last_service, last_provider: c.last_provider, last_visit: c.last_visit,
+    visits: c.visits, spend: c.spend, days_away: c.days_away, text: by[c.id], status: 'draft', created_by: uid,
+  }));
+  if (rows.length) await db('winback_msgs', { method: 'POST', body: JSON.stringify(rows) });
+  await logUse(`winback x${rows.length}`, { made: rows.length }, j);
+  return json({ kind: 'winback', made: rows.length, total: pool.total });
+}
+
+// ===== الذكاء الاصطناعي ٢: محلل الآراء =====
+async function reviews(uid: string, logUse: any) {
+  const R: any[] = await db('rekaz_reviews?select=id,customer_name,product_name,provider_names,rating,description,reply,created_at&order=created_at.desc&limit=800');
+  if (!R?.length) return json({ error: 'empty', message: 'ما فيه آراء' }, 400);
+  const avg = (a: any[]) => (a.length ? Math.round((a.reduce((s, x) => s + Number(x.rating || 0), 0) / a.length) * 100) / 100 : 0);
+  const group = (key: (x: any) => string[]) => { const m: Record<string, any[]> = {}; R.forEach((x) => key(x).forEach((k) => { if (k) (m[k] ||= []).push(x); })); return Object.entries(m).map(([k, a]) => ({ name: k, n: a.length, avg: avg(a), low: a.filter((x) => x.rating <= 3).length })).sort((a, b) => b.n - a.n); };
+  const dist = [1, 2, 3, 4, 5].map((s) => R.filter((x) => Number(x.rating) === s).length);
+  const months: Record<string, any[]> = {}; R.forEach((x) => { const m = String(x.created_at).slice(0, 7); (months[m] ||= []).push(x); });
+  const stats = {
+    n: R.length, avg: avg(R), dist, with_text: R.filter((x) => String(x.description || '').trim().length > 3).length,
+    providers: group((x) => String(x.provider_names || '').split(',').map((s) => s.trim())).slice(0, 15),
+    services: group((x) => [String(x.product_name || '').trim()]).slice(0, 15),
+    months: Object.entries(months).sort().slice(-8).map(([m, a]) => ({ m, n: a.length, avg: avg(a) })),
+    first: R[R.length - 1]?.created_at, last: R[0]?.created_at,
+  };
+  const texts = R.filter((x) => String(x.description || '').trim().length > 3).slice(0, 450)
+    .map((x) => `[${x.id}] ★${x.rating} | ${x.product_name || '-'} | ${x.provider_names || '-'} | ${String(x.created_at).slice(0, 10)} | ${String(x.description).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
+  const recentLow = R.filter((x) => x.rating <= 3 && !x.reply && Date.now() - new Date(x.created_at).getTime() < 120 * 86400000).slice(0, 12).map((x) => x.id);
+  const system = `أنتِ محللة تجربة العملاء لصالون «بيوتفريش» في الأحساء. اقرئي الآراء الحقيقية وطلّعي تقرير عملي للإدارة باللهجة السعودية الخليجية، مختصر وواضح.
+قواعد:
+- الاقتباسات حرفية فقط من النصوص، بدون أي تعديل، وجملة قصيرة.
+- لا تخترعين أرقام. العدد التقريبي لكل موضوع من قراءتك (n).
+- كوني منصفة: المديح والملاحظات.
+- اقتراحات الحل عملية ومحددة تقدر الإدارة تسويها هالأسبوع.
+- الردود الجاهزة للتقييمات المنخفضة: محترمة، تعتذر بدون تبرير، تدعو العميلة تتواصل، أقل من ٤٠ كلمة، باللهجة.
+ردك JSON صالح فقط:
+{"summary":"٣ جمل","praise":[{"theme":"","n":0,"quotes":[""]}],"complaints":[{"theme":"","n":0,"severity":"high|mid|low","who":"خدمة أو أخصائية لو واضح","quotes":[""],"fix":""}],"providers":[{"name":"","strength":"","watch":""}],"alerts":[""],"replies":[{"id":"","text":""}]}`;
+  const user = `الإحصائيات: ${JSON.stringify({ n: stats.n, avg: stats.avg, dist, providers: stats.providers.slice(0, 10), services: stats.services.slice(0, 10), months: stats.months })}
+الآراء المكتوبة (id ★ | الخدمة | الأخصائية | التاريخ | النص):
+${texts}
+
+اكتبي ردود جاهزة لهذي الآراء المنخفضة فقط (لو موجودة في القائمة): ${recentLow.join(', ') || 'لا يوجد'}`;
+  const { out, j } = await ask(system, user, 5000);
+  const rep = await db('ai_reports', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ kind: 'reviews', data: out, stats, created_by: uid }) });
+  await logUse('reviews report', { id: rep?.[0]?.id }, j);
+  return json({ kind: 'reviews', report: rep?.[0] || { data: out, stats } });
+}

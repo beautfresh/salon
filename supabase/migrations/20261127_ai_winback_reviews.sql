@@ -44,7 +44,7 @@ begin
   select jsonb_build_object('total', (select count(*) from pool), 'spend', (select round(coalesce(sum(spend), 0)) from pool),
     'list', coalesce((select jsonb_agg(jsonb_build_object(
       'id', p.customer_id, 'name', p.name, 'phone', p.phone, 'visits', p.visits, 'spend', round(p.spend),
-      'last_visit', (p.last_at at time zone 'Asia/Riyadh')::date, 'days_away', ((now() - p.last_at) / interval '1 day')::int,
+      'last_visit', (p.last_at at time zone 'Asia/Riyadh')::date, 'days_away', (extract(epoch from now() - p.last_at) / 86400)::int,
       'last_service', l.product_name, 'last_provider', l.provider_names,
       'top_service', (select r.product_name from public.rekaz_reservations r where r.customer_id = p.customer_id and r.status = 'confirmed' group by 1 order by count(*) desc limit 1)
     ) order by p.spend desc) from pick p

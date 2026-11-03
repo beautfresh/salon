@@ -108,7 +108,7 @@ async function setup() {
   }
   if (ep.status !== 'verified') { await call('PATCH', `/webhook-endpoints/${ep.id}/verification`, {}, undefined, 'events'); steps.push('verified'); }
   for (const f of FAMILIES) {
-    try { await call('POST', '/event-subscriptions', { webhookEndpointId: ep.id, eventFamily: f }, `sub-${ep.id}-${f}`, 'events'); steps.push(`sub_${f}`); }
+    try { await call('POST', '/event-subscriptions', { webhookEndpointId: ep.id, eventFamily: `events.${f}` }, `sub-${ep.id}-${f}`, 'events'); steps.push(`sub_${f}`); }
     catch (e) { steps.push(`sub_${f}_failed: ${(e as Error).message.slice(0, 160)}`); }
   }
   return steps;

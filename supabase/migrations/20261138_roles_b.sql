@@ -111,7 +111,7 @@ begin
     'week', (select count(*) from mine where status in ('confirmed', 'pending') and start_at >= now() and start_at < private.rd(td + 8)),
     'month', (select to_jsonb(mon) from mon), 'last_month', (select to_jsonb(lmon) from lmon),
     'rank', (select count(*) + 1 from rank where v > (select v from mon)), 'ranked', (select count(*) from rank),
-    'rating', (select jsonb_build_object('avg', round(avg(rating)::numeric, 2), 'n', count(*), 'm', count(*) filter (where created_at >= private.rd(ms)))) from rv),
+    'rating', (select jsonb_build_object('avg', round(avg(rating)::numeric, 2), 'n', count(*), 'm', count(*) filter (where created_at >= private.rd(ms))) from rv),
     'reviews', coalesce((select jsonb_agg(x) from (select jsonb_build_object('rating', rating, 'text', description, 'svc', product_name, 'at', created_at) x from rv where length(coalesce(description, '')) > 3 order by created_at desc limit 6) z), '[]'::jsonb),
     'due', coalesce((select jsonb_agg(jsonb_build_object('id', customer_id, 'name', name, 'phone', phone, 'svc', product_name, 'visits', visits, 'days', days)) from due), '[]'::jsonb),
     'logs', (select count(*) from public.cx_log where by_id = auth.uid() and created_at >= private.rd(ms)))

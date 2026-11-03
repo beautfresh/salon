@@ -10,7 +10,7 @@ language plpgsql security definer set search_path = '' as $$
 begin
   if not p_force and exists (select 1 from public.cx_stats where refreshed_at > now() - interval '10 minutes' limit 1) then return; end if;
   if not pg_try_advisory_xact_lock(778201) then return; end if;
-  delete from public.cx_stats;
+  delete from public.cx_stats where customer_id is not null;
   insert into public.cx_stats (customer_id, visits, spend, first_at, last_at, next_at, cancels, cadence)
   select customer_id, visits, spend, first_at, last_at, next_at, cancels, cadence from private.cx_agg();
 end $$;

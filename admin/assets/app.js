@@ -2059,9 +2059,10 @@
 
   async function pageCx(view, args, _p, alive) {
     const id = decodeURIComponent(args[0] || '');
-    const c = await q(sb.rpc('cx_profile', { p_id: id }));
+    const [c, log] = await Promise.all([q(sb.rpc('cx_profile', { p_id: id })), q(sb.from('cx_log').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(60)).catch(() => [])]);
     if (!alive()) return;
     if (!c) { view.innerHTML = '<div class="notice danger">ما لقينا هذي العميلة</div>'; return; }
+    const lastV = (log || []).find((x) => x.kind === 'visit');
     setTitle(c.name || 'ملف العميلة');
     const M = isManager(), n = c.note || {}, fn = firstName(c.name);
     const top = c.services[0], prov = c.providers[0];
@@ -2078,6 +2079,7 @@
     // قبل لا تستقبلينها
     const tips = [];
     if (n.allergies) tips.push(['⚠️', `<b>انتبهي:</b> ${esc(n.allergies)}`, 'bad']);
+    if (lastV) tips.push(['📝', `<b>آخر زيارة</b> (${lastV.visit_on ? cxDate(lastV.visit_on + 'T12:00:00') : ago(dk(new Date(lastV.created_at)))}${lastV.by_name ? ` · ${esc(firstName(lastV.by_name))}` : ''}): ${esc(lastV.done || '')}${lastV.result ? `. ${esc(lastV.result)}` : ''}${lastV.next_time ? `<br><b>المرة الجاية:</b> ${esc(lastV.next_time)}` : ''}`, lastV.mood === 'upset' ? 'bad' : 'accent']);
     if (today) tips.push(['📍', `عندها موعد <b>اليوم ${cxTime(today.at)}</b>: ${esc(today.svc || '')}${today.by ? ` مع ${esc(cxProv(today.by))}` : ''}`, 'accent']);
     else if (next) tips.push(['📅', `موعدها الجاي <b>${cxDate(next.at)} ${cxTime(next.at)}</b>: ${esc(next.svc || '')}`, '']);
     if (n.prefs) tips.push(['🤍', `<b>تحب:</b> ${esc(n.prefs)}`, '']);
@@ -2091,7 +2093,7 @@
     if (c.orders?.web_unpaid) tips.push(['🌐', `عندها ${c.orders.web_unpaid} طلب من الموقع ما اكتمل دفعه`, 'warn']);
     if (c.winback) tips.push(['💌', `انرسل لها «وحشتينا» ${ago(dk(new Date(c.winback.at)))}`, '']);
 
-    const PRI = { '⚠️': 0, '📍': 1, '💬': 2, '🎁': 3, '🎂': 4, '🤍': 5, '👩‍🎨': 6, '💅': 7, '🔁': 8, '📅': 9, '⏳': 10, '🌐': 11, '💌': 12 };
+    const PRI = { '⚠️': 0, '📝': 1, '📍': 1.5, '💬': 2, '🎁': 3, '🎂': 4, '🤍': 5, '👩‍🎨': 6, '💅': 7, '🔁': 8, '📅': 9, '⏳': 10, '🌐': 11, '💌': 12 };
     tips.sort((x, y) => (PRI[x[0]] ?? 20) - (PRI[y[0]] ?? 20));
     // الإيقاع: آخر ١٢ شهر
     const months = []; { const t = D(todayR()); for (let i = 11; i >= 0; i--) { const d = new Date(t.getFullYear(), t.getMonth() - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); } }
@@ -2132,12 +2134,17 @@
             ${c.providers.length ? `<div class="cx-provs">${c.providers.map((p) => `<span class="chip sm">${esc(p.name)} <b class="num">${p.n}</b></span>`).join('')}</div>` : ''}</div></div>
         </div>
 
-        <div class="section-title"><h2>ملاحظات الصالون عليها</h2><button class="btn sm" id="cx-edit">${I.edit} ${n.prefs || n.allergies || n.notes ? 'تعديل' : 'أضيفي'}</button></div>
-        <div class="card cx-notes" id="cx-notes">${n.prefs || n.allergies || n.notes ? `
+        <div class="section-title"><h2>ملاحظات الفريق عليها</h2></div>
+        <div class="cx-lact"><button class="btn primary sm" id="cx-lv">📝 وش صار بالزيارة</button><button class="btn sm" id="cx-ln">${I.plus} ملاحظة</button><button class="btn sm" id="cx-edit">${I.edit} ${n.prefs || n.allergies ? 'الحساسية والتفضيلات' : 'حساسية أو تفضيلات'}</button></div>
+        ${n.prefs || n.allergies || n.notes ? `<div class="card cx-notes">
           ${n.allergies ? `<div class="cx-n bad"><span>حساسية أو تنبيه</span><p>${esc(n.allergies)}</p></div>` : ''}
           ${n.prefs ? `<div class="cx-n"><span>تفضيلاتها</span><p>${esc(n.prefs)}</p></div>` : ''}
-          ${n.notes ? `<div class="cx-n"><span>ملاحظات</span><p>${esc(n.notes)}</p></div>` : ''}
-          <div class="muted small">آخر تعديل ${ago(dk(new Date(n.updated_at)))}</div>` : '<div class="muted">لونها المفضل، شكل الأظافر، درجة حرارة الماء، أي حساسية… أي شي يخلي زيارتها الجاية أحلى. يطلع لكل الفريق أول ما يفتحون ملفها.</div>'}</div>
+          ${n.notes ? `<div class="cx-n"><span>ملاحظات ثابتة</span><p>${esc(n.notes)}</p></div>` : ''}</div>` : ''}
+        <div class="cx-log">${(log || []).length ? log.map((x) => `<div class="cx-le ${x.kind} ${x.mood || ''}">
+            <span class="cx-la">${esc(initial(x.by_name || '؟'))}</span>
+            <div class="grow"><div class="cx-lh"><b>${esc(x.by_name || 'الفريق')}</b><span>${x.kind === 'visit' ? `زيارة ${x.visit_on ? cxDate(x.visit_on + 'T12:00:00') : ''}` : 'ملاحظة'} · ${ago(dk(new Date(x.created_at)))}</span>${x.mood ? `<i class="cx-mood">${{ happy: '😊 مبسوطة', ok: '🙂 عادي', upset: '😕 ما كانت مرتاحة' }[x.mood]}</i>` : ''}</div>
+              ${x.kind === 'visit' ? `${x.done ? `<p><span>وش سوّينا:</span> ${esc(x.done)}</p>` : ''}${x.result ? `<p><span>كيف كانت:</span> ${esc(x.result)}</p>` : ''}${x.next_time ? `<p class="nx"><span>المرة الجاية:</span> ${esc(x.next_time)}</p>` : ''}` : `<p>${esc(x.text || '')}</p>`}</div>
+            ${x.by_id === S.profile?.id || M ? `<button class="x-btn" data-dl="${x.id}" aria-label="حذف">×</button>` : ''}</div>`).join('') : '<div class="card muted cx-empty">ما فيه شي مسجل للحين. بعد كل زيارة سجّلي وش انسوّى لها (مثلًا رقم الصبغة) وكيف كانت، عشان اللي تستقبلها المرة الجاية تعرف كل شي.</div>'}</div>
 
         ${c.phone ? `<div class="section-title"><h2>رسالة جاهزة</h2></div><div class="chips wrap">${tpls.map(([k, l]) => `<a class="chip" target="_blank" rel="noopener" href="https://wa.me/${waNum(c.phone)}?text=${encodeURIComponent(T[k])}">${esc(l)}</a>`).join('')}</div>` : ''}
 
@@ -2152,6 +2159,36 @@
         ${c.reviews.length ? `<div class="section-title"><h2>تقييماتها</h2></div><div class="list">${c.reviews.map((r) => `<div class="row"><span class="cx-stars ${r.rating <= 3 ? 'low' : ''}">★${r.rating}</span><div class="grow"><div class="title">${r.text ? esc(r.text) : '<span class="muted">بدون تعليق</span>'}</div><div class="meta">${esc(r.svc || '')}${r.by ? ` · ${esc(cxProv(r.by))}` : ''} · ${cxDate(r.at, 1)}</div></div></div>`).join('')}</div>` : ''}
         <p class="muted small" style="margin-top:18px">الزيارات والمواعيد من ركاز، وتتحدث تلقائيًا. الملاحظات تنحفظ هنا للفريق.</p>
       </div>`;
+    const lastDay = c.timeline.find((d) => !d.cx)?.d || todayR();
+    $('#cx-lv', view).onclick = () => modal(`
+      <h3>وش صار بزيارة ${esc(fn || 'العميلة')}؟</h3>
+      <form id="cx-vf">
+        <div class="field"><label>يوم الزيارة</label><input class="input" type="date" name="visit_on" value="${lastDay}" max="${todayR()}"></div>
+        <div class="field"><label>وش سوّينا لها</label><textarea class="input" name="done" rows="2" maxlength="400" required placeholder="مثال: صبغة 7.1 مع أكسجين 20، تريم 2 سم، جل نيود"></textarea></div>
+        <div class="field"><label>كيف كانت</label><div class="chips" id="cx-md">${[['happy', '😊 مبسوطة'], ['ok', '🙂 عادي'], ['upset', '😕 ما كانت مرتاحة']].map(([k, l]) => `<button type="button" class="chip" data-m="${k}">${l}</button>`).join('')}</div>
+          <textarea class="input" name="result" rows="2" maxlength="400" style="margin-top:8px" placeholder="مثال: عجبها اللون بس تبي أفتح شوي"></textarea></div>
+        <div class="field"><label>للمرة الجاية</label><textarea class="input" name="next_time" rows="2" maxlength="300" placeholder="مثال: نجرب 7.3 أدفى، وتبي موعد مسائي"></textarea></div>
+        <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">حفظ</button></div>
+      </form>`, (root, close) => {
+      let mood = null;
+      $$('[data-m]', root).forEach((b) => b.onclick = () => { mood = mood === b.dataset.m ? null : b.dataset.m; $$('[data-m]', root).forEach((x) => x.classList.toggle('on', x.dataset.m === mood)); });
+      $('#cx-vf', root).addEventListener('submit', (e) => { e.preventDefault(); busy($('button.primary', root), async () => {
+        const f = new FormData(e.target); const v = (k) => String(f.get(k) || '').trim() || null;
+        try { await q(sb.from('cx_log').insert({ customer_id: c.id, kind: 'visit', visit_on: v('visit_on'), done: v('done'), result: v('result'), mood, next_time: v('next_time'), by_name: S.profile?.full_name || S.profile?.login || null })); toast('انحفظت، وبتطلع للي تستقبلها المرة الجاية'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      }); });
+    });
+    $('#cx-ln', view).onclick = () => modal(`
+      <h3>ملاحظة على ${esc(fn || 'العميلة')}</h3>
+      <form id="cx-nf"><div class="field"><textarea class="input" name="text" rows="4" maxlength="800" required placeholder="أي شي يفيد الفريق"></textarea></div>
+        <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">حفظ</button></div></form>`, (root, close) => {
+      $('#cx-nf', root).addEventListener('submit', (e) => { e.preventDefault(); busy($('button.primary', root), async () => {
+        try { await q(sb.from('cx_log').insert({ customer_id: c.id, kind: 'note', text: String(new FormData(e.target).get('text') || '').trim(), by_name: S.profile?.full_name || S.profile?.login || null })); toast('انحفظت'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+      }); });
+    });
+    $$('[data-dl]', view).forEach((b) => b.onclick = async () => {
+      if (!(await confirmBox('حذف الملاحظة', 'تنحذف من ملف العميلة.', 'حذف', true))) return;
+      try { await q(sb.from('cx_log').delete().eq('id', Number(b.dataset.dl))); route(); } catch (err) { toast(errMsg(err), true); }
+    });
     $('#cx-tmore', view)?.addEventListener('click', (e) => { $$('.cx-tip[hidden]', view).forEach((x) => { x.hidden = false; }); e.currentTarget.remove(); });
     $('#cx-all', view)?.addEventListener('click', (e) => { $$('.cx-more', view).forEach((x) => { x.hidden = false; }); e.currentTarget.remove(); });
     $('#cx-edit', view).onclick = () => modal(`

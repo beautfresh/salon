@@ -1583,3 +1583,21 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .cx-hero .grow { min-width: 0; flex: 1 1 170px; }
 .cx-hero .cl-acts { flex: none; width: auto; display: flex; gap: 8px; position: static; }
 @media (max-width: 640px) { .cx-hero .cl-acts { width: 100%; justify-content: flex-start; } }
+/* سجل الفريق على العميلة */
+.cx-lact { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.cx-notes { margin-bottom: 10px; }
+.cx-log { display: grid; gap: 8px; }
+.cx-le { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface, #fff); animation: cxIn .4s cubic-bezier(.2, .8, .2, 1) both; }
+.cx-le.visit { border-inline-start: 3px solid #8A5A45; }
+.cx-le.visit.upset { border-inline-start-color: #A4442F; background: #FDF6F3; }
+.cx-le.visit.happy { border-inline-start-color: #3F7A4C; }
+.cx-la { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; background: #F3EBDF; color: #5A2A22; font-weight: 700; font-size: 13px; }
+.cx-lh { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; margin-bottom: 4px; }
+.cx-lh b { font-size: 13.5px; } .cx-lh > span { font-size: 12px; color: var(--muted, #8A6F66); }
+.cx-mood { font-style: normal; font-size: 12px; padding: 1px 8px; border-radius: 99px; background: #F3EBDF; }
+.cx-le p { margin: 2px 0 0; font-size: 13.5px; line-height: 1.7; }
+.cx-le p span { color: var(--muted, #8A6F66); font-size: 12.5px; }
+.cx-le p.nx { color: #5A2A22; }
+.cx-empty { font-size: 13px; line-height: 1.8; }
+#cx-md .chip.on { background: #5A2A22; color: #F3EBDF; border-color: #5A2A22; }
+.cx-lact .btn svg { width: 16px; height: 16px; flex: none; }

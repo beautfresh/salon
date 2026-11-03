@@ -37,7 +37,7 @@ create policy kb_feedback_del on public.kb_feedback for delete to authenticated 
 
 -- توحيد الحروف العربية للبحث (أ إ آ ← ا، ة ← ه، ى ← ي، وحذف التشكيل والتطويل)
 create or replace function private.ar_norm(t text) returns text language sql immutable set search_path = '' as $$
-  select lower(regexp_replace(translate(coalesce(t, ''), 'أإآٱةىـ', 'اااايه'), '[ً-ْ]', '', 'g'))
+  select lower(regexp_replace(translate(coalesce(t, ''), 'أإآٱةىـ', 'ااااهي'), '[ً-ْ]', '', 'g'))
 $$;
 
 -- البحث: كل كلمة من السؤال تعطي نقاط حسب مكانها (العنوان والوسوم أقوى)

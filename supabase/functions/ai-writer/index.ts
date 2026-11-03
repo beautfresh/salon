@@ -126,6 +126,7 @@ const ask = async (system: string, user: string, max = 4000) => {
   if (!r.ok) throw new Error(j?.error?.message || 'ai');
   const txt = (j.content || []).map((x: any) => x.text || '').join('').trim();
   let out: any; try { out = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)); } catch { out = { raw: txt }; }
+  if (!txt) throw new Error(`empty:${j.stop_reason}:${(j.content || []).map((x: any) => x.type).join('+')}:${j.usage?.output_tokens}`);
   return { out, j };
 };
 const first = (n: string) => String(n || '').trim().split(/\s+/)[0] || '';
@@ -150,7 +151,7 @@ async function winback(b: any, auth: string, uid: string, logUse: any) {
 - إيموجي واحد أو اثنين بالكثير.
 ردك JSON صالح فقط: {"msgs":[{"id":"","text":""}]}`;
   const lines = pool.list.map((c: any) => `id=${c.id} | الاسم: ${first(c.name)} | آخر خدمة: ${c.last_service || '-'} | المعتادة: ${c.top_service || '-'} | الأخصائية: ${first(String(c.last_provider || '').split(',')[0]) || '-'} | زيارات: ${c.visits}`).join('\n');
-  const { out, j } = await ask(system, `اكتبي رسالة لكل وحدة:\n${lines}`, 4000);
+  const { out, j } = await ask(system, `اكتبي رسالة لكل وحدة:\n${lines}`, 8000);
   const by: Record<string, string> = {}; (out?.msgs || []).forEach((m: any) => { if (m?.id && m?.text) by[String(m.id)] = String(m.text).slice(0, 700); });
   const rows = pool.list.filter((c: any) => by[c.id]).map((c: any) => ({
     customer_id: c.id, name: c.name, phone: c.phone, last_service: c.last_service, last_provider: c.last_provider, last_visit: c.last_visit,
@@ -193,7 +194,7 @@ async function reviews(uid: string, logUse: any) {
 ${texts}
 
 اكتبي ردود جاهزة لهذي الآراء المنخفضة فقط (لو موجودة في القائمة): ${recentLow.join(', ') || 'لا يوجد'}`;
-  const { out, j } = await ask(system, user, 5000);
+  const { out, j } = await ask(system, user, 16000);
   const rep = await db('ai_reports', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ kind: 'reviews', data: out, stats, created_by: uid }) });
   await logUse('reviews report', { id: rep?.[0]?.id }, j);
   return json({ kind: 'reviews', report: rep?.[0] || { data: out, stats } });

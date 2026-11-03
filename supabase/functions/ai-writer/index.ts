@@ -111,7 +111,7 @@ ${quotes}
     await db('ai_log', { method: 'POST', body: JSON.stringify({ user_id: user.id, kind, prompt: userMsg.slice(0, 2000), output: out, tokens: (j.usage?.input_tokens || 0) + (j.usage?.output_tokens || 0) }) }).catch(() => {});
     return json({ kind, out, left: MONTH_CAP - n - 1 });
   } catch (e) {
-    return json({ error: 'server', message: 'صار خطأ، جربي مرة ثانية', detail: String((e as Error).message || e).slice(0, 300) }, 500);
+    const msg = String((e as Error).message || e); return json({ error: 'server', message: /[\u0600-\u06FF]/.test(msg) ? msg : 'صار خطأ، جربي مرة ثانية', detail: msg.slice(0, 300) }, 500);
   }
 });
 
@@ -152,6 +152,7 @@ async function winback(b: any, auth: string, uid: string, logUse: any) {
 ردك JSON صالح فقط: {"msgs":[{"id":"","text":""}]}`;
   const lines = pool.list.map((c: any) => `id=${c.id} | الاسم: ${first(c.name)} | آخر خدمة: ${c.last_service || '-'} | المعتادة: ${c.top_service || '-'} | الأخصائية: ${first(String(c.last_provider || '').split(',')[0]) || '-'} | زيارات: ${c.visits}`).join('\n');
   const { out, j } = await ask(system, `اكتبي رسالة لكل وحدة:\n${lines}`, 8000);
+  if (!out?.msgs) throw new Error('ما اكتملت الرسائل هالمرة، جربي مرة ثانية');
   const by: Record<string, string> = {}; (out?.msgs || []).forEach((m: any) => { if (m?.id && m?.text) by[String(m.id)] = String(m.text).slice(0, 700); });
   const rows = pool.list.filter((c: any) => by[c.id]).map((c: any) => ({
     customer_id: c.id, name: c.name, phone: c.phone, last_service: c.last_service, last_provider: c.last_provider, last_visit: c.last_visit,
@@ -195,7 +196,8 @@ async function reviews(uid: string, logUse: any) {
 ${texts}
 
 اكتبي ردود جاهزة لهذي الآراء المنخفضة فقط (لو موجودة في القائمة): ${recentLow.join(', ') || 'لا يوجد'}`;
-  const { out, j } = await ask(system, user, 9000);
+  const { out, j } = await ask(system, user, 16000);
+  if (!out || out.raw != null || !out.summary) throw new Error('التحليل ما اكتمل هالمرة، جربي مرة ثانية');
   const rep = await db('ai_reports', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ kind: 'reviews', data: out, stats, created_by: uid }) });
   await logUse('reviews report', { id: rep?.[0]?.id }, j);
   return json({ kind: 'reviews', report: rep?.[0] || { data: out, stats } });

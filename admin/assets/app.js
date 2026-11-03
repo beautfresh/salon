@@ -2116,16 +2116,32 @@
       e.preventDefault(); const qq = inp.value.trim(); if (!qq) return;
       const ph = document.createElement('div'); ph.className = 'card ask-c'; ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="muted"><span class="spinner"></span> يدوّر في الأرقام…</div>`; out.prepend(ph); inp.value = '';
       busy($('#ask-f button', view), async () => {
-        try { const j = await aiCall({ kind: 'ask', q: qq }); const item = { q: qq, a: j.answer, c: j.clients || [] }; ASK_LOG.unshift(item); if (ASK_LOG.length > 12) ASK_LOG.pop(); ph.outerHTML = askCard(item); bindCard($('.ask-c', out)); }
+        try { const j = await aiCall({ kind: 'ask', q: qq }); const item = { q: qq, a: j.answer, c: j.clients || [], go: j.go || [] }; ASK_LOG.unshift(item); if (ASK_LOG.length > 12) ASK_LOG.pop(); ph.outerHTML = askCard(item); bindCard($('.ask-c', out)); }
         catch (err) { ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="notice warn">${esc(errMsg(err))}</div>`; }
       });
     });
     if (params.get('q')) { inp.value = params.get('q'); $('#ask-f', view).requestSubmit(); }
     setTimeout(() => inp.focus(), 50);
   }
+  const ASK_GO = {
+    winback: ['💌', 'افتحي الاسترجاع الذكي', 'يكتب رسائل للغايبات وتراجعينها قبل الإرسال', '#/marketing?t=winback'],
+    reviews: ['⭐', 'افتحي محلل الآراء', 'وش يمدحون ووش يزعّلهم', '#/marketing?t=reviews'],
+    campaigns: ['📣', 'افتحي الحملات', 'رتبي حملة وتابعي نتيجتها', '#/marketing?t=campaigns'],
+    writer: ['✍️', 'افتحي الكاتب الذكي', 'منشور أو عرض جاهز بثواني', '#/marketing?t=writer'],
+    after: ['💬', 'افتحي «بعد الزيارة»', 'اسألي عميلات أمس عن تجربتهن', '#/appts?t=after'],
+    appts: ['📅', 'افتحي مواعيد الصالون', 'جدول اليوم والمواعيد الجاية', '#/appts'],
+    away: ['🌙', 'افتحي العميلات الغايبات', 'كل اللي تأخروا عن عادتهم', '#/clients?s=away'],
+    vip: ['💎', 'افتحي عميلات VIP', 'أعلى ٥٪ صرف', '#/clients?s=vip'],
+    sales: ['📈', 'افتحي المبيعات والأداء', 'الأرقام بالتفصيل واللمحات', '#/sales'],
+    finance: ['🧾', 'افتحي المالية', 'المصروفات والصافي والتقرير', '#/finance'],
+    team: ['👥', 'افتحي الفريق', 'المناوبات والإجازات', '#/team?t=shifts'],
+    gifts: ['🎁', 'افتحي قسائم الهدايا', 'سوي قسيمة أو تابعي المصروف منها', '#/kit?t=gifts'],
+    seasons: ['🗓️', 'افتحي المواسم', 'وش الجاي ووش تجهزون له', '#/marketing?t=seasons'],
+  };
   function askCard(x) {
-    const list = x.c || [];
+    const list = x.c || [], go = (x.go || []).map((k) => ASK_GO[k]).filter(Boolean);
     return `<div class="card ask-c"><div class="ask-qq">${esc(x.q)}</div><div class="ask-a">${esc(x.a || '').replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div>
+      ${go.length ? `<div class="ask-go">${go.map(([ic, l, d, h]) => `<a class="ask-gl" href="${h}"><span class="ask-gi">${ic}</span><span class="grow"><b>${l}</b><small>${d}</small></span><span class="ask-ga">←</span></a>`).join('')}</div>` : ''}
       ${list.length ? `<div class="ask-lh"><b>${list.length} عميلة</b><button class="btn sm" data-copy="${esc(list.map((c) => `${c.name} ${c.phone || ''}`).join('\n'))}">نسخ القائمة</button></div>
       <div class="list">${list.map((c) => `<div class="row"><a class="grow" href="#/cx/${encodeURIComponent(c.id)}"><div class="title">${esc(c.name || '')}</div><div class="meta">${esc(c.last_service || '')}${c.last_provider ? ` · ${esc(cxProv(c.last_provider))}` : ''} · ${c.days_away != null ? `قبل ${sdN(c.days_away)} يوم` : ''} · ${cxVisits(c.visits)} · ${sar(c.spend)} ر.س</div></a>${c.phone ? `<button class="btn sm" data-wa="${esc(c.phone)}" data-n="${esc(firstName(c.name))}">${I.wa}</button>` : ''}</div>`).join('')}</div>` : ''}</div>`;
   }

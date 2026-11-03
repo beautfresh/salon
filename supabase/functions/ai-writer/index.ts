@@ -228,7 +228,10 @@ async function askSite(b: any, logUse: any) {
 - لو السؤال يطلب قائمة عميلات، استخدمي find_clients وحطي معرفاتهن في client_ids.
 - لا تذكرين الأدوات ولا حدودها ولا أي كلام تقني، ولا تكتبين أرقام الجوالات في النص (القائمة تطلع لحالها تحت الجواب).
 - استخدمي أقل عدد أدوات يكفي، وخلّي الجواب قصير.
-- ردك الأخير JSON فقط: {"answer":"النص","client_ids":["..."]}`;
+- لو فيه اقتراح، حطي معه وين تروح تنفذه: اختاري من هالمفاتيح بس في go (واحد أو اثنين بالكثير، وبدون ما تكتبينها في النص):
+  winback = الاسترجاع الذكي (رسائل للعميلات الغايبات) · reviews = محلل الآراء · campaigns = الحملات · writer = الكاتب الذكي (منشورات وعروض) · after = بعد الزيارة (متابعة عميلات أمس) · appts = مواعيد الصالون · away = العميلات الغايبات · vip = عميلات VIP · sales = المبيعات والأداء · finance = المالية · team = الفريق والمناوبات · gifts = قسائم الهدايا · seasons = المواسم
+  ولو جوابك فيه قائمة عميلات تبين تتواصلين معهن، القائمة نفسها فيها زر واتساب، فما يحتاج تحطين مفتاح لها.
+- ردك الأخير JSON فقط: {"answer":"النص","client_ids":["..."],"go":["winback"]}`;
   const msgs: any[] = [{ role: 'user', content: question }];
   const found: Record<string, any> = {}; let usage = { input_tokens: 0, output_tokens: 0 };
   for (let i = 0; i < 7; i++) {
@@ -258,7 +261,9 @@ async function askSite(b: any, logUse: any) {
     let out: any; try { out = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)); } catch { out = { answer: txt }; }
     const clients = (out.client_ids || []).map((id: string) => found[id]).filter(Boolean).slice(0, 80);
     await logUse(`ask: ${question}`, { answer: String(out.answer || '').slice(0, 500), n: clients.length }, { usage });
-    return json({ kind: 'ask', answer: out.answer || txt, clients });
+    const GO = ['winback', 'reviews', 'campaigns', 'writer', 'after', 'appts', 'away', 'vip', 'sales', 'finance', 'team', 'gifts', 'seasons'];
+    const go = (Array.isArray(out.go) ? out.go : []).filter((k: string) => GO.includes(k)).slice(0, 2);
+    return json({ kind: 'ask', answer: out.answer || txt, clients, go });
   }
   throw new Error('السؤال طوّل، جربي تسألينه بشكل أبسط');
 }

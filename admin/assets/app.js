@@ -4757,12 +4757,43 @@
   async function pageAppts(view, _a, params, alive) {
     const t = params.get('t') || 'day';
     const M = isManager();
-    const tabs = [['day', 'جدول اليوم'], ['pending', 'بانتظار التأكيد'], ...(M ? [['svc', 'الخدمات والأسعار'], ['set', 'الإعدادات']] : [])];
+    const tabs = [['day', 'جدول اليوم'], ['pending', 'بانتظار التأكيد'], ...(!isSpec() ? [['after', 'بعد الزيارة']] : []), ...(M ? [['svc', 'الخدمات والأسعار'], ['set', 'الإعدادات']] : [])];
     const head = `<div class="chips">${tabs.map(([k, l]) => `<a class="chip ${k === t ? 'on' : ''}" href="#/appts?t=${k}">${l}</a>`).join('')}<a class="chip" href="#/bookings">الحجوزات المنزلية ←</a></div>`;
     if (t === 'svc' && M) return apServices(view, head, alive);
     if (t === 'set' && M) return apSettings(view, head, alive);
     if (t === 'pending') return apPending(view, head, alive);
+    if (t === 'after' && !isSpec()) return apAfter(view, head, params.get('d'), alive);
     return apDay(view, head, params.get('d') || rDay(Date.now()), alive);
+  }
+
+  async function apAfter(view, head, dParam, alive) {
+    const tk = todayR(), day = dParam || tk, yd = dk(new Date(D(tk).getTime() - 86400000));
+    const [L, K] = await Promise.all([q(sb.rpc('followup_list', { p_day: day })), kitProfile().catch(() => ({}))]);
+    if (!alive()) return;
+    const review = K.review || '';
+    const done = L.filter((x) => x.done), sent = done.filter((x) => x.f?.sent_at).length, issues = L.filter((x) => x.f?.outcome === 'issue').length;
+    const msg = (x) => `هلا ${firstName(x.name)} 🤍\nشكرًا لزيارتك بيوتفريش${day === tk ? ' اليوم' : ''}. كيف كانت تجربتك${x.by ? ` مع ${firstName(String(x.by).split(/[,،]/)[0])}` : ''}؟\nلو فيه أي ملاحظة قولي لنا هنا، نبي نسمعك.`;
+    const rmsg = (x) => `يسعدنا إنها عجبتك يا ${firstName(x.name)} 🤍\nلو عندك دقيقة، تقييمك في قوقل يفرق معنا كثير:\n${review}`;
+    view.innerHTML = `${head}
+      <div class="fu-top"><div class="chips"><a class="chip ${day === tk ? 'on' : ''}" href="#/appts?t=after">اليوم</a><a class="chip ${day === yd ? 'on' : ''}" href="#/appts?t=after&d=${yd}">أمس</a></div>
+        <div class="fu-k"><span><b class="num">${sent}</b>/${done.length} انرسل لهن</span>${issues ? `<span class="bad"><b class="num">${issues}</b> عندهن ملاحظة</span>` : ''}</div></div>
+      <p class="muted small">بعد ما تخلص زيارتها، أرسلي لها سؤال التجربة. لو ردّت إنها مبسوطة، أرسلي لها رابط تقييم قوقل. ولو عندها ملاحظة، سجّليها وتطلع للإدارة وفي ملفها قبل لا تكتبها برّا.${review ? '' : ' <b>رابط تقييم قوقل مو محطوط في العُدّة.</b>'}</p>
+      <div class="list" id="fu-l">${L.length ? L.map((x) => { const f = x.f || {}; return `<div class="row fu-r ${f.outcome || ''} ${x.done ? '' : 'wait'}" data-c="${esc(x.cid)}">
+        <a class="grow" href="#/cx/${encodeURIComponent(x.cid)}"><div class="title">${esc(x.name || '')} ${f.outcome === 'happy' ? '<span class="badge ok">مبسوطة</span>' : f.outcome === 'issue' ? '<span class="badge danger">عندها ملاحظة</span>' : f.sent_at ? '<span class="badge">انرسل</span>' : ''}</div><div class="meta">${esc(x.svc || '')}${x.by ? ` · ${esc(cxProv(x.by))}` : ''} · ${x.done ? `خلصت ${cxTime(x.end)}` : `تخلص ${cxTime(x.end)}`}</div></a>
+        <div class="fu-a">${!x.phone ? '' : !f.sent_at ? `<button class="btn sm ${x.done ? 'primary' : ''}" data-send>${I.wa} اسأليها</button>` : !f.outcome ? `<button class="btn sm" data-ok>😊 مبسوطة</button><button class="btn sm" data-bad>😕 ملاحظة</button>` : f.outcome === 'happy' && review && !f.review_sent ? `<button class="btn sm primary" data-rev>⭐ رابط قوقل</button>` : ''}</div></div>`; }).join('') : '<div class="empty">ما فيه زيارات بهاليوم</div>'}</div>`;
+    const up = (cid, row) => q(sb.from('visit_followups').upsert({ customer_id: cid, day, ...row }));
+    $$('.fu-r', view).forEach((r) => {
+      const x = L.find((y) => y.cid === r.dataset.c);
+      $('[data-send]', r)?.addEventListener('click', async () => { window.open(`https://wa.me/${waNum(x.phone)}?text=${encodeURIComponent(msg(x))}`, '_blank', 'noopener'); try { await up(x.cid, { sent_at: new Date().toISOString() }); route(); } catch (err) { toast(errMsg(err), true); } });
+      $('[data-ok]', r)?.addEventListener('click', async () => { try { await up(x.cid, { outcome: 'happy' }); route(); } catch (err) { toast(errMsg(err), true); } });
+      $('[data-rev]', r)?.addEventListener('click', async () => { window.open(`https://wa.me/${waNum(x.phone)}?text=${encodeURIComponent(rmsg(x))}`, '_blank', 'noopener'); try { await up(x.cid, { review_sent: true }); route(); } catch (err) { toast(errMsg(err), true); } });
+      $('[data-bad]', r)?.addEventListener('click', () => modal(`<h3>ملاحظة ${esc(firstName(x.name))}</h3><form id="fu-f"><div class="field"><textarea class="input" name="t" rows="3" required maxlength="500" placeholder="وش قالت بالضبط؟"></textarea><div class="hint">تنحفظ في ملفها بالأحمر، وتطلع للإدارة.</div></div><div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">حفظ</button></div></form>`, (root, close) => {
+        $('#fu-f', root).addEventListener('submit', (e) => { e.preventDefault(); busy($('button.primary', root), async () => {
+          const t = String(new FormData(e.target).get('t') || '').trim();
+          try { await up(x.cid, { outcome: 'issue', note: t }); await q(sb.from('cx_log').insert({ customer_id: x.cid, kind: 'visit', visit_on: day, done: x.svc || null, result: t, mood: 'upset', by_name: S.profile?.full_name || S.profile?.login || null })); toast('انحفظت، تواصلوا معها بأسرع وقت'); close(); route(); } catch (err) { toast(errMsg(err), true); }
+        }); });
+      }));
+    });
   }
 
   async function apDay(view, head, day, alive) {

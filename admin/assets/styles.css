@@ -1642,3 +1642,8 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .me-ap .me-t { min-width: 64px; font-weight: 700; color: #5A2A22; }
 .me-ap.past { opacity: .5; } .me-ap.cur { background: #F3EBDF; }
 .list .row .btn svg { width: 15px; height: 15px; }
+/* بعد الزيارة */
+.fu-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin: 12px 0 6px; }
+.fu-k { display: flex; gap: 12px; font-size: 13px; color: var(--muted, #8A6F66); } .fu-k b { color: #5A2A22; font-size: 16px; margin-inline-end: 3px; } .fu-k .bad b { color: #A4442F; }
+.fu-r { flex-wrap: wrap; } .fu-r.wait { opacity: .6; } .fu-r.issue { background: #FDF6F3; }
+.fu-a { display: flex; gap: 6px; flex-wrap: wrap; } .fu-a .btn svg { width: 15px; height: 15px; }

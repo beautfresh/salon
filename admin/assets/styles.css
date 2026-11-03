@@ -1630,3 +1630,15 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .rv-m span { display: grid; text-align: center; } .rv-m b { font-size: 13px; color: #5A2A22; }
 .fin-grid > * { min-width: 0; }
 .rv-r .grow, .rv-q { min-width: 0; overflow-wrap: anywhere; }
+/* صفحتي */
+.me-pick { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; } .me-pick .input { max-width: 240px; }
+.me-hero { display: flex; justify-content: space-between; align-items: center; padding: 18px; border-radius: 22px; background: var(--hero-bg, linear-gradient(160deg, #FBF7F1, #F3EBDF)); border: 1px solid var(--line); margin-bottom: 12px; animation: cxIn .5s cubic-bezier(.2, .8, .2, 1) both; }
+.me-hero h2 { margin: 4px 0; font-size: 24px; } .me-hero p { margin: 0; color: #6B4A3A; }
+.me-medal { font-size: 42px; animation: cxIn .6s .2s both; }
+.me-k { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.me-k > div { padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface, #fff); }
+.me-k b { display: block; font-size: 22px; color: #5A2A22; } .me-k b small { font-size: 13px; color: var(--muted, #8A6F66); }
+.me-k span { font-size: 12.5px; color: var(--muted, #8A6F66); } .me-k em { font-style: normal; font-weight: 700; } .me-k em.up { color: #3F7A4C; } .me-k em.down { color: #A4442F; }
+.me-ap .me-t { min-width: 64px; font-weight: 700; color: #5A2A22; }
+.me-ap.past { opacity: .5; } .me-ap.cur { background: #F3EBDF; }
+.list .row .btn svg { width: 15px; height: 15px; }

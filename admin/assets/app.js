@@ -21,7 +21,9 @@
   const isAdmin = () => S.profile?.role === 'admin';
   const isManager = () => ['admin', 'partner'].includes(S.profile?.role);
 
-  const ROLE_LABEL = { admin: 'مدير النظام', partner: 'الإدارة', staff: 'موظف' };
+  const ROLE_LABEL = { admin: 'مدير النظام', partner: 'الإدارة', reception: 'الاستقبال', specialist: 'أخصائية', staff: 'موظفة (عام)' };
+  const ROLE_HINT = { admin: 'كل الصلاحيات، وإدارة المستخدمين', partner: 'تشوف كل شي: المبيعات والمالية والتقارير والتسويق', reception: 'المواعيد والعميلات والهدايا والتشغيل والمخزون، بدون المبيعات والمالية', specialist: 'صفحتها ومواعيدها وملفات العميلات بدون أرقام مالية، والتشغيل والصرف', staff: 'مثل الاستقبال' };
+  const isSpec = () => S.profile?.role === 'specialist';
   const MOVE_LABEL = { purchase: 'شراء', issue: 'صرف', damage: 'تالف', expired: 'منتهي الصلاحية', count_adjust: 'تسوية جرد' };
   const MOVE_BADGE = { purchase: 'ok', issue: 'accent', damage: 'danger', expired: 'warn', count_adjust: '' };
   const STATUS_LABEL = { draft: 'مسودة', approved: 'معتمدة', cancelled: 'ملغاة' };
@@ -263,7 +265,7 @@
     S.session = data.session;
     if (!S.session) return renderLogin();
     try {
-      const prof = await q(sb.from('profiles').select('id,full_name,login,role,is_active').eq('id', S.session.user.id).maybeSingle());
+      const prof = await q(sb.from('profiles').select('id,full_name,login,role,is_active,provider_id').eq('id', S.session.user.id).maybeSingle());
       S.profile = prof;
       if (!prof || !prof.is_active) return renderPending();
       await loadRefs();
@@ -286,7 +288,8 @@
       ['العُدّة والنظام', [['kit', 'عُدّة بيوتفريش', I.kit], A && ['users', 'المستخدمين', I.users], A && ['catalog', 'الفئات والموردين', I.tag], ['more', 'الإعدادات', I.key]]],
     ];
     const L = [];
-    G.forEach(([g, its]) => { L.push({ group: g }); its.filter(Boolean).forEach(([k, l, ic]) => L.push({ href: `#/${k}`, label: l, icon: ic, key: k, group: g })); });
+    if (isSpec()) G[0][1].unshift(['me', 'صفحتي', I.users]); else if (M) G[0][1].push(['me', 'صفحة الأخصائية', I.users]);
+    G.forEach(([g, its]) => { const ok = its.filter((x) => x && canSee(x[0])); if (!ok.length) return; L.push({ group: g }); ok.forEach(([k, l, ic]) => L.push({ href: `#/${k}`, label: l, icon: ic, key: k, group: g })); });
     return L;
   }
 
@@ -311,7 +314,7 @@
           <div class="content" id="view"></div>
         </div>
         <nav class="bottomnav">
-          <a href="#/home" data-nav="home"><span class="ic">${I.home}</span>الرئيسية</a>
+          ${isSpec() ? `<a href="#/me" data-nav="me"><span class="ic">${I.users}</span>صفحتي</a>` : `<a href="#/home" data-nav="home"><span class="ic">${I.home}</span>الرئيسية</a>`}
           <a href="#/appts" data-nav="appts"><span class="ic">${I.cal}</span>المواعيد</a>
           <button type="button" class="fab" id="fab" aria-label="إجراء سريع"><span class="ic">${I.plus}</span>إجراء</button>
           ${isManager() ? `<a href="#/sales" data-nav="sales"><span class="ic">${I.chart}</span>المبيعات</a>` : `<a href="#/clients" data-nav="clients"><span class="ic">${I.heart}</span>العميلات</a>`}
@@ -338,6 +341,7 @@
 
   const ROUTES = {
     home: { title: 'الرئيسية', nav: 'home', fn: pageHome },
+    me: { title: 'صفحتي', nav: 'me', fn: pageMe },
     bookings: { title: 'الحجوزات المنزلية', nav: 'bookings', fn: pageBookings },
     booking: { title: 'تفاصيل الحجز', nav: 'bookings', fn: pageBooking },
     homesvc: { title: 'خدمات هوم والإعدادات', nav: 'bookings', fn: pageHomeSvc, manager: true },
@@ -375,13 +379,29 @@
     more: { title: 'الإعدادات', nav: 'more', fn: pageMore },
   };
 
+  // صلاحيات الصفحات: الإدارة تشوف كل شي، الأخصائية صفحات محددة، والاستقبال كل شي ما عدا صفحات الإدارة
+  const SPEC_OK = new Set(['me', 'appts', 'clients', 'cx', 'ops', 'svc', 'rules', 'assets', 'asset', 'issue', 'items', 'item', 'team', 'member', 'tour', 'more', 'feedback']);
+  function canSee(key) {
+    const r = ROUTES[key]; if (!r) return false;
+    if (r.admin) return isAdmin();
+    if (r.manager) return isManager();
+    if (key === 'me') return isSpec() || isManager();
+    if (isSpec()) return SPEC_OK.has(key);
+    return true;
+  }
+  const homeOf = () => (isSpec() ? '#/me' : '#/home');
+  function prune(root) {
+    if (isManager() || !root) return;
+    $$('a[href^="#/"]', root).forEach((a) => { const k = a.getAttribute('href').slice(2).split(/[?/]/)[0]; if (k && ROUTES[k] && !canSee(k)) a.remove(); });
+  }
+
   let routeSeq = 0;
   async function route() {
     if (!S.shellReady) return;
     const { parts, params } = parseHash();
     let r = ROUTES[parts[0]];
-    if (!r || (r.admin && !isAdmin()) || (r.manager && !isManager())) {
-      if (location.hash !== '#/home') { location.hash = '#/home'; return; }
+    if (!r || !canSee(parts[0])) {
+      if (location.hash !== homeOf()) { location.hash = homeOf(); return; }
       r = ROUTES.home;
     }
     const seq = ++routeSeq;
@@ -404,6 +424,7 @@
     }
     try {
       await r.fn(view, parts.slice(1), params, () => seq === routeSeq);
+      if (seq === routeSeq) prune(view);
     } catch (e) {
       if (seq === routeSeq) view.innerHTML = `<div class="notice danger">${esc(errMsg(e))}</div>`;
     } finally {
@@ -1316,7 +1337,7 @@
 
   /* ---------- users (admin) ---------- */
   async function pageUsers(view) {
-    const profs = await q(sb.from('profiles').select('id,full_name,login,role,is_active,approved_at,created_at').order('created_at'));
+    const profs = await q(sb.from('profiles').select('id,full_name,login,role,is_active,approved_at,created_at,provider_id').order('created_at'));
     S.profiles = new Map(profs.map((p) => [p.id, p]));
     const pending = profs.filter((p) => !p.is_active && !p.approved_at);
     const others = profs.filter((p) => p.is_active || p.approved_at);
@@ -1356,8 +1377,7 @@
       <h3>اعتماد ${esc(p.full_name || p.login)}</h3>
       <p class="muted" style="margin-top:-8px" dir="ltr">${esc(p.login || '')}</p>
       <form id="ap-form">
-        <div class="field"><label>الصلاحية</label><select class="input" name="role">${roleOptions('staff')}</select>
-          <div class="hint">الموظف: صرف وإدخال فواتير مسودة بدون رؤية الأسعار. الإدارة: ترى كل شيء والتقارير. مدير النظام: كل الصلاحيات.</div></div>
+        ${roleFields('reception', null)}
         <div class="field"><label>الاسم</label><input class="input" name="full_name" value="${esc(p.full_name || '')}" required></div>
         <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">اعتماد الحساب</button></div>
       </form>`, (el, close) => {
@@ -1366,7 +1386,7 @@
         const f = new FormData(e.target);
         await busy($('button.primary', el), async () => {
           try {
-            await q(sb.from('profiles').update({ role: f.get('role'), full_name: f.get('full_name').trim(), is_active: true }).eq('id', p.id));
+            await q(sb.from('profiles').update({ role: f.get('role'), provider_id: f.get('role') === 'specialist' ? (f.get('provider_id') || null) : null, full_name: f.get('full_name').trim(), is_active: true }).eq('id', p.id));
             toast('تم اعتماد الحساب'); close(); after && after();
           } catch (err) { toast(errMsg(err), true); }
         });
@@ -1385,6 +1405,20 @@
     return data;
   }
 
+  let PROVS = null;
+  function roleFields(role, prov) {
+    const id = 'rf' + Math.random().toString(36).slice(2, 7);
+    setTimeout(async () => {
+      const box = document.getElementById(id); if (!box) return;
+      const sel = $('select[name=role]', box), pv = $('.rf-prov', box), hint = $('.hint', box);
+      if (!PROVS) PROVS = await q(sb.from('rekaz_providers').select('id,name').order('name')).catch(() => []);
+      $('select[name=provider_id]', box).innerHTML = `<option value="">— اختاري —</option>${PROVS.filter((x) => x.name !== 'مزود الخدمة الافتراضي').map((x) => `<option value="${x.id}" ${x.id === prov ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}`;
+      const upd = () => { pv.hidden = sel.value !== 'specialist'; hint.textContent = ROLE_HINT[sel.value] || ''; };
+      sel.onchange = upd; upd();
+    });
+    return `<div id="${id}"><div class="field"><label>الصلاحية</label><select class="input" name="role">${roleOptions(role)}</select><div class="hint"></div></div>
+      <div class="field rf-prov" hidden><label>اسمها في ركاز</label><select class="input" name="provider_id"><option value="">…</option></select><div class="hint">عشان تطلع لها مواعيدها وتقييماتها وعميلاتها في «صفحتي»</div></div></div>`;
+  }
   function roleOptions(sel) {
     return Object.entries(ROLE_LABEL).map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${v}</option>`).join('');
   }
@@ -1398,7 +1432,7 @@
           <div class="hint">حروف إنجليزية وأرقام فقط، بدون مسافات.</div></div>
         <div class="field"><label>كلمة المرور</label><input class="input" name="password" dir="ltr" required minlength="8" autocomplete="new-password">
           <div class="hint">8 خانات على الأقل. يمكن للمستخدم تغييرها بعد الدخول.</div></div>
-        <div class="field"><label>الصلاحية</label><select class="input" name="role">${roleOptions('staff')}</select></div>
+        ${roleFields('reception', null)}
         <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">إنشاء الحساب</button></div>
       </form>`, (el, close) => {
       $('#u-form', el).addEventListener('submit', async (e) => {
@@ -1406,7 +1440,11 @@
         const f = new FormData(e.target);
         await busy($('button.primary', el), async () => {
           try {
-            await invokeAdmin({ action: 'create', full_name: f.get('full_name').trim(), login: f.get('login').trim().toLowerCase(), password: f.get('password'), role: f.get('role') });
+            const role = f.get('role'), base = ['admin', 'partner'].includes(role) ? role : 'staff';
+            const made = await invokeAdmin({ action: 'create', full_name: f.get('full_name').trim(), login: f.get('login').trim().toLowerCase(), password: f.get('password'), role: base });
+            const uid = made?.id || made?.user_id || made?.user?.id;
+            if (uid && role !== base) await q(sb.from('profiles').update({ role, provider_id: f.get('provider_id') || null }).eq('id', uid));
+            else if (!uid && role !== base) toast('انشأ الحساب، حددي الصلاحية من قائمة المستخدمين', true);
             toast('تم إنشاء الحساب'); close(); after && after();
           } catch (err) { toast(errMsg(err), true); }
         });
@@ -1421,7 +1459,7 @@
       <form id="ue-form">
         <div class="field"><label>الاسم</label><input class="input" name="full_name" value="${esc(p.full_name)}" required></div>
         <div class="field"><label>اسم المستخدم</label><input class="input" value="${esc(p.login || '')}" dir="ltr" disabled></div>
-        <div class="field"><label>الصلاحية</label><select class="input" name="role" ${self ? 'disabled' : ''}>${roleOptions(p.role)}</select></div>
+        ${self ? `<div class="field"><label>الصلاحية</label><select class="input" disabled>${roleOptions(p.role)}</select></div>` : roleFields(p.role, p.provider_id)}
         <div class="field"><label class="check"><input type="checkbox" name="is_active" ${p.is_active ? 'checked' : ''} ${self ? 'disabled' : ''}> الحساب مفعّل</label>
           ${self ? '<div class="hint">لا يمكنك تغيير صلاحية حسابك أو إيقافه.</div>' : ''}</div>
         <div class="actions end"><button type="button" class="btn" data-close>إلغاء</button><button class="btn primary">حفظ</button></div>
@@ -1435,7 +1473,7 @@
         e.preventDefault();
         const f = new FormData(e.target);
         const row = { full_name: f.get('full_name').trim() };
-        if (!self) { row.role = f.get('role'); row.is_active = !!f.get('is_active'); }
+        if (!self) { row.role = f.get('role'); row.is_active = !!f.get('is_active'); row.provider_id = row.role === 'specialist' ? (f.get('provider_id') || null) : null; }
         await busy($('#ue-form button.primary', el), async () => {
           try { await q(sb.from('profiles').update(row).eq('id', p.id)); toast('تم الحفظ'); close(); after && after(); }
           catch (err) { toast(errMsg(err), true); }
@@ -2055,6 +2093,37 @@
     more.onclick = () => { st.off = st.rows.length; load(true); };
     $('#cl-loyal', view)?.addEventListener('click', loyaltyForm);
     load();
+  }
+
+  /* ======================= صفحتي (الأخصائية) ======================= */
+  async function pageMe(view, _a, params, alive) {
+    const M = isManager(); const pid = M ? params.get('p') : null;
+    if (M && !PROVS) PROVS = await q(sb.from('rekaz_providers').select('id,name').order('name')).catch(() => []);
+    const d = M && !pid ? null : await q(sb.rpc('staff_me', { p_provider_id: pid || null }));
+    if (!alive()) return;
+    const pick = M ? `<div class="me-pick"><span class="muted small">معاينة صفحة:</span><select class="input" id="me-p"><option value="">اختاري أخصائية</option>${(PROVS || []).filter((x) => x.name !== 'مزود الخدمة الافتراضي').map((x) => `<option value="${x.id}" ${x.id === pid ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : '';
+    const bind = () => { $('#me-p', view)?.addEventListener('change', (e) => { location.hash = e.target.value ? `#/me?p=${e.target.value}` : '#/me'; }); };
+    if (!d) { view.innerHTML = `${pick}<div class="card muted">اختاري أخصائية تشوفين صفحتها مثل ما تشوفها هي.</div>`; bind(); return; }
+    if (!d.linked) { view.innerHTML = `${pick}<div class="notice info">هلا ${esc(firstName(d.name))} 🤍 حسابك لسه ما انربط باسمك في ركاز. اطلبي من الإدارة تربطه من «المستخدمين»، وبعدها تطلع لك مواعيدك وتقييماتك وعميلاتك هنا.</div>`; bind(); return; }
+    const me = firstName(d.name || d.provider), mo = d.month || {}, lm = d.last_month || {};
+    const pc = Number(lm.v) > 0 ? Math.round((Number(mo.v) / Number(lm.v) - 1) * 100) : null;
+    const medal = d.rank === 1 ? '🥇' : d.rank === 2 ? '🥈' : d.rank === 3 ? '🥉' : '';
+    const nowT = Date.now();
+    view.innerHTML = `${pick}
+      <div class="me-hero"><div><span class="muted small">${WDAYS[new Date().getDay()]} ${cxDate(new Date())}</span><h2>هلا ${esc(me)} 🤍</h2><p>${d.today.length ? `عندك اليوم <b>${d.today.length}</b> ${d.today.length === 1 ? 'موعد' : d.today.length === 2 ? 'موعدين' : 'مواعيد'}${d.week ? `، و${sdN(d.week)} خلال الأسبوع` : ''}` : 'ما عندك مواعيد اليوم'}</p></div>${medal ? `<span class="me-medal">${medal}</span>` : ''}</div>
+      <div class="me-k">
+        <div><b class="num">${sdN(mo.n)}</b><span>خدمة هالشهر</span></div>
+        <div><b class="num">${sar(mo.v)}</b><span>ر.س قيمة خدماتك${pc != null ? ` <em class="${pc >= 0 ? 'up' : 'down'}">${pc >= 0 ? '▲' : '▼'}${Math.abs(pc)}٪</em>` : ''}</span></div>
+        <div><b class="num">${d.rank}<small>/${d.ranked}</small></b><span>ترتيبك بالفريق</span></div>
+        <div><b class="num">★${d.rating?.avg ?? '—'}</b><span>من ${sdN(d.rating?.n || 0)} تقييم</span></div>
+      </div>
+      <div class="section-title"><h2>مواعيدك اليوم</h2></div>
+      <div class="list">${d.today.length ? d.today.map((a) => { const past = new Date(a.end || a.at).getTime() < nowT, cur = new Date(a.at).getTime() <= nowT && !past; return `<a class="row me-ap ${past ? 'past' : ''} ${cur ? 'cur' : ''}" href="#/cx/${encodeURIComponent(a.cid || '')}"><span class="me-t num">${cxTime(a.at)}</span><div class="grow"><div class="title">${esc(a.client || 'عميلة')}</div><div class="meta">${esc(a.svc || '')}${a.st === 'pending' ? ' · <span class="badge warn">بانتظار التأكيد</span>' : ''}${cur ? ' · <b>الحين</b>' : ''}</div></div><span class="go">‹</span></a>`; }).join('') : '<div class="empty">ما عندك مواعيد اليوم</div>'}</div>
+      <p class="muted small">اضغطي على العميلة وتشوفين ملفها: حساسيتها، ووش سوّيتوا آخر مرة. وبعد الزيارة سجّلي «وش صار بالزيارة» عشان المرة الجاية.${d.logs ? ` سجّلتي هالشهر ${sdN(d.logs)} 👏` : ''}</p>
+      ${d.due.length ? `<div class="section-title"><h2>عميلاتك اللي صار وقت رجعتهن</h2><span class="muted small">${d.due.length}</span></div>
+      <div class="list">${d.due.map((c) => `<div class="row"><a class="grow" href="#/cx/${encodeURIComponent(c.id)}"><div class="title">${esc(c.name || '')}</div><div class="meta">${esc(c.svc || '')} · قبل ${sdN(c.days)} يوم · ${cxVisits(c.visits)}</div></a>${c.phone ? `<a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/${waNum(c.phone)}?text=${encodeURIComponent(`هلا ${firstName(c.name)} 🤍\nمعك ${me} من بيوتفريش، صار لك فترة من آخر ${c.svc || 'زيارة'}.\nودّك أرتب لك موعد؟ beautfresh.com/book`)}">${I.wa} رسالة</a>` : ''}</div>`).join('')}</div>` : ''}
+      ${d.reviews.length ? `<div class="section-title"><h2>آخر تقييماتك</h2></div><div class="list">${d.reviews.map((r) => `<div class="row"><span class="cx-stars ${r.rating <= 3 ? 'low' : ''}">★${r.rating}</span><div class="grow"><div class="title">${esc(r.text)}</div><div class="meta">${esc(r.svc || '')} · ${cxDate(r.at, 1)}</div></div></div>`).join('')}</div>` : ''}`;
+    bind();
   }
 
   async function pageCx(view, args, _p, alive) {
@@ -4640,11 +4709,11 @@
   function quickActions() {
     const M = isManager();
     const A = [
-      ['visit', I.heart, 'ختم زيارة', 'لعميلة في الصالون', true],
+      ['visit', I.heart, 'ختم زيارة', 'لعميلة في الصالون', !isSpec()],
       ['issue', I.out, 'صرف من المخزون', 'منتجات استخدمتوها', true],
       ['sales', I.chart, 'مبيعات اليوم', 'لحظة بلحظة من ركاز', M],
       ['expense', I.invoice, 'مصروف', 'فاتورة أو دفعة', M],
-      ['purchase', I.cart, 'فاتورة شراء', 'بضاعة وصلت', true],
+      ['purchase', I.cart, 'فاتورة شراء', 'بضاعة وصلت', !isSpec()],
       ['fault', I.wrench, 'بلّغ عن عطل', 'جهاز أو كرسي', true],
       ['feedback', I.check, 'رأي عميلة', 'مديح أو شكوى', true],
       ['leave', I.cal, 'طلب إجازة', 'لك أو لموظفة', true],

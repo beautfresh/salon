@@ -177,15 +177,16 @@ async function reviews(uid: string, logUse: any) {
     months: Object.entries(months).sort().slice(-8).map(([m, a]) => ({ m, n: a.length, avg: avg(a) })),
     first: R[R.length - 1]?.created_at, last: R[0]?.created_at,
   };
-  const texts = R.filter((x) => String(x.description || '').trim().length > 3).slice(0, 450)
+  const texts = R.filter((x) => String(x.description || '').trim().length > 3).slice(0, 320)
     .map((x) => `[${x.id}] ★${x.rating} | ${x.product_name || '-'} | ${x.provider_names || '-'} | ${String(x.created_at).slice(0, 10)} | ${String(x.description).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
-  const recentLow = R.filter((x) => x.rating <= 3 && !x.reply && Date.now() - new Date(x.created_at).getTime() < 120 * 86400000).slice(0, 12).map((x) => x.id);
+  const recentLow = R.filter((x) => x.rating <= 3 && !x.reply && String(x.description || '').trim().length > 3 && Date.now() - new Date(x.created_at).getTime() < 120 * 86400000).slice(0, 12).map((x) => x.id);
   const system = `أنتِ محللة تجربة العملاء لصالون «بيوتفريش» في الأحساء. اقرئي الآراء الحقيقية وطلّعي تقرير عملي للإدارة باللهجة السعودية الخليجية، مختصر وواضح.
 قواعد:
 - الاقتباسات حرفية فقط من النصوص، بدون أي تعديل، وجملة قصيرة.
 - لا تخترعين أرقام. العدد التقريبي لكل موضوع من قراءتك (n).
 - كوني منصفة: المديح والملاحظات.
 - اقتراحات الحل عملية ومحددة تقدر الإدارة تسويها هالأسبوع.
+- لا تذكرين أي معرّفات (id) ولا ملاحظات تقنية في الملخص أو التنبيهات. التنبيهات فقط لأشياء تخص الصالون وتحتاج تصرف.
 - الردود الجاهزة للتقييمات المنخفضة: محترمة، تعتذر بدون تبرير، تدعو العميلة تتواصل، أقل من ٤٠ كلمة، باللهجة.
 ردك JSON صالح فقط:
 {"summary":"٣ جمل","praise":[{"theme":"","n":0,"quotes":[""]}],"complaints":[{"theme":"","n":0,"severity":"high|mid|low","who":"خدمة أو أخصائية لو واضح","quotes":[""],"fix":""}],"providers":[{"name":"","strength":"","watch":""}],"alerts":[""],"replies":[{"id":"","text":""}]}`;
@@ -194,7 +195,7 @@ async function reviews(uid: string, logUse: any) {
 ${texts}
 
 اكتبي ردود جاهزة لهذي الآراء المنخفضة فقط (لو موجودة في القائمة): ${recentLow.join(', ') || 'لا يوجد'}`;
-  const { out, j } = await ask(system, user, 16000);
+  const { out, j } = await ask(system, user, 9000);
   const rep = await db('ai_reports', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ kind: 'reviews', data: out, stats, created_by: uid }) });
   await logUse('reviews report', { id: rep?.[0]?.id }, j);
   return json({ kind: 'reviews', report: rep?.[0] || { data: out, stats } });

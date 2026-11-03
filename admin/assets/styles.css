@@ -1628,3 +1628,5 @@ a.lz-t:hover { transform: translateY(-2px); border-color: #E5D9C9; }
 .rv-dist .cx-bar span { color: #C9A46A; letter-spacing: 1px; }
 .rv-m { display: flex; justify-content: space-between; gap: 4px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 11px; color: var(--muted, #8A6F66); }
 .rv-m span { display: grid; text-align: center; } .rv-m b { font-size: 13px; color: #5A2A22; }
+.fin-grid > * { min-width: 0; }
+.rv-r .grow, .rv-q { min-width: 0; overflow-wrap: anywhere; }

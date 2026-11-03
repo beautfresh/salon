@@ -214,6 +214,7 @@ section{padding-block:clamp(70px,10vw,120px) 0}
 .pay2{margin-top:40px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:40px;align-items:center}
 .pay2 .phone{--w:min(270px,70vw)}
 .pstages{display:grid;gap:12px}
+.ps-why{border-color:#C9A46A!important}
 .ps{background:var(--stage);border:1px solid var(--line);border-radius:24px;padding:18px 20px;display:grid;gap:6px;justify-items:start}
 .ps b{font-size:19px}.ps span{color:var(--mute);font-size:15px}
 .money{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px;font-size:14px}
@@ -396,9 +397,10 @@ section{padding-block:clamp(70px,10vw,120px) 0}
   <div class="pay2">
     <div class="pp reveal"><div class="phone new"><div class="scr"><img src="img/n-det.webp" alt="خيارات الدفع في صفحة الحجز" loading="lazy"></div></div></div>
     <div class="pstages">
-      <div class="ps reveal"><span class="chip c-ok">من أول يوم</span><b>تحجز من موقعنا، وتدفع في الصالون</b><span>بعد الخدمة من كاشير ركاز: كاش أو مدى أو Apple Pay على الجهاز. والفاتورة الإلكترونية تطلع من ركاز مثل اليوم.</span></div>
+      <div class="ps reveal"><span class="chip c-ok">شغّال الحين</span><b>تحجز من موقعنا، وتدفع في الصالون</b><span>بعد الخدمة من كاشير ركاز: كاش أو مدى أو Apple Pay على الجهاز. والفاتورة الإلكترونية تطلع من ركاز مثل اليوم.</span></div>
       <div class="ps reveal"><span class="chip c-wt">لما يفعّل ركاز الدفع أونلاين</span><b>عربون أو دفع كامل وقت الحجز</b><span>زر «ادفعي أونلاين» في صفحة الحجز يفتح صفحة دفع ركاز. المبلغ يدخل حساب الصالون في ركاز والفاتورة تطلع منه، والباقي يندفع في الصالون.</span></div>
       <div class="ps reveal"><span class="chip c-sm">خطة بديلة</span><b>إذا ركاز ما يدعم الدفع من برّا</b><span>نربط بوابة دفع سعودية للعربون بس، والباقي والفاتورة تبقى على ركاز.</span></div>
+      <div class="ps reveal ps-why"><span class="chip c-wt">ليش الدفع أونلاين أولوية</span><b>ثلث حجوزات الموقع وقفت عند التحويل البنكي</b><span>من مايو لين أكتوبر: ٢١٨ طلب من ٦٢١ ما اكتمل دفعه. نص صاحباتها رجعوا حجزوا بالواتساب، و١٠٣ طلب ضاع فعليًا بحوالي ١٩ ألف ريال. و٦٢٪ من الزائرات يفتحن من داخل إنستقرام، والطلعة لتطبيق البنك تضيّعهن.</span></div>
       <div class="money reveal"><span>العميلة</span><i>←</i><span>صفحة الحجز</span><i>←</i><span class="g">ركاز يقبض ويفوتر</span><i>←</i><span>حساب الصالون</span></div>
     </div>
   </div>
@@ -407,12 +409,12 @@ section{padding-block:clamp(70px,10vw,120px) 0}
 <!-- 7 Gift -->
 <section class="wrap">
   <div class="reveal"><span class="eyebrow">٧ · الإهداء</span><h2 class="h2">شي ما كان موجود: <em>أهديها بيوتفريش</em></h2>
-  <p class="lead">في ركاز ما فيه إهداء. في موقعنا قسم كامل: وحدة تهدي أختها أو أمها قسيمة باسمها، تتصمم قدامها، وتوصلها على جوالها.</p></div>
+  <p class="lead">في ركاز ما فيه إهداء. في موقعنا قسم كامل: وحدة تهدي أختها أو أمها بطاقة باسمها، تصممها بنفسها، وتوصلها رابط على جوالها. المُهدى لها تفتح ظرف بختم، وتطلع لها البطاقة بحركة، وتحفظها صورة للذكرى، وتحجز فيها مباشرة واسمها وجوالها جاهزين.</p></div>
   <div class="strip gift reveal">
     <figure><div class="phone new"><div class="scr"><img src="img/g-land.webp" alt=""></div></div><figcaption><b>من الصفحة الرئيسية</b><span>الطريق الثالث جنب الصالون والبيت</span></figcaption></figure>
     <figure><div class="phone new"><div class="scr"><img src="img/g-1.webp" alt=""></div></div><figcaption><b>القيمة والمناسبة</b><span>٢٠٠ إلى ١٠٠٠ ريال أو مبلغ تختاره، وثلاث تصاميم</span></figcaption></figure>
     <figure><div class="phone new"><div class="scr"><img src="img/g-2.webp" alt=""></div></div><figcaption><b>لمين الهدية</b><span>اسمها وجوالها وكلمة منها، والقسيمة تتكتب قدامها</span></figcaption></figure>
-    <figure><div class="phone new"><div class="scr"><img src="img/g-3.webp" alt=""></div></div><figcaption><b>الدفع</b><span>أونلاين «قريبًا»، ولين ذاك تكمّل الطلب على الواتساب</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/g-3.webp" alt=""></div></div><figcaption><b>الإرسال</b><span>تتفعّل بعد الدفع، وتوصلها برابط على الواتساب</span></figcaption></figure>
     <figure><div class="phone new"><div class="scr"><img src="img/a-voucher.webp" alt=""></div></div><figcaption><b>في لوحة الإدارة</b><span>القسيمة برقمها، وتنصرف من رصيدها زيارة بعد زيارة</span></figcaption></figure>
   </div>
 </section>
@@ -428,12 +430,12 @@ section{padding-block:clamp(70px,10vw,120px) 0}
 <!-- 6 Admin -->
 <section class="wrap">
   <div class="reveal"><span class="eyebrow">٩ · ورا الكواليس</span><h2 class="h2">كل حجز يدخل على <em>لوحة الصالون</em></h2>
-  <p class="lead">لوحة إدارة بيوتفريش شغّالة الحين. لما ينربط الحجز، كل موعد ينعكس على ملف العميلة والمالية والفريق.</p></div>
+  <p class="lead">كل حجز من الموقع يدخل ركاز ويطلع في لوحة بيوتفريش: في ملف العميلة الذكي، ولوحة المبيعات، والفريق. والذكاء الاصطناعي يكتب رسائل الاسترجاع ويحلل الآراء.</p></div>
   <div class="strip reveal">
     <figure><div class="phone new"><div class="scr"><img src="img/a-home.webp" alt=""></div></div><figcaption><b>لوحة الصباح</b><span>وضع اليوم في نظرة وحدة</span></figcaption></figure>
     <figure><div class="phone new"><div class="scr"><img src="img/a-booking.webp" alt=""></div></div><figcaption><b>الحجوزات</b><span>كل حجز وحالته</span></figcaption></figure>
-    <figure><div class="phone new"><div class="scr"><img src="img/a-client.webp" alt=""></div></div><figcaption><b>ملف العميلة</b><span>زياراتها وأختامها وآراؤها</span></figcaption></figure>
-    <figure><div class="phone new"><div class="scr"><img src="img/a-finance.webp" alt=""></div></div><figcaption><b>المالية</b><span>اليوم والأسبوع والشهر والهدف</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/a-client.webp" alt=""></div></div><figcaption><b>ملف العميلة الذكي</b><span>حساسيتها، آخر زيارة، وأخصائيتها، قبل لا تستقبلونها</span></figcaption></figure>
+    <figure><div class="phone new"><div class="scr"><img src="img/a-sales.webp" alt=""></div></div><figcaption><b>المبيعات والأداء</b><span>أرقام ركاز نفسها، مع لمحات ذكية</span></figcaption></figure>
     <figure><div class="phone new"><div class="scr"><img src="img/a-card.webp" alt=""></div></div><figcaption><b>بطاقة الولاء</b><span>أختام رقمية لكل عميلة</span></figcaption></figure>
   </div>
 </section>
@@ -454,16 +456,17 @@ section{padding-block:clamp(70px,10vw,120px) 0}
   <div class="reveal"><span class="eyebrow">١١ · الخطوات الجاية</span><h2 class="h2">من هنا <em>إلى الإطلاق</em></h2></div>
   <div class="road reveal">
     <div class="stp d"><i>✓</i><b>الموقع والهوية</b><span>الصفحة، الخدمات المنزلية، الإهداء، ولوحة الإدارة</span></div>
-    <div class="stp c"><i>٢</i><b>ربط الحجز</b><span>الصفحة الجديدة تكتب في لوحة الصالون مباشرة</span></div>
-    <div class="stp"><i>٣</i><b>الدفع مع ركاز</b><span>تفعيل الدفع أونلاين والفاتورة</span></div>
-    <div class="stp"><i>٤</i><b>تغيير الرابط</b><span>beautfresh.com في البايو</span></div>
+    <div class="stp d"><i>✓</i><b>ربط الحجز</b><span>شغّال من ٢ نوفمبر: كل الأزرار تودّي beautfresh.com/book، والحجز يدخل ركاز</span></div>
+    <div class="stp c"><i>٣</i><b>الدفع أونلاين</b><span>تفعيله في ركاز، ونربطه بصفحة الحجز</span></div>
+    <div class="stp"><i>٤</i><b>تغيير الرابط</b><span>beautfresh.com/book في بايو إنستقرام</span></div>
+    <div class="stp"><i>٥</i><b>رصيد واتساب ركاز</b><span>عشان ترجع رسائل التأكيد والتذكير</span></div>
   </div>
 </section>
 
 <div class="wrap end">
   <div class="logo" role="img" aria-label="بيوتفريش"></div>
   <h2><span dir="ltr">The Fresh Version of You.</span><br>حتى في الحجز.</h2>
-  <p>لقطات «ركاز اليوم» من صفحة الصالون العامة على ركاز في ١ نوفمبر ٢٠٢٦. الحجز التجريبي وقف عند رمز التحقق، وما انرسل أي حجز.</p>
+  <p>لقطات «ركاز اليوم» من صفحة الصالون العامة على ركاز في ١ نوفمبر ٢٠٢٦. أرقام الدفع من طلبات الموقع في ركاز من ١٥ مايو لين ٣١ أكتوبر ٢٠٢٦. آخر تحديث ٣ نوفمبر ٢٠٢٦.</p>
 </div>
 
 <script>
@@ -515,15 +518,15 @@ const A=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
     ['اسم العلامة','«بيوتيفريش» بالخطأ في العنوان والتذييل','«بيوتفريش» كما في الشعار','ok'],
     ['الألوان والخط','قالب ركاز العام بلون برتقالي محمر','ألوان بيوتفريش وزخارفها وخط تجوال','ok'],
     ['الخدمات المنزلية','غير موجودة','صفحة خاصة بشعارها وهويتها','ok'],
-    ['شكل الخدمات','أيقونة مقص وحدة لكل الخدمات','أيقونة لكل قسم، و«الأكثر طلبًا» فوق','pr'],
-    ['ترتيب القائمة','قرابة ٩٠ بطاقة، خدمات بلا قسم، و«باقة تست» ظاهرة','٨٨ خدمة في ١٥ قسم مرتب، وبحث بكلمة','pr']],
+    ['شكل الخدمات','أيقونة مقص وحدة لكل الخدمات','أيقونة لكل قسم، و«الأكثر طلبًا» فوق','ok'],
+    ['ترتيب القائمة','قرابة ٩٠ بطاقة، خدمات بلا قسم، و«باقة تست» ظاهرة','٨٨ خدمة في ١٥ قسم مرتب، وبحث بكلمة','ok']],
    'الحجز':[
-    ['الدخول','رقم جوال ورمز تحقق قبل التأكيد','الاسم والجوال فقط','pr'],
-    ['عدد الشاشات','٨ شاشات','٣ شاشات','pr'],
-    ['الموعد','شريط أيام وقائمة أوقات','«أقرب موعد» بضغطة، والتقويم لمن تبي يوم معيّن','pr'],
-    ['السعر حسب الطول','يظهر بعد الدخول في الخدمة','خيارات واضحة: قصير، متوسط، طويل','pr'],
-    ['أكثر من خدمة','عبر سلة مشتريات','في نفس الشاشة، والمدة تنجمع','pr'],
-    ['العميلة الراجعة','تبدأ من الصفر','«نرجع لنفس الطلّة؟» بضغطة','pr'],
+    ['الدخول','رقم جوال ورمز تحقق قبل التأكيد','الاسم والجوال فقط','ok'],
+    ['عدد الشاشات','٨ شاشات','٣ شاشات','ok'],
+    ['الموعد','شريط أيام وقائمة أوقات','«أقرب موعد» بضغطة، والتقويم لمن تبي يوم معيّن','ok'],
+    ['السعر حسب الطول','يظهر بعد الدخول في الخدمة','خيارات واضحة: قصير، متوسط، طويل','ok'],
+    ['أكثر من خدمة','عبر سلة مشتريات','في نفس الشاشة، والمدة تنجمع','ok'],
+    ['العميلة الراجعة','تبدأ من الصفر','«نرجع لنفس الطلّة؟» بضغطة','ok'],
     ['بعد الحجز','حسب إعدادات ركاز','تأكيد واتساب وتذكير قبل الموعد بيوم','pr']],
    'الدفع':[
     ['الدفع أونلاين','غير مفعّل','عربون أو دفع كامل، يظهر «قريبًا» لين يتفعّل','wt'],
@@ -531,10 +534,12 @@ const A=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
     ['الكاشير','نقطة بيع ركاز','نقطة بيع ركاز','sm']],
    'بعد الزيارة':[
     ['بطاقة الولاء','لا توجد','بطاقة أختام رقمية برابط خاص لكل عميلة','ok'],
-    ['الإهداء','لا يوجد','صفحة إهداء بقسيمة باسم المُهدى لها','ok'],
+    ['الإهداء','لا يوجد','بطاقة رقمية تنفتح من ظرف، تنحفظ صورة، وتحجز فيها مباشرة','ok'],
+    ['استرجاع الغايبات','لا يوجد','رسالة شخصية لكل عميلة غايبة بالذكاء الاصطناعي، وحساب كم رجعت','ok'],
     ['رأي العميلة','نجوم داخل ركاز','رأي يوصل للإدارة ومربوط بملف العميلة','ok']],
    'الإدارة':[
-    ['ملف العميلة','داخل ركاز','زياراتها وأختامها وآراؤها في مكان واحد','ok'],
+    ['ملف العميلة','داخل ركاز','ملف ذكي: حساسيتها، آخر زيارة، أخصائيتها، وسجل ملاحظات الفريق','ok'],
+    ['التقارير','تقارير ركاز','لوحة مبيعات بأرقام ركاز نفسها، مع لمحات ذكية ومحلل للآراء','ok'],
     ['المالية والفريق والمخزون','خارج ركاز','لوحة بيوتفريش: المالية، الورديات، المخزون، التقارير','ok'],
     ['تقويم الحجوزات','لوحة ركاز','تقويم يومي لكل موظفة: وصلت، خلصت، ما حضرت','pr'],
     ['ملكية البيانات','على منصة خارجية','قاعدة بيانات بيوتفريش الخاصة','ok']]};

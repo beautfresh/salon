@@ -1721,3 +1721,7 @@ div.fcard { cursor: default; }
 .pp-sigclr { font: inherit; font-size: 11px; border: 0; background: none; color: #A0675A; cursor: pointer; padding: 2px 0; }
 @media print { .pp-sigclr { display: none; } .pp-live .pp-in { background: none; } .pp-sigpad { border-style: solid; border-color: #ddd; } }
 .adv-kb { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ask-top { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+.ask-top .ask-qq { flex: 1; min-width: 0; }
+.ask-tools { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
+.ask-tools .icon-btn { opacity: .45; font-size: 13px; } .ask-tools .icon-btn:hover, .ask-tools .icon-btn.on { opacity: 1; }

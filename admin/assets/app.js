@@ -2095,27 +2095,33 @@
   }
 
   /* ======================= اسألي الموقع ======================= */
-  const ASK_LOG = [];
   async function pageAsk(view, _a, params, alive) {
     const sugg = ['كم مبيعات أكتوبر مقارنة بسبتمبر؟', 'مين أعلى أخصائية دخل هالشهر؟', 'مين سوّت صبغة وما رجعت من ٣ شهور؟', 'وش أكثر ٥ خدمات طلبًا هالشهر؟', 'أي يوم بالأسبوع أقوى مبيعات؟', 'وش يقولون عن روز في التقييمات؟', 'كم عميلة جديدة جات هالشهر؟', 'العميلات اللي يجون كل شهر وغابوا هالشهر'];
     view.innerHTML = `
       <div class="ask-h card"><h2>✦ اسألي الموقع</h2><p class="muted">اسألي أي سؤال عن الصالون بكلامك، ويجاوبك من أرقام ركاز الحقيقية. لو طلبتي عميلات، يطلعن لك بقائمة مع واتساب.</p>
         <form id="ask-f" class="ask-f"><input class="input" id="ask-q" maxlength="500" placeholder="مثال: مين سوّت بروتين وما رجعت من شهرين؟" autocomplete="off"><button class="btn primary">اسألي</button></form>
         <div class="chips wrap" id="ask-s">${sugg.map((x) => `<button type="button" class="chip sm">${x}</button>`).join('')}</div></div>
-      <div id="ask-out">${ASK_LOG.map(askCard).join('')}</div>`;
+      <div id="ask-out"><div class="muted small">يحمّل أسئلتكم السابقة…</div></div>`;
     const out = $('#ask-out', view), inp = $('#ask-q', view);
     const bindCard = (el) => {
       $$('[data-wa]', el).forEach((b) => b.onclick = () => window.open(`https://wa.me/${waNum(b.dataset.wa)}?text=${encodeURIComponent(`هلا ${b.dataset.n} 🤍\nوحشتينا في بيوتفريش! ودّك نرتب لك موعد؟ beautfresh.com/book`)}`, '_blank', 'noopener'));
       $('[data-copy]', el)?.addEventListener('click', (e) => copyTxt(e.currentTarget.dataset.copy, 'القائمة'));
       kbBind(el);
+      $('[data-pin]', el)?.addEventListener('click', async (e) => { const b = e.currentTarget, on = b.dataset.pin !== '1'; try { await q(sb.from('ask_history').update({ pinned: on }).eq('id', Number(el.dataset.id))); b.dataset.pin = on ? '1' : '0'; b.classList.toggle('on', on); toast(on ? 'انثبّت فوق 📌' : 'شلت التثبيت'); } catch (err) { toast(errMsg(err), true); } });
+      $('[data-del]', el)?.addEventListener('click', async () => { if (!(await confirmBox('تحذفين هالسؤال؟', 'بينحذف السؤال وجوابه من السجل.', 'حذف', true))) return; try { await q(sb.from('ask_history').delete().eq('id', Number(el.dataset.id))); el.remove(); } catch (err) { toast(errMsg(err), true); } });
     };
+    const hist = await q(sb.from('ask_history').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(40)).catch(() => []);
+    if (!alive()) return;
+    out.innerHTML = hist.map((h) => askCard({ id: h.id, q: h.q, a: h.answer, c: h.clients || [], go: h.go || [], refs: h.refs || [], at: h.created_at, pin: h.pinned })).join('') || '';
     $$('.ask-c', out).forEach(bindCard);
     $$('#ask-s .chip', view).forEach((b) => b.onclick = () => { inp.value = b.textContent; $('#ask-f', view).requestSubmit(); });
     $('#ask-f', view).addEventListener('submit', (e) => {
       e.preventDefault(); const qq = inp.value.trim(); if (!qq) return;
       const ph = document.createElement('div'); ph.className = 'card ask-c'; ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="muted"><span class="spinner"></span> يدوّر في الأرقام…</div>`; out.prepend(ph); inp.value = '';
       busy($('#ask-f button', view), async () => {
-        try { const j = await aiCall({ kind: 'ask', q: qq }); const item = { q: qq, a: j.answer, c: j.clients || [], go: j.go || [], refs: j.refs || [] }; ASK_LOG.unshift(item); if (ASK_LOG.length > 12) ASK_LOG.pop(); ph.outerHTML = askCard(item); bindCard($('.ask-c', out)); }
+        try { const j = await aiCall({ kind: 'ask', q: qq }); const item = { q: qq, a: j.answer, c: j.clients || [], go: j.go || [], refs: j.refs || [], at: new Date().toISOString() };
+          const saved = await q(sb.from('ask_history').insert({ q: qq, answer: j.answer || '', clients: item.c, go: item.go, refs: item.refs }).select('id').single()).catch(() => null); if (saved) item.id = saved.id;
+          ph.outerHTML = askCard(item); bindCard($('.ask-c', out)); }
         catch (err) { ph.innerHTML = `<div class="ask-qq">${esc(qq)}</div><div class="notice warn">${esc(errMsg(err))}</div>`; }
       });
     });
@@ -2139,7 +2145,7 @@
   };
   function askCard(x) {
     const list = x.c || [], go = (x.go || []).map((k) => ASK_GO[k]).filter(Boolean);
-    return `<div class="card ask-c"><div class="ask-qq">${esc(x.q)}</div><div class="ask-a">${esc(x.a || '').replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div>
+    return `<div class="card ask-c" data-id="${x.id || ''}"><div class="ask-top"><div class="ask-qq">${esc(x.q)}</div>${x.id ? `<div class="ask-tools"><span class="muted small">${x.at ? ago(new Date(x.at).toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' })) : ''}</span><button class="icon-btn sm ${x.pin ? 'on' : ''}" data-pin="${x.pin ? 1 : 0}" title="تثبيت">📌</button><button class="icon-btn sm" data-del title="حذف">🗑️</button></div>` : ''}</div><div class="ask-a">${esc(x.a || '').replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div>
       ${(x.refs || []).length ? `<div class="ask-refs"><span class="muted small">مبني على:</span>${x.refs.map((r) => kbChip(r.id, r.title)).join('')}</div>` : ''}
       ${go.length ? `<div class="ask-go">${go.map(([ic, l, d, h]) => `<a class="ask-gl" href="${h}"><span class="ask-gi">${ic}</span><span class="grow"><b>${l}</b><small>${d}</small></span><span class="ask-ga">←</span></a>`).join('')}</div>` : ''}
       ${list.length ? `<div class="ask-lh"><b>${list.length} عميلة</b><button class="btn sm" data-copy="${esc(list.map((c) => `${c.name} ${c.phone || ''}`).join('\n'))}">نسخ القائمة</button></div>

@@ -4671,7 +4671,7 @@
 
   const genCode = () => 'BF-' + Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('');
   const vState = (v) => (v.status === 'pending' ? ['pend', 'طلب جديد', 'warn'] : v.status === 'cancelled' ? ['can', 'ملغي', ''] : v.status === 'used' || v.redeemed_on ? ['used', 'استُخدمت', ''] : v.expires_on && until(v.expires_on) < 0 ? ['exp', 'انتهت', 'danger'] : ['ok', 'سارية', 'ok']);
-  const giftLink = (v) => `https://beautfresh.com/gift/open/?t=${v.token}`;
+  const giftLink = (v) => `https://beautfresh.com/gift/open/${['oud', 'rose', 'gold', 'sand'].includes(v.design?.theme) ? v.design.theme + '/' : ''}?t=${v.token}`;
   function voucherHTML(v, K) {
     return `<div class="voucher"><div class="vc-l"><img class="vc-logo" src="../home/assets/gift-logo.svg" alt="بيوتفريش للإهداء"><span class="vc-eb">قسيمة هدية</span><h2>${esc(v.value_text)}</h2>
       ${v.to_name ? `<span class="vc-to">إلى: <b>${esc(v.to_name)}</b></span>` : ''}${v.from_name ? `<span class="vc-to">من: <b>${esc(v.from_name)}</b></span>` : ''}${v.message ? `<p class="vc-msg">«${esc(v.message)}»</p>` : ''}
